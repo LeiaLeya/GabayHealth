@@ -48,7 +48,7 @@
 
 <body>
     <div class="main-wrapper">
-        @include('layouts.sidebar')
+        @include('layouts.publicSidebar')
         <div class="main-content">
             @yield('content')
         </div>
