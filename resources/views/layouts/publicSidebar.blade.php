@@ -10,17 +10,14 @@
     <h4 class="text-center mt-5 mb-5" style="width: 100%;">Menu</h4>
     <ul class="nav nav-pills flex-column mb-auto">
         <li class="nav-item mb-2">
-            <a href="{{ route('login') }}"
-                class="nav-link text-white {{ request()->routeIs('login') ? 'active' : '' }}">
-                <i class="bi bi-box-arrow-in-right"></i> Login
+            <a href="{{ route('login') }}" class="nav-link text-white {{ request()->routeIs('login') ? 'active' : '' }}">
+                Login
             </a>
         </li>
         <li>
-            <a href="{{ route('register') }}"
-                class="nav-link text-white {{ request()->routeIs('register') ? 'active' : '' }}">
-                <i class="bi bi-person-plus"></i> Register
+            <a href="{{ route('register') }}" class="nav-link text-white {{ request()->routeIs('register') ? 'active' : '' }}">
+                Register
             </a>
         </li>
     </ul>
-
 </div>
