@@ -1,32 +1,43 @@
 <?php
 
-namespace App\Http\Controllers; 
+namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\SysUser;
-use Illuminate\Support\Facades\Auth;
+use App\Services\FirestoreService;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Session;
 
 class SysUserController extends Controller
 {
     public function login()
     {
-        if (Auth::check()) {
+        if (Session::has('user')) {
             return redirect()->route('RHUs.index')->with('success', 'Login successful.');
         }
-
         return view('auth.login');
     }
 
-    public function authenticate(Request $request)
+    public function authenticate(Request $request, FirestoreService $firestore)
     {
         $credentials = $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-            return redirect()->route('RHUs.index')->with('success', 'Login successful.');
+        
+        $users = $firestore->db->collection('admin')->where('username', '=', $credentials['username'])->documents();
+        foreach ($users as $userDoc) {
+            if ($userDoc->exists()) {
+                $user = $userDoc->data();
+                
+                if (Hash::check($credentials['password'], $user['password'])) {
+                    Session::put('user', [
+                        'id' => $userDoc->id(),
+                        'username' => $user['username'],
+                    ]);
+                    return redirect()->route('RHUs.index')->with('success', 'Login successful.');
+                }
+            }
         }
 
         return back()->withErrors([
@@ -39,24 +50,34 @@ class SysUserController extends Controller
         return view('auth.register');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, FirestoreService $firestore)
     {
         $validated = $request->validate([
-            'username' => 'required|unique:sys_users',
+            'username' => 'required|string',
             'password' => 'required|min:6|confirmed',
+            'email' => 'nullable|email',
         ]);
 
-        $user = SysUser::create([
+        
+        $existing = $firestore->db->collection('admin')->where('username', '=', $validated['username'])->documents();
+        if (iterator_count($existing) > 0) {
+            return back()->withErrors(['username' => 'Username already taken.'])->withInput();
+        }
+
+        $firestore->addDocument('admin', [
             'username' => $validated['username'],
-            'password' => bcrypt($validated['password']),
+            'password' => Hash::make($validated['password']),
+            'email' => $validated['email'] ?? '',
+            'createdAt' => now()->toDateTimeString(),
+            'userId' => '', 
         ]);
 
-        return redirect()->route('RHUs.index')->with('success', 'Registration successful!');
+        return redirect()->route('login')->with('success', 'Registration successful! Please login.');
     }
 
     public function logout(Request $request)
     {
-        Auth::logout();
+        Session::forget('user');
         return redirect()->route('login')->with('success', 'You have been logged out.');
     }
 }
