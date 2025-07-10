@@ -27,10 +27,10 @@ Route::get('/', [HomeController::class, 'index']);
 // Route::get('/personnel', fn() => view('pages.personnel'))->name('personnel.index');
 // Route::get('/logout', fn() => redirect('/'))->name('logout');
 
-Route::middleware(['auth'])->group(function () {
+// Route::middleware(['custom.auth'])->group(function () {
     Route::get('/RHUs/approvals', [AdminController::class, 'indexApprovals'])->name('RHUs.approvals');
     Route::resource('RHUs', AdminController::class);
     Route::post('/logout', [SysUserController::class, 'logout'])->name('logout');
-});
+// });
 
 
