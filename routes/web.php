@@ -3,12 +3,18 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RuralHealthUnitController;
 use App\Http\Controllers\SysUserController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\FirestoreTestController;
+
+Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
 
 Route::get('/login', [SysUserController::class, 'login'])->name('login');
 Route::post('/login', [SysUserController::class, 'authenticate'])->name('login.submit');
 
 Route::get('/register', [SysUserController::class, 'register'])->name('register');
 Route::post('/register', [SysUserController::class, 'store'])->name('register.submit');
+
+Route::get('/', [HomeController::class, 'index']);
 
 // Route::get('/', fn() => view('welcome'));
 
