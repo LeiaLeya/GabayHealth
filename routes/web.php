@@ -7,6 +7,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\FirestoreTestController;
 use App\Http\Middleware\SessionAuth;
 use App\Http\Kernel;
+use App\Http\Controllers\RHUController;
 
 // Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
 
@@ -32,5 +33,8 @@ Route::get('/', [HomeController::class, 'index']);
     Route::resource('RHUs', AdminController::class);
     Route::post('/logout', [SysUserController::class, 'logout'])->name('logout');
 // });
+
+    Route::resource('BHUs', RHUController::class);
+
 
 
