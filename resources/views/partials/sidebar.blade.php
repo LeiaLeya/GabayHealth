@@ -11,17 +11,23 @@
 
     <div class="seal-section">
         <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
-        <div class="center-name">Pob. Ward IV Health Center</div>
+        <div class="center-name">
+            {{ session('user.name', 'Health Center') }}
+        </div>
     </div>
 
     <ul class="nav-links">
         @php
             $navItems = [
                 ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
                 ['route' => 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                ['route' => 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
                 ['route' => 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
                 ['route' => 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                ['route' => 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
                 ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
             ];
         @endphp
 
@@ -31,13 +37,17 @@
                     @php
                         $iconMap = [
                             'Reports' => 'bi-file-earmark-bar-graph',
+                            'Verify Reports' => 'bi-patch-check',
                             'Schedules' => 'bi-calendar-event',
+                            'Calendars' => 'bi-calendar3',
                             'Events' => 'bi-calendar2-event',
                             'Inventory' => 'bi-box-seam',
+                            'Services' => 'bi-heart-pulse',
                             'Personnel' => 'bi-people',
+                            'Account Management' => 'bi-person-gear',
                         ];
                     @endphp
-                    <i class="bi {{ $iconMap[$item['label']] }} nav-icon"></i>
+                    <i class="bi {{ $iconMap[$item['label']] ?? $item['icon'] }} nav-icon"></i>
                     <span>{{ $item['label'] }}</span>
                 </a>
             </li>
@@ -102,16 +112,17 @@
     }
 
     .nav-links li {
-        padding: 18px 35px;
+        padding: 10px 24px;
         border-radius: 6px;
         transition: background 0.2s;
-        margin-bottom: 12px;
+        margin-bottom: -4px;
     }
 
     .nav-links li.active,
     .nav-links li:hover {
         background-color: #113d96;
         border-radius: 6px;
+        padding: 10px 24px;
     }
 
     .nav-links li a {
