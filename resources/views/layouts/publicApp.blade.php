@@ -3,10 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GabayHealth</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         @font-face {
             font-family: 'Bilo';
@@ -34,8 +31,7 @@
         .main-content {
             flex: 1;
             overflow-y: auto;
-            background: #fff;
-            padding: 0;
+            background: #f9f9f9;
             padding: 32px;
         }
 
@@ -52,15 +48,11 @@
 
 <body>
     <div class="main-wrapper">
-        @if(empty($hideSidebar))
-            @include('partials.sidebar')
-        @endif
+        @include('layouts.publicSidebar')
         <div class="main-content">
             @yield('content')
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
