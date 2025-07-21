@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 
 class AdminController extends Controller
 {
-    // List all approved RHUs
+
     public function index(FirestoreService $firestore)
     {
         $documents = $firestore->getCollection('rhu');
@@ -22,7 +22,7 @@ class AdminController extends Controller
         return view('admin.index', compact('ruralHealthUnits'));
     }
 
-    // List all pending RHUs for approval
+    
     public function indexApprovals(FirestoreService $firestore)
     {
         $documents = $firestore->getCollection('rhu');
@@ -36,13 +36,13 @@ class AdminController extends Controller
         return view('admin.indexApprovals', compact('ruralHealthUnits'));
     }
 
-    // Show create form
+
     public function create()
     {
         return view('admin.create');
     }
 
-    // Store a new RHU in Firestore
+
     public function store(Request $request, FirestoreService $firestore)
     {
         $validated = $request->validate([
@@ -108,7 +108,7 @@ class AdminController extends Controller
         return view('admin.show', compact('ruralHealthUnits'));
     }
 
-    // Show edit form for a specific RHU
+    
     public function edit($id, FirestoreService $firestore)
     {
         $document = $firestore->db->collection('rhu')->document($id)->snapshot();
@@ -120,7 +120,7 @@ class AdminController extends Controller
         return view('admin.edit', compact('ruralHealthUnit', 'cityName'));
     }
 
-    // Update an RHU (e.g., approve)
+    
     public function update(Request $request, $id, FirestoreService $firestore)
     {
         $document = $firestore->db->collection('rhu')->document($id);
@@ -137,7 +137,7 @@ class AdminController extends Controller
         return back()->with('error', 'No status provided.');
     }
 
-    // Delete an RHU
+
     public function destroy($id, FirestoreService $firestore)
     {
         $firestore->db->collection('rhu')->document($id)->delete();
@@ -151,6 +151,6 @@ class AdminController extends Controller
         if ($response->successful()) {
             return $response->json('name');
         }
-        return $cityCode; // fallback if not found
+        return $cityCode; 
     }
 }

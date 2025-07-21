@@ -8,41 +8,61 @@ use Illuminate\Support\Facades\Http;
 
 class RHUController extends Controller
 {
-    // List all approved RHUs
     public function index(FirestoreService $firestore)
     {
-        $documents = $firestore->getCollection('rhu');
-        $ruralHealthUnits = [];
+        $documents = $firestore->getCollection('barangay');
+        $barangayHealthUnits = [];
         foreach ($documents as $document) {
             $data = $document->data();
             if (($data['status'] ?? '') === 'approved') {
-                $ruralHealthUnits[] = array_merge(['id' => $document->id()], $data);
+                $barangayHealthUnits[] = array_merge(['id' => $document->id()], $data);
             }
         }
-        return view('admin.index', compact('ruralHealthUnits'));
+        return view('rhus.index', compact('barangayHealthUnits'));
     }
 
-    // List all pending RHUs for approval
     public function indexApprovals(FirestoreService $firestore)
     {
-        $documents = $firestore->getCollection('rhu');
-        $ruralHealthUnits = [];
+        $documents = $firestore->getCollection('barangay');
+        $barangayHealthUnits = [];
         foreach ($documents as $document) {
             $data = $document->data();
             if (($data['status'] ?? '') === 'pending') {
-                $ruralHealthUnits[] = array_merge(['id' => $document->id()], $data);
+                $barangayHealthUnits[] = array_merge(['id' => $document->id()], $data);
             }
         }
-        return view('admin.indexApprovals', compact('ruralHealthUnits'));
+        return view('rhus.indexApprovals', compact('barangayHealthUnits'));
     }
 
-    // Show create form
+    public function indexDoctors(FirestoreService $firestore)
+    {
+        $documents = $firestore->getCollection('health_worker');
+        $doctors = [];
+        foreach ($documents as $document) {
+            $data = $document->data();
+            if (($data['type'] ?? '') === 'Doctor') {
+                $doctors[] = array_merge(['id' => $document->id()], $data);
+            }
+        }
+        return view('rhus.indexDoctors', compact('doctors'));
+    }
+
+    public function indexNotifications(FirestoreService $firestore)
+    {
+        $documents = $firestore->getCollection('notifications');
+        $notifications = [];
+        foreach ($documents as $document) {
+            $data = $document->data();
+            $notifications[] = array_merge(['id' => $document->id()], $data);
+        }
+        return view('rhus.indexNotifications', compact('notifications'));
+    }
+
     public function create()
     {
         return view('admin.create');
     }
 
-    // Store a new RHU in Firestore
     public function store(Request $request, FirestoreService $firestore)
     {
         $validated = $request->validate([
@@ -108,36 +128,35 @@ class RHUController extends Controller
         return view('admin.show', compact('ruralHealthUnits'));
     }
 
-    // Show edit form for a specific RHU
     public function edit($id, FirestoreService $firestore)
     {
-        $document = $firestore->db->collection('rhu')->document($id)->snapshot();
+        $document = $firestore->db->collection('barangay')->document($id)->snapshot();
+        
         if (!$document->exists()) {
-            abort(404);
+            abort(404, 'Barangay Health Unit not found');
         }
-        $ruralHealthUnit = array_merge(['id' => $document->id()], $document->data());
-        $cityName = $this->getCityName($ruralHealthUnit['city'] ?? '');
-        return view('admin.edit', compact('ruralHealthUnit', 'cityName'));
+        
+        $barangayHealthUnit = array_merge(['id' => $document->id()], $document->data());
+        
+        return view('rhus.edit', compact('barangayHealthUnit'));
     }
 
-    // Update an RHU (e.g., approve)
     public function update(Request $request, $id, FirestoreService $firestore)
     {
-        $document = $firestore->db->collection('rhu')->document($id);
-        $data = [];
-        if ($request->has('status')) {
-            $data['status'] = $request->input('status');
-        }
-        if (!empty($data)) {
-            $document->update([
-                ['path' => 'status', 'value' => $data['status']]
-            ]);
-            return back()->with('success', 'RHU updated successfully!');
-        }
-        return back()->with('error', 'No status provided.');
+        $validated = $request->validate([
+            'status' => 'required|in:approved,rejected,pending'
+        ]);
+        
+        $firestore->db->collection('barangay')->document($id)->update([
+            ['path' => 'status', 'value' => $validated['status']],
+            ['path' => 'updated_at', 'value' => now()->toDateTimeString()]
+        ]);
+        
+        $message = $validated['status'] === 'approved' ? 'BHU approved successfully!' : 'BHU rejected successfully!';
+        
+        return redirect()->route('rhu.approvals')->with('success', $message);
     }
 
-    // Delete an RHU
     public function destroy($id, FirestoreService $firestore)
     {
         $firestore->db->collection('rhu')->document($id)->delete();
@@ -151,6 +170,6 @@ class RHUController extends Controller
         if ($response->successful()) {
             return $response->json('name');
         }
-        return $cityCode; // fallback if not found
+        return $cityCode; 
     }
 }

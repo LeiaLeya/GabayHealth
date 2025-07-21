@@ -55,7 +55,7 @@ class SysUserController extends Controller
         $validated = $request->validate([
             'username' => 'required|string',
             'password' => 'required|min:6|confirmed',
-            'email' => 'nullable|email',
+            // 'email' => 'nullable|email', 
         ]);
 
         
@@ -67,9 +67,9 @@ class SysUserController extends Controller
         $firestore->addDocument('admin', [
             'username' => $validated['username'],
             'password' => Hash::make($validated['password']),
-            'email' => $validated['email'] ?? '',
-            'createdAt' => now()->toDateTimeString(),
-            'userId' => '', 
+            // 'email' => $validated['email'] ?? '',
+            // 'createdAt' => now()->toDateTimeString(),
+            // 'userId' => '', 
         ]);
 
         return redirect()->route('login')->with('success', 'Registration successful! Please login.');

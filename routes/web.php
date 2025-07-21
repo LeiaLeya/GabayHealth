@@ -9,7 +9,7 @@ use App\Http\Middleware\SessionAuth;
 use App\Http\Kernel;
 use App\Http\Controllers\RHUController;
 
-// Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
+Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
 
 Route::get('/login', [SysUserController::class, 'login'])->name('login');
 Route::post('/login', [SysUserController::class, 'authenticate'])->name('login.submit');
@@ -34,7 +34,8 @@ Route::get('/', [HomeController::class, 'index']);
     Route::post('/logout', [SysUserController::class, 'logout'])->name('logout');
 // });
 
-    Route::resource('BHUs', RHUController::class);
-
-
+Route::resource('BHUs', RHUController::class);
+Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
+Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');
+Route::get('/rhu/notifications', [RHUController::class, 'indexNotifications'])->name('rhu.notifications');
 

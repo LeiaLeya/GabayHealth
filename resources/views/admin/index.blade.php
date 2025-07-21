@@ -14,7 +14,7 @@
                             <div class="card-body">
                                 <h6 class="card-title">{{ $unit['name'] ?? '' }}</h6>
                                 <p class="card-text" style="font-size: 0.9rem">
-                                    {{ $unit['tagline'] ?? 'No tagline provided.' }}</p>
+                                    {{ $unit['description'] ?? 'No description provided.' }}</p>
                             </div>
                             <div class="card-footer bg-transparent border-0">
                                 <a href="{{ route('RHUs.show', $unit['id']) }}" class="btn btn-primary btn-sm mb-2">View

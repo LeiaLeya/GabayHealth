@@ -7,7 +7,7 @@
     <hr style="border-color: #f0f0f000;" class="mb-5">
 
 
-    <h4 class="text-center mt-5 mb-5" style="width: 100%;">Admin</h1>
+    <h4 class="text-center mt-5 mb-5" style="width: 100%;"></h1>
         <ul class="nav nav-pills flex-column mb-auto">
             <li class="nav-item mb-2">
                 <a href="{{ route('RHUs.index') }}"
@@ -19,6 +19,30 @@
                 <a href="{{ route('RHUs.approvals') }}"
                     class="nav-link text-white {{ request()->routeIs('RHUs.approvals') ? 'active' : '' }}">
                     <i class=""></i> RHU Approvals
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('BHUs.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('BHUs.index') ? 'active' : '' }}">
+                    <i class=""></i> BHUs
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('rhu.approvals') }}"
+                    class="nav-link text-white {{ request()->routeIs('rhu.approvals') ? 'active' : '' }}">
+                    <i class=""></i> BHU Approvals
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('rhu.doctors') }}"
+                    class="nav-link text-white {{ request()->routeIs('rhu.doctors') ? 'active' : '' }}">
+                    <i class=""></i> Doctors
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('rhu.notifications') }}"
+                    class="nav-link text-white {{ request()->routeIs('rhu.notifications') ? 'active' : '' }}">
+                    <i class=""></i> Notifications
                 </a>
             </li>
         </ul>

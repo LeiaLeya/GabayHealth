@@ -11,8 +11,7 @@
 
             <div>
                 <div class="card-header d-flex justify-content-between align-items-center mb-4 mt-5">
-                    <h3>Rural Health Unit Applications</h3>
-
+                    <h3>Barangay Health Unit Applications</h3>
                 </div>
 
                 <div class="card-body">
@@ -20,28 +19,31 @@
                         <thead>
                             <tr>
                                 <th scope="col">Registration Id</th>
-                                <th scope="col">Rural Health Unit</th>
+                                <th scope="col">Health Center Name</th>
+                                <th scope="col">Barangay</th>
+                                <th scope="col">City</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($ruralHealthUnits as $unit)
+                            @forelse($barangayHealthUnits as $unit)
                                 <tr>
                                     <th scope="row">{{ $unit['id'] ?? '' }}</th>
-                                    <td>{{ $unit['name'] ?? '' }}</td>
+                                    <td>{{ $unit['healthCenterName'] ?? 'No name provided' }}</td>
+                                    <td>{{ $unit['barangay'] ?? 'No barangay provided' }}</td>
+                                    <td>{{ $unit['city'] ?? 'No city provided' }}</td>
                                     <td>
-                                        <a href="{{ route('RHUs.edit', $unit['id']) }}"
+                                        <a href="{{ route('BHUs.edit', $unit['id']) }}"
                                             class="btn btn-primary btn-sm">Review</a>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="text-center">No pending applications.</td>
+                                    <td colspan="5" class="text-center">No pending applications.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
-                    {{-- {{ $ruralHealthUnits->links() }} --}}
                 </div>
             </div>
         </div>
