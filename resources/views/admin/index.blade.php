@@ -17,8 +17,7 @@
                                     {{ $unit['description'] ?? 'No description provided.' }}</p>
                             </div>
                             <div class="card-footer bg-transparent border-0">
-                                <a href="{{ route('RHUs.show', $unit['id']) }}" class="btn btn-primary btn-sm mb-2">View
-                                    Details</a>
+                                <a href="{{ route('RHUs.show', $unit['id']) }}" class="btn btn-primary btn-sm mb-2">See BHUs</a>
                             </div>
                         </div>
                     </div>

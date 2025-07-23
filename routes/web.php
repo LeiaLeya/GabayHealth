@@ -5,37 +5,36 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SysUserController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\FirestoreTestController;
-use App\Http\Middleware\SessionAuth;
-use App\Http\Kernel;
 use App\Http\Controllers\RHUController;
+use App\Http\Controllers\RHURegistrationController;
 
 Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
 
 Route::get('/login', [SysUserController::class, 'login'])->name('login');
-Route::post('/login', [SysUserController::class, 'authenticate'])->name('login.submit');
+Route::post('/login', [SysUserController::class, 'authenticate'])->name('login');
 
-Route::get('/register', [SysUserController::class, 'register'])->name('register');
-Route::post('/register', [SysUserController::class, 'store'])->name('register.submit');
+Route::get('/register', function () {
+    return view('auth.registerSelect');
+})->name('register.select');
+
+Route::get('/register/admin', [SysUserController::class, 'register'])->name('register.admin');
+Route::post('/register/admin', [SysUserController::class, 'store'])->name('register.admin.submit');
+
+Route::get('/register/rhu', [RHURegistrationController::class, 'create'])->name('rhu.register');
+Route::post('/register/rhu', [RHURegistrationController::class, 'store'])->name('rhu.register.submit');
 
 Route::get('/', [HomeController::class, 'index']);
 
-// Route::get('/', fn() => view('welcome'));
+Route::post('/logout', [SysUserController::class, 'logout'])->name('logout');
 
-// Route::get('/reports', fn() => view('pages.reports'))->name('reports.index');
-// Route::get('/schedules', fn() => view('pages.schedules'))->name('schedules.index');
-// Route::get('/events', fn() => view('pages.events'))->name('events.index');
-// Route::get('/inventory', fn() => view('pages.inventory'))->name('inventory.index');
-// Route::get('/personnel', fn() => view('pages.personnel'))->name('personnel.index');
-// Route::get('/logout', fn() => redirect('/'))->name('logout');
-
-// Route::middleware(['custom.auth'])->group(function () {
+Route::middleware(['admin.auth'])->group(function () {
     Route::get('/RHUs/approvals', [AdminController::class, 'indexApprovals'])->name('RHUs.approvals');
     Route::resource('RHUs', AdminController::class);
-    Route::post('/logout', [SysUserController::class, 'logout'])->name('logout');
-// });
+});
 
-Route::resource('BHUs', RHUController::class);
-Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
-Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');
-Route::get('/rhu/notifications', [RHUController::class, 'indexNotifications'])->name('rhu.notifications');
-
+Route::middleware(['rhu.auth'])->group(function () {
+    Route::resource('BHUs', RHUController::class);
+    Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
+    Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');
+    Route::get('/rhu/notifications', [RHUController::class, 'indexNotifications'])->name('rhu.notifications');
+});

@@ -14,9 +14,7 @@
                             <div class="card-body">
                                 <h6 class="card-title">
                                     {{ $unit['healthCenterName'] ?? ($unit['barangay'] ?? 'No name provided') }}</h6>
-                                <p class="card-text" style="font-size: 0.9rem">
-                                    {{ $unit['fullAddress'] ?? 'No address provided.' }}</p>
-                                <small class="text-muted">{{ $unit['city'] ?? '' }}</small>
+                                
                             </div>
                             <div class="card-footer bg-transparent border-0">
                                 <a href="{{ route('BHUs.show', $unit['id']) }}" class="btn btn-primary btn-sm mb-2">View

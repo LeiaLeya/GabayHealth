@@ -9,14 +9,6 @@
                 </div>
                 <div class="card-body">
 
-                    @if (session('success'))
-                        <div class="alert alert-success">{{ session('success') }}</div>
-                    @endif
-
-                    @if (session('error'))
-                        <div class="alert alert-danger">{{ session('error') }}</div>
-                    @endif
-
                     {{-- @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -27,33 +19,38 @@
                         </div>
                     @endif --}}
 
-                    <form method="POST" action="{{ route('login') }}">
+                    <form method="POST" action="{{ route('register.admin.submit') }}">
                         @csrf
 
                         <div class="mb-3">
-                            {{-- <label class="form-label">Username</label> --}}
-                            <input type="text" name="loginField" value="{{ old('loginField') }}" class="form-control"
-                                placeholder="Username or email">
-                            @error('loginField')
+                            {{-- <label class="form-label">Username <span class="text-danger">*</span></label> --}}
+                            <input type="text" name="username" value="{{ old('username') }}" class="form-control"
+                                placeholder="Enter username">
+                            @error('username')
                                 <span class="text-danger">{{ $message }}</span>
                             @enderror
                         </div>
 
                         <div class="mb-3">
-                            {{-- <label class="form-label">Password</label> --}}
-                            <input type="password" name="password" class="form-control" placeholder="Password">
+                            {{-- <label class="form-label">Password <span class="text-danger">*</span></label> --}}
+                            <input type="password" name="password" class="form-control"  placeholder="Password">
                             @error('password')
                                 <span class="text-danger">{{ $message }}</span>
                             @enderror
                         </div>
 
+                        <div class="mb-3">
+                            {{-- <label class="form-label">Confirm Password <span class="text-danger">*</span></label> --}}
+                            <input type="password" name="password_confirmation" class="form-control"  placeholder="Confirm password">
+                        </div>
+
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Log In</button>
+                            <button type="submit" class="btn btn-primary">Sign Up</button>
                         </div>
                     </form>
                 </div>
-                <div class="text-center mt-2 mb-4 ">
-                    <h5><a href="{{ route('register.select') }}" style="text-decoration: none; color: black;">Create new account</a></h5>
+                <div class="text-center mt-2 mb-4">
+                    <a href="{{ route('login') }}">Already have an account? </a>
                 </div>
             </div>
         </div>

@@ -6,17 +6,18 @@
     </a>
     <hr style="border-color: #f0f0f000;" class="mb-5">
 
-
     <h4 class="text-center mt-5 mb-5" style="width: 100%;">Menu</h4>
     <ul class="nav nav-pills flex-column mb-auto">
         <li class="nav-item mb-2">
-            <a href="{{ route('login') }}" class="nav-link text-white {{ request()->routeIs('login') ? 'active' : '' }}">
-                Login
+            <a href="{{ route('login') }}"
+                class="nav-link text-white {{ request()->routeIs('login') ? 'active' : '' }}">
+                <i class=""></i>Login
             </a>
         </li>
-        <li>
-            <a href="{{ route('register') }}" class="nav-link text-white {{ request()->routeIs('register') ? 'active' : '' }}">
-                Register
+        <li class="nav-item mb-2">
+            <a href="{{ route('register.select') }}"
+                class="nav-link text-white {{ request()->routeIs('register.select') || request()->routeIs('register.admin') || request()->routeIs('rhu.register') ? 'active' : '' }}">
+                <i class=""></i>Register
             </a>
         </li>
     </ul>
