@@ -94,25 +94,40 @@ class RHUController extends Controller
 
     public function show($id, FirestoreService $firestore)
     {
-        $document = $firestore->db->collection('rhu')->document($id)->snapshot();
+        // Get the barangay health unit document
+        $document = $firestore->db->collection('barangay')->document($id)->snapshot();
+        
         if (!$document->exists()) {
-            abort(404);
+            abort(404, 'Barangay Health Unit not found');
         }
-        $ruralHealthUnit = array_merge(['id' => $document->id()], $document->data());
-        $cityName = $this->getCityName($ruralHealthUnit['city'] ?? '');
-
-        $bhuQuery = $firestore->db->collection('barangay')->where('rhuId', '=', $id)->documents();
-        $bhus = [];
-        foreach ($bhuQuery as $bhuDoc) {
-            if ($bhuDoc->exists()) {
-                $data = $bhuDoc->data();
-                if (($data['status'] ?? '') === 'approved') {
-                    $bhus[] = array_merge(['id' => $bhuDoc->id()], $data);
-                }
+        
+        $barangayHealthUnit = array_merge(['id' => $document->id()], $document->data());
+        
+        // Get barangay name if barangay code exists
+        $barangayName = '';
+        if (isset($barangayHealthUnit['barangay'])) {
+            $barangayName = $this->getBarangayName($barangayHealthUnit['barangay']);
+        }
+        
+        // Get city name if city code exists
+        $cityName = '';
+        if (isset($barangayHealthUnit['city'])) {
+            $cityName = $this->getCityName($barangayHealthUnit['city']);
+        }
+        
+        // Get health workers for this BHU
+        $healthWorkersQuery = $firestore->db->collection('health_worker')
+            ->where('barangayId', '=', $id)
+            ->documents();
+        
+        $healthWorkers = [];
+        foreach ($healthWorkersQuery as $workerDoc) {
+            if ($workerDoc->exists()) {
+                $healthWorkers[] = array_merge(['id' => $workerDoc->id()], $workerDoc->data());
             }
         }
-
-        return view('admin.show', compact('ruralHealthUnit', 'cityName', 'bhus'));
+        
+        return view('rhus.show', compact('barangayHealthUnit', 'barangayName', 'cityName', 'healthWorkers'));
     }
 
     public function showPending(FirestoreService $firestore)
@@ -171,5 +186,16 @@ class RHUController extends Controller
             return $response->json('name');
         }
         return $cityCode; 
+    }
+
+    private function getBarangayName($barangayCode)
+    {
+        if (!$barangayCode) return '';
+        
+        $response = Http::get("https://psgc.gitlab.io/api/barangays/{$barangayCode}");
+        if ($response->successful()) {
+            return $response->json('name');
+        }
+        return $barangayCode;
     }
 }

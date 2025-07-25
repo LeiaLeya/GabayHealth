@@ -10,7 +10,7 @@
                     </div>
                 @endif
 
-                <div class="card-header d-flex justify-content-between align-items-center mb-4 mt-5">
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
                     <h3>Health Workers & Doctors</h3>
                     {{-- <a href="{{ route('BHUs.create') }}" class="btn btn-primary">Add New Doctor</a> --}}
                 </div>

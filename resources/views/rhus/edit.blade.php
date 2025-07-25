@@ -6,7 +6,7 @@
             <h2 class="text-primary">
                 {{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['barangay'] ?? 'No Name') }}</h2>
             <a href="{{ route('rhu.approvals') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Approvals
+                <i class="bi bi-arrow-left"></i>Back
             </a>
         </div>
 

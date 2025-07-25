@@ -7,6 +7,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\FirestoreTestController;
 use App\Http\Controllers\RHUController;
 use App\Http\Controllers\RHURegistrationController;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
 
@@ -36,5 +37,7 @@ Route::middleware(['rhu.auth'])->group(function () {
     Route::resource('BHUs', RHUController::class);
     Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
     Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');
-    Route::get('/rhu/notifications', [RHUController::class, 'indexNotifications'])->name('rhu.notifications');
+    Route::get('/rhu/notifications', [NotificationController::class, 'index'])->name('rhu.notifications');
+    Route::get('/notifications/{id}/view', [NotificationController::class, 'view'])->name('notifications.view');
+    Route::post('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 });

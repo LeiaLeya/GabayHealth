@@ -5,7 +5,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="text-primary">{{ $ruralHealthUnit['name'] ?? 'No Name' }}</h2>
             <a href="{{ route('RHUs.approvals') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Approvals
+                <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
 
@@ -49,7 +49,7 @@
                         @method('PUT')
                         <input type="hidden" name="status" value="approved">
                         <button type="submit" class="btn btn-success">
-                            Publish
+                            Approve
                         </button>
                     </form>
                     <form method="POST" action="{{ route('RHUs.update', $ruralHealthUnit['id']) }}">

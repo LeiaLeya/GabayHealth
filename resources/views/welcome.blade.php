@@ -29,8 +29,8 @@
                     Bringing Public Health Closer to Home.
                 </p>
                 <div class="d-flex gap-3 justify-content-center justify-content-md-start">
-                    <a href="{{ route('login') }}" class="btn btn-primary btn-lg px-4">Login</a>
-                    <a href="{{ route('register.select') }}" class="btn btn-outline-primary btn-lg px-4">Register</a>
+                    {{-- <a href="{{ route('login') }}" class="btn btn-primary btn-lg px-4">Get started</a> --}}
+                    <a href="{{ route('login') }}" class="btn btn-outline-primary btn-lg px-4">Get started</a>
                 </div>
             </div>
             <div class="col-md-6 text-center mt-5 mt-md-0">
