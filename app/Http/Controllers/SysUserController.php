@@ -96,7 +96,7 @@ class SysUserController extends Controller
 
     private function tryRHUAuthentication($loginField, $password, $firestore)
     {
-        $rhuUsers = $firestore->db->collection('rhu_users')
+        $rhuUsers = $firestore->db->collection('rhu')
             ->where('loginField', '=', $loginField)
             ->documents();
             
@@ -110,7 +110,7 @@ class SysUserController extends Controller
             }
         }
 
-        $rhuUsers = $firestore->db->collection('rhu_users')
+        $rhuUsers = $firestore->db->collection('rhu')
             ->where('contactNumber', '=', $loginField)
             ->documents();
             
@@ -129,14 +129,8 @@ class SysUserController extends Controller
 
     private function handleRHULogin($userDoc, $user, $firestore)
     {
-        $rhuDetails = $this->getRHUDetails($userDoc->id(), $firestore);
-        
-        if (!$rhuDetails) {
-            return back()->withErrors(['error' => 'RHU details not found. Please contact administrator.'])->withInput();
-        }
-
-        if ($rhuDetails['status'] !== 'approved') {
-            $statusMessage = match($rhuDetails['status']) {
+        if ($user['status'] !== 'approved') {
+            $statusMessage = match($user['status']) {
                 'pending' => 'RHU not yet approved. Please wait for admin approval.',
                 'rejected' => 'Your RHU registration has been rejected. Please contact administrator.',
                 default => 'Your RHU account is not active. Please contact administrator.'
@@ -150,53 +144,10 @@ class SysUserController extends Controller
             'loginField' => $user['loginField'],
             'contactNumber' => $user['contactNumber'] ?? '',
             'role' => 'rhu',
-            'rhuData' => $rhuDetails
+            'rhuData' => array_merge(['id' => $userDoc->id()], $user)
         ]);
         
-        return redirect()->route('BHUs.index')->with('success', 'Welcome back, ' . ($rhuDetails['name'] ?? 'RHU User') . '!');
-    }
-
-    private function getRHUDetails($userId, $firestore)
-    {
-        try {
-            $rhuQuery = $firestore->db->collection('rhu')
-                ->where('userId', '=', $userId)
-                ->documents();
-
-            foreach ($rhuQuery as $document) {
-                return array_merge(['id' => $document->id()], $document->data());
-            }
-            
-            return null;
-        } catch (\Exception $e) {
-            return null;
-        }
-    }
-
-    public function register()
-    {
-        return view('auth.registerAdmin');
-    }
-
-    public function store(Request $request, FirestoreService $firestore)
-    {
-        $validated = $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|min:6|confirmed',
-        ]);
-
-        $existing = $firestore->db->collection('admin')->where('username', '=', $validated['username'])->documents();
-        if (iterator_count($existing) > 0) {
-            return back()->withErrors(['username' => 'Username already taken.'])->withInput();
-        }
-
-        $firestore->addDocument('admin', [
-            'username' => $validated['username'],
-            'password' => Hash::make($validated['password']),
-            'createdAt' => now()->toDateTimeString(),
-        ]);
-
-        return redirect()->route('login')->with('success', 'Admin registration successful! Please login.');
+        return redirect()->route('BHUs.index')->with('success', 'Welcome back, ' . ($user['name'] ?? 'RHU User') . '!');
     }
 
     public function logout(Request $request)

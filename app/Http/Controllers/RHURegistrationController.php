@@ -36,43 +36,32 @@ class RHURegistrationController extends Controller
             return back()->withErrors(['loginField' => 'This login credential is already taken.'])->withInput();
         }
 
-        $existingRHU = $firestore->db->collection('rhu_users')->where('loginField', '=', $validated['loginField'])->documents();
+        $existingRHU = $firestore->db->collection('rhu')->where('loginField', '=', $validated['loginField'])->documents();
         if (iterator_count($existingRHU) > 0) {
             return back()->withErrors(['loginField' => 'This login credential is already taken.'])->withInput();
         }
 
-        $existingContact = $firestore->db->collection('rhu_users')->where('contactNumber', '=', $validated['contactNumber'])->documents();
+        $existingContact = $firestore->db->collection('rhu')->where('contactNumber', '=', $validated['contactNumber'])->documents();
         if (iterator_count($existingContact) > 0) {
             return back()->withErrors(['contactNumber' => 'This mobile number is already registered.'])->withInput();
         }
 
         try {
-            $rhuUserData = [
+            // Store everything in rhu collection
+            $rhuData = [
                 'loginField' => $validated['loginField'],
                 'contactNumber' => $validated['contactNumber'],
                 'password' => Hash::make($validated['password']),
-                'createdAt' => now()->toDateTimeString(),
-                'updatedAt' => now()->toDateTimeString(),
-            ];
-
-            $rhuUserRef = $firestore->addDocument('rhu_users', $rhuUserData);
-            $rhuUserId = $rhuUserRef->id();
-
-            $rhuData = [
-                'userId' => $rhuUserId,
                 'name' => $validated['rhuName'],
-                'contactNumber' => $validated['contactNumber'],
                 'headName' => $validated['headName'],
                 'licenseNumber' => $validated['licenseNumber'] ?? '',
                 'operatingHours' => $validated['operatingHours'],
                 'description' => $validated['description'] ?? '',
-                
                 'fullAddress' => $validated['fullAddress'],
                 'city' => $validated['city'],
                 'province' => $validated['province'],
                 'region' => $validated['region'],
                 'zipCode' => $validated['zipCode'] ?? '',
-                
                 'status' => 'pending',
                 'createdAt' => now()->toDateTimeString(),
                 'updatedAt' => now()->toDateTimeString(),
@@ -83,7 +72,6 @@ class RHURegistrationController extends Controller
             $firestore->addDocument('rhu', $rhuData);
 
             return redirect()->route('login')->with('success', 'RHU registration submitted successfully! Please wait for admin approval.');
-
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Registration failed. Please try again.'])->withInput();
         }

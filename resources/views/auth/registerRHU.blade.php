@@ -25,7 +25,7 @@
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="loginField" class="form-label">Email/Username <span
+                                    <label for="loginField" class="form-label">Email or Username <span
                                             class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="loginField" name="loginField"
                                         value="{{ old('loginField') }}" placeholder="Enter email or username" required>
@@ -118,10 +118,10 @@
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="city" class="form-label">City/Municipality <span
+                                    <label for="city" class="form-label">City or Municipality <span
                                             class="text-danger">*</span></label>
                                     <select class="form-select" id="city" name="city" required disabled>
-                                        <option value="">Select City/Municipality</option>
+                                        <option value="">Select City or Municipality</option>
                                     </select>
                                 </div>
                             </div>
