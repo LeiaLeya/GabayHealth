@@ -21,7 +21,6 @@ class NotificationController extends Controller
         $notifications = [];
 
         if ($user['role'] === 'rhu') {
-            // Get all RHU documents and check each one for notifications
             $notifications = $this->getAllNotifications();
         }
 
@@ -36,17 +35,15 @@ class NotificationController extends Controller
             return redirect()->route('rhu.notifications')->with('error', 'Unauthorized access');
         }
 
-        // Find the notification
         $notification = $this->findNotificationById($notificationId);
         
         if (!$notification) {
             return redirect()->route('rhu.notifications')->with('error', 'Notification not found');
         }
 
-        // Mark as read if it's unread
         if ($notification['status'] === 'unread') {
             $this->markNotificationAsRead($notificationId);
-            $notification['status'] = 'read'; // Update for display
+            $notification['status'] = 'read'; 
         }
 
         return view('rhus.viewNotification', compact('notification'));
@@ -60,7 +57,6 @@ class NotificationController extends Controller
             return response()->json(['success' => false, 'error' => 'Unauthorized']);
         }
 
-        // Find which RHU has this notification and mark it as read
         $success = $this->markNotificationAsRead($notificationId);
         
         return response()->json(['success' => $success]);
@@ -69,7 +65,6 @@ class NotificationController extends Controller
     private function findNotificationById($notificationId)
     {
         try {
-            // Search through all RHU documents to find the notification
             $rhuDocs = $this->firestore->db->collection('rhu')->documents();
             
             foreach ($rhuDocs as $rhuDoc) {
@@ -99,12 +94,10 @@ class NotificationController extends Controller
         $allNotifications = [];
 
         try {
-            // Get all RHU documents
             $rhuDocs = $this->firestore->db->collection('rhu')->documents();
             
             foreach ($rhuDocs as $rhuDoc) {
                 if ($rhuDoc->exists()) {
-                    // Get notifications for this RHU
                     $notificationsQuery = $this->firestore->db->collection('rhu')
                         ->document($rhuDoc->id())
                         ->collection('notifications')
@@ -132,7 +125,6 @@ class NotificationController extends Controller
     private function markNotificationAsRead($notificationId)
     {
         try {
-            // Search through all RHU documents to find the notification
             $rhuDocs = $this->firestore->db->collection('rhu')->documents();
             
             foreach ($rhuDocs as $rhuDoc) {
@@ -144,7 +136,6 @@ class NotificationController extends Controller
                         ->snapshot();
                         
                     if ($doc->exists()) {
-                        // Found it! Mark as read
                         $this->firestore->db->collection('rhu')
                             ->document($rhuDoc->id())
                             ->collection('notifications')

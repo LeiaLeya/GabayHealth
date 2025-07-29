@@ -10,27 +10,47 @@ class RHUController extends Controller
 {
     public function index(FirestoreService $firestore)
     {
-        $documents = $firestore->getCollection('barangay');
+        $currentRhuId = session('user.id');
+        
+        if (!$currentRhuId) {
+            return redirect()->route('login')->with('error', 'Please log in to continue.');
+        }
+        
+        $bhuQuery = $firestore->db->collection('barangay')
+            ->where('rhuId', '=', $currentRhuId)
+            ->where('status', '=', 'approved')
+            ->documents();
+        
         $barangayHealthUnits = [];
-        foreach ($documents as $document) {
-            $data = $document->data();
-            if (($data['status'] ?? '') === 'approved') {
-                $barangayHealthUnits[] = array_merge(['id' => $document->id()], $data);
+        foreach ($bhuQuery as $document) {
+            if ($document->exists()) {
+                $barangayHealthUnits[] = array_merge(['id' => $document->id()], $document->data());
             }
         }
+        
         return view('rhus.index', compact('barangayHealthUnits'));
     }
 
     public function indexApprovals(FirestoreService $firestore)
     {
-        $documents = $firestore->getCollection('barangay');
+        $currentRhuId = session('user.id');
+        
+        if (!$currentRhuId) {
+            return redirect()->route('login')->with('error', 'Please log in to continue.');
+        }
+        
+        $bhuQuery = $firestore->db->collection('barangay')
+            ->where('rhuId', '=', $currentRhuId)
+            ->where('status', '=', 'pending')
+            ->documents();
+        
         $barangayHealthUnits = [];
-        foreach ($documents as $document) {
-            $data = $document->data();
-            if (($data['status'] ?? '') === 'pending') {
-                $barangayHealthUnits[] = array_merge(['id' => $document->id()], $data);
+        foreach ($bhuQuery as $document) {
+            if ($document->exists()) {
+                $barangayHealthUnits[] = array_merge(['id' => $document->id()], $document->data());
             }
         }
+        
         return view('rhus.indexApprovals', compact('barangayHealthUnits'));
     }
 
@@ -94,7 +114,6 @@ class RHUController extends Controller
 
     public function show($id, FirestoreService $firestore)
     {
-        // Get the barangay health unit document
         $document = $firestore->db->collection('barangay')->document($id)->snapshot();
         
         if (!$document->exists()) {
@@ -103,19 +122,16 @@ class RHUController extends Controller
         
         $barangayHealthUnit = array_merge(['id' => $document->id()], $document->data());
         
-        // Get barangay name if barangay code exists
         $barangayName = '';
         if (isset($barangayHealthUnit['barangay'])) {
             $barangayName = $this->getBarangayName($barangayHealthUnit['barangay']);
         }
         
-        // Get city name if city code exists
         $cityName = '';
         if (isset($barangayHealthUnit['city'])) {
             $cityName = $this->getCityName($barangayHealthUnit['city']);
         }
         
-        // Get health workers for this BHU
         $healthWorkersQuery = $firestore->db->collection('health_worker')
             ->where('barangayId', '=', $id)
             ->documents();

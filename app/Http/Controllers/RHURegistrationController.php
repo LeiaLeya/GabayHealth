@@ -47,7 +47,6 @@ class RHURegistrationController extends Controller
         }
 
         try {
-            // Store everything in rhu collection
             $rhuData = [
                 'loginField' => $validated['loginField'],
                 'contactNumber' => $validated['contactNumber'],
