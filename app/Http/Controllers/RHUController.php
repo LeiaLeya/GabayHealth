@@ -16,6 +16,14 @@ class RHUController extends Controller
             return redirect()->route('login')->with('error', 'Please log in to continue.');
         }
         
+        // Get RHU details
+        $rhuDoc = $firestore->db->collection('rhu')->document($currentRhuId)->snapshot();
+        $rhuName = 'Rural Health Unit';
+        if ($rhuDoc->exists()) {
+            $rhuData = $rhuDoc->data();
+            $rhuName = $rhuData['name'] ?? 'Rural Health Unit';
+        }
+        
         $bhuQuery = $firestore->db->collection('barangay')
             ->where('rhuId', '=', $currentRhuId)
             ->where('status', '=', 'approved')
@@ -28,7 +36,7 @@ class RHUController extends Controller
             }
         }
         
-        return view('rhus.index', compact('barangayHealthUnits'));
+        return view('rhus.index', compact('barangayHealthUnits', 'rhuName'));
     }
 
     public function indexApprovals(FirestoreService $firestore)
@@ -56,25 +64,91 @@ class RHUController extends Controller
 
     public function indexDoctors(FirestoreService $firestore)
     {
-        $documents = $firestore->getCollection('health_worker');
-        $doctors = [];
-        foreach ($documents as $document) {
-            $data = $document->data();
-            if (($data['type'] ?? '') === 'Doctor') {
-                $doctors[] = array_merge(['id' => $document->id()], $data);
+        $currentRhuId = session('user.id');
+        
+        if (!$currentRhuId) {
+            return redirect()->route('login')->with('error', 'Please log in to continue.');
+        }
+        
+        // Get all BHU IDs for this RHU first
+        $bhuQuery = $firestore->db->collection('barangay')
+            ->where('rhuId', '=', $currentRhuId)
+            ->where('status', '=', 'approved')
+            ->documents();
+        
+        $bhuIds = [];
+        foreach ($bhuQuery as $bhuDoc) {
+            if ($bhuDoc->exists()) {
+                $bhuIds[] = $bhuDoc->id();
             }
         }
+        
+        $doctors = [];
+        
+        if (!empty($bhuIds)) {
+            // Get doctors assigned to these BHUs
+            foreach ($bhuIds as $bhuId) {
+                $doctorQuery = $firestore->db->collection('health_worker')
+                    ->where('barangayId', '=', $bhuId)
+                    ->documents();
+                
+                foreach ($doctorQuery as $document) {
+                    if ($document->exists()) {
+                        $data = $document->data();
+                        if (($data['type'] ?? '') === 'Doctor') {
+                            $doctors[] = array_merge(['id' => $document->id()], $data);
+                        }
+                    }
+                }
+            }
+        }
+        
         return view('rhus.indexDoctors', compact('doctors'));
     }
 
+    // Alternative approach if notifications don't have rhuId directly
     public function indexNotifications(FirestoreService $firestore)
     {
-        $documents = $firestore->getCollection('notifications');
-        $notifications = [];
-        foreach ($documents as $document) {
-            $data = $document->data();
-            $notifications[] = array_merge(['id' => $document->id()], $data);
+        $currentRhuId = session('user.id');
+        
+        if (!$currentRhuId) {
+            return redirect()->route('login')->with('error', 'Please log in to continue.');
         }
+        
+        // Get all BHU IDs for this RHU first
+        $bhuQuery = $firestore->db->collection('barangay')
+            ->where('rhuId', '=', $currentRhuId)
+            ->documents();
+        
+        $bhuIds = [];
+        foreach ($bhuQuery as $bhuDoc) {
+            if ($bhuDoc->exists()) {
+                $bhuIds[] = $bhuDoc->id();
+            }
+        }
+        
+        $notifications = [];
+        
+        if (!empty($bhuIds)) {
+            // Get notifications related to these BHUs
+            foreach ($bhuIds as $bhuId) {
+                $notificationQuery = $firestore->db->collection('notifications')
+                    ->where('barangayId', '=', $bhuId)
+                    ->documents();
+                
+                foreach ($notificationQuery as $document) {
+                    if ($document->exists()) {
+                        $notifications[] = array_merge(['id' => $document->id()], $document->data());
+                    }
+                }
+            }
+            
+            // Sort by created_at descending
+            usort($notifications, function($a, $b) {
+                return strtotime($b['created_at']) - strtotime($a['created_at']);
+            });
+        }
+        
         return view('rhus.indexNotifications', compact('notifications'));
     }
 

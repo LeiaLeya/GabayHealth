@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container mt-4">
-        <h3 class="mb-4 mt-5">Barangay Health Units</h3>
+        <h3 class="mb-4 mt-5">{{ $rhuName }} BHUs</h3>
         <div class="card-body">
             <div class="row">
 
@@ -10,7 +10,6 @@
                     <div class="col-md-3 mb-4">
                         <div style="position: relative" class="card h-100">
                             <img src="{{ asset('images/Doctor.png') }}" class="card-img-top" alt="BHU Logo">
-                            {{-- <img src="{{ asset('images/seal.png') }}" class="card-img-top" style="position: absolute; top: 50px; left: 50px; width: 150px; height:150px; "> --}}
                             <div class="card-body">
                                 <h6 class="card-title">
                                     {{ $unit['healthCenterName'] ?? ($unit['barangay'] ?? 'No name provided') }}</h6>

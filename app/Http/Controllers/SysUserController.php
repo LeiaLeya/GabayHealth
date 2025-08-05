@@ -155,4 +155,38 @@ class SysUserController extends Controller
         Session::forget('user');
         return redirect()->route('login')->with('success', 'You have been logged out.');
     }
+
+    public function register()
+    {
+        return view('auth.registerAdmin');
+    }
+
+    public function store(Request $request, FirestoreService $firestore)
+    {
+        $data = $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        // Check for username uniqueness in Firestore
+        $existingUsername = $firestore->db->collection('admin')
+            ->where('username', '=', $data['username'])
+            ->documents();
+        
+        foreach ($existingUsername as $doc) {
+            if ($doc->exists()) {
+                return redirect()->back()->withErrors(['username' => 'The username has already been taken.'])->withInput();
+            }
+        }
+
+        // Add additional fields
+        $data['password'] = Hash::make($data['password']);
+        $data['status'] = 'approved';
+        $data['created_at'] = now()->format('Y-m-d H:i:s');
+        $data['updated_at'] = now()->format('Y-m-d H:i:s');
+        
+        $firestore->db->collection('admin')->add($data);
+
+        return redirect()->route('login')->with('success', 'Admin registered successfully. You can now log in.');
+    }
 }

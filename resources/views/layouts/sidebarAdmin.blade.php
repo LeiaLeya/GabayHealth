@@ -4,7 +4,7 @@
         <img src="{{ asset('images/GabayHealthDark.png') }}" style="height: 40px; margin-right: 10px; font-weight: 700;">
         GabayHealth
     </a>
-    <hr style="border-color: #f0f0f000;" class="mb-5">
+    {{-- <hr style="border-color: #f0f0f000;" class="mb-5"> --}}
 
 
     <h4 class="text-center mt-5 mb-5" style="width: 100%;">Admin</h4>

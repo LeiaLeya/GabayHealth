@@ -13,8 +13,8 @@
                             {{-- <img src="{{ asset('images/seal.png') }}" class="card-img-top" style="position: absolute; top: 50px; left: 50px; width: 150px; height:150px; "> --}}
                             <div class="card-body">
                                 <h6 class="card-title">{{ $unit['name'] ?? '' }}</h6>
-                                <p class="card-text" style="font-size: 0.9rem">
-                                    {{ $unit['description'] ?? 'No description provided.' }}</p>
+                                {{-- <p class="card-text" style="font-size: 0.9rem">
+                                    {{ $unit['description'] ?? 'No description provided.' }}</p> --}}
                             </div>
                             <div class="card-footer bg-transparent border-0">
                                 <a href="{{ route('RHUs.show', $unit['id']) }}" class="btn btn-primary btn-sm mb-2">See BHUs</a>
