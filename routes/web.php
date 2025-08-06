@@ -34,6 +34,7 @@ Route::middleware(['admin.auth'])->group(function () {
 });
 
 Route::middleware(['rhu.auth'])->group(function () {
+    Route::get('/rhu/pending', [RHUController::class, 'pending'])->name('rhu.pending');
     Route::resource('BHUs', RHUController::class);
     Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
     Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mt-4">
-        <h3 class="mb-4 mt-5">{{ $rhuName }} BHUs</h3>
+    <div class="container mt-5">
+        <h3 class="mb-3 mt-5">{{ $rhuName }}</h3>
         <div class="card-body">
             <div class="row">
 

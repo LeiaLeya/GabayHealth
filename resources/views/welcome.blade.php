@@ -1,24 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.publicApp')
 
-<head>
-    <meta charset="UTF-8">
-    <title>Welcome | Gabay Health</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body, title {
-            font-family: 'Poppins', sans-serif;
-            background: #f9f9f9;
-        }
-
-        p, .btn {
-            font-family: 'Bilo', sans-serif;
-        }
-    </style>
-</head>
-
-<body>
+@section('content')
     <div class="container py-5 mt-5">
         <div class="row align-items-center mt-5">
             <div class="col-md-6 text-center text-md-start">
@@ -29,7 +11,6 @@
                     Bringing Public Health Closer to Home.
                 </p>
                 <div class="d-flex gap-3 justify-content-center justify-content-md-start">
-                    {{-- <a href="{{ route('login') }}" class="btn btn-primary btn-lg px-4">Get started</a> --}}
                     <a href="{{ route('login') }}" class="btn btn-outline-primary btn-lg px-4">Get started</a>
                 </div>
             </div>
@@ -39,6 +20,4 @@
             </div>
         </div>
     </div>
-</body>
-
-</html>
+@endsection

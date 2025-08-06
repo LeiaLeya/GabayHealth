@@ -288,4 +288,17 @@ class RHUController extends Controller
         }
         return $barangayCode;
     }
+    
+    public function pending()
+    {
+        $user = session('user');
+        $rhuData = $user['rhuData'] ?? [];
+        
+        // Check if status changed to approved
+        if (($rhuData['status'] ?? '') === 'approved') {
+            return redirect()->route('BHUs.index')->with('success', 'Welcome! Your account has been approved.');
+        }
+        
+        return view('rhus.pending', compact('rhuData'));
+    }
 }

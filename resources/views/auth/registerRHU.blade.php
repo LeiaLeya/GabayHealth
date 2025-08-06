@@ -72,11 +72,6 @@
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="licenseNumber" class="form-label">License Number</label>
-                                    <input type="text" class="form-control" id="licenseNumber" name="licenseNumber"
-                                        value="{{ old('licenseNumber') }}" placeholder="DOH or local health accreditation">
-                                </div>
-                                <div class="col-md-6 mb-3">
                                     <label for="operatingHours" class="form-label">Operating Hours</label>
                                     <input type="text" class="form-control" id="operatingHours" name="operatingHours"
                                         placeholder="e.g., Monday-Friday 8:00 AM - 5:00 PM"
@@ -84,11 +79,11 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
+                            {{-- <div class="mb-3">
                                 <label for="description" class="form-label">Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="3"
                                     placeholder="Brief description of the RHU services and facilities">{{ old('description') }}</textarea>
-                            </div>
+                            </div> --}}
 
                             <hr class="my-4">
 
@@ -124,9 +119,7 @@
                                         <option value="">Select City or Municipality</option>
                                     </select>
                                 </div>
-                            </div>
 
-                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="zipCode" class="form-label">ZIP Code</label>
                                     <input type="text" class="form-control" id="zipCode" name="zipCode"
@@ -135,7 +128,7 @@
                             </div>
 
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                                <a href="{{ route('login') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                                <a href="{{ route('register.select') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
                                 <button type="submit" class="btn btn-primary">Submit Registration</button>
                             </div>
                         </form>

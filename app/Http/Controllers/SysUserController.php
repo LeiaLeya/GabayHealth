@@ -129,9 +129,21 @@ class SysUserController extends Controller
 
     private function handleRHULogin($userDoc, $user, $firestore)
     {
+        if ($user['status'] === 'pending') {
+            // Allow login but redirect to pending page
+            Session::put('user', [
+                'id' => $userDoc->id(),
+                'loginField' => $user['loginField'],
+                'contactNumber' => $user['contactNumber'] ?? '',
+                'role' => 'rhu',
+                'rhuData' => array_merge(['id' => $userDoc->id()], $user)
+            ]);
+            
+            return redirect()->route('rhu.pending');
+        }
+        
         if ($user['status'] !== 'approved') {
             $statusMessage = match($user['status']) {
-                'pending' => 'RHU not yet approved. Please wait for admin approval.',
                 'rejected' => 'Your RHU registration has been rejected. Please contact administrator.',
                 default => 'Your RHU account is not active. Please contact administrator.'
             };

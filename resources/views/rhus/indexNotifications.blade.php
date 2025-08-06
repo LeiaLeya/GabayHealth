@@ -1,9 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mt-4">
-        <h3 class="mb-4">Notifications</h3>
-
+    <div class="container mt-5">
+        <h3 class="mb-4 mt-5">Notifications</h3>
         <div class="card">
             <div class="card-body">
                 @if (count($notifications) > 0)

@@ -2,10 +2,10 @@
 
 @section('content')
     <div class="row justify-content-center mt-5">
-        <div class="col-md-4">
-            <div class="card shadow">
+        <div class="col-md-3 col-lg-3 mt-5">
+            <div class="card shadow mt-5">
                 <div class="card-header text-center bg-primary text-white">
-                    <h4 class="mt-2">GabayHealth</h4>
+                    <h3 class="mt-2">Sign In</h3>
                 </div>
                 <div class="card-body">
 
@@ -48,7 +48,7 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Log In</button>
+                            <button type="submit" class="btn btn-primary">LOGIN</button>
                         </div>
                     </form>
                 </div>

@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container py-4">
+    <div class="container py-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-primary">
+            <h2 class="">
                 {{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['barangay'] ?? 'No Name') }}</h2>
             <a href="{{ route('rhu.approvals') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i>Back

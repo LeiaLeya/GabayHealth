@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mt-4">
+    <div class="container pt-3 mt-5">
         <div class="row">
             <div class="col-md-8 mx-auto">
                 <div class="card">

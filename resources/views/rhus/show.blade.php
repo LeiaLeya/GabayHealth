@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mt-4">
+    <div class="container mt-5">
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="mb-0">Barangay Health Unit Details</h3>
+                    <h3 class="mb-0">{{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['barangay'] ?? 'Health Center') }}</h3>
                     <a href="{{ route('BHUs.index') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i>Back
                     </a>
@@ -16,12 +16,6 @@
         <div class="row">
             <div class="col-lg-8">
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-hospital me-2"></i>
-                            {{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['barangay'] ?? 'Health Center') }}
-                        </h5>
-                    </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
