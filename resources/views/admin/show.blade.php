@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container py-4">
+    <div class="container py-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="mb-4">{{ $ruralHealthUnit['name'] ?? '' }}</h3>
             <a href="{{ route('RHUs.index') }}" class="btn btn-outline-secondary">

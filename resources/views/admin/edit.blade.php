@@ -1,9 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-primary">{{ $ruralHealthUnit['name'] ?? 'No Name' }}</h2>
+    <div class="container pt-5 mt-3">
+        {{-- Header Section --}}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="">{{ $ruralHealthUnit['name'] ?? 'No Name' }}</h3>
             <a href="{{ route('RHUs.approvals') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
@@ -58,7 +59,7 @@
                         <input type="hidden" name="status" value="rejected">
                         <button type="submit" class="btn btn-danger"
                             onclick="return confirm('Are you sure you want to reject this RHU application?')">
-                            Denied
+                            Reject
                         </button>
                     </form>
                 </div>
