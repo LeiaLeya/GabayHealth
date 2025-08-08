@@ -106,6 +106,100 @@ class RHUController extends Controller
         return view('rhus.indexDoctors', compact('doctors'));
     }
 
+    public function indexReports(FirestoreService $firestore)
+    {
+        $currentRhuId = session('user.id');
+        if (!$currentRhuId) {
+            return redirect()->route('login')->with('error', 'Session expired. Please login again.');
+        }
+
+        // Get BHU (barangay health unit) IDs owned by this RHU
+        $bhuIds = [];
+        try {
+            $bhuQuery = $firestore->db->collection('barangay')
+                ->where('rhuId', '=', $currentRhuId)
+                ->documents();
+            foreach ($bhuQuery as $bhuDoc) {
+                if ($bhuDoc->exists()) {
+                    $bhuIds[] = $bhuDoc->id();
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed fetching BHUs for reports: '.$e->getMessage());
+        }
+
+        $reports = [];
+        if (!empty($bhuIds)) {
+            // Preload barangay names for mapping (avoid repeated calls)
+            $barangayNameMap = [];
+            try {
+                foreach ($bhuIds as $bid) {
+                    $bDoc = $firestore->db->collection('barangay')->document($bid)->snapshot();
+                    if ($bDoc->exists()) {
+                        $bData = $bDoc->data();
+                        $barangayNameMap[$bid] = $bData['barangayName'] ?? $bData['barangay'] ?? ($bData['healthCenterName'] ?? $bid);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed preloading barangay names: '.$e->getMessage());
+            }
+
+            try {
+                // Firestore PHP SDK has no native whereIn pre-aggregation in this code; brute force scan
+                $allReports = $firestore->db->collection('reports')->documents();
+                foreach ($allReports as $doc) {
+                    if ($doc->exists()) {
+                        $data = $doc->data();
+                        $barangayId = $data['barangayId'] ?? null;
+                        if (in_array($barangayId, $bhuIds, true)) {
+                            if ($barangayId && isset($barangayNameMap[$barangayId])) {
+                                $data['barangayName'] = $barangayNameMap[$barangayId];
+                            }
+                            $reports[] = array_merge(['id' => $doc->id()], $data);
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed fetching reports: '.$e->getMessage());
+            }
+        }
+
+        // Sort newest first using createdAt ISO string
+        usort($reports, function ($a, $b) {
+            return strcmp($b['createdAt'] ?? '', $a['createdAt'] ?? '');
+        });
+
+        return view('rhus.indexReports', compact('reports'));
+    }
+
+    public function showReport($id, FirestoreService $firestore)
+    {
+        $currentRhuId = session('user.id');
+        if (!$currentRhuId) {
+            return redirect()->route('login')->with('error', 'Session expired. Please login again.');
+        }
+        $report = null;
+        try {
+            $doc = $firestore->db->collection('reports')->document($id)->snapshot();
+            if ($doc->exists()) {
+                $data = $doc->data();
+                // Validate ownership via barangay -> rhu mapping
+                if (!empty($data['barangayId'])) {
+                    $barangayDoc = $firestore->db->collection('barangay')->document($data['barangayId'])->snapshot();
+                    if ($barangayDoc->exists() && ($barangayDoc->data()['rhuId'] ?? null) === $currentRhuId) {
+                        $report = array_merge(['id' => $doc->id()], $data);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed fetching report: '.$e->getMessage());
+        }
+        if (!$report) {
+            return redirect()->route('rhu.reports')->with('error', 'Report not found or access denied.');
+        }
+        return view('rhus.viewReport', compact('report'));
+    }
+
     // Alternative approach if notifications don't have rhuId directly
     public function indexNotifications(FirestoreService $firestore)
     {

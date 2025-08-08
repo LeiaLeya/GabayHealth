@@ -37,6 +37,10 @@
                         Notifications
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('rhu.reports') ? 'active' : '' }}"
+                        href="{{ route('rhu.reports') }}">Reports</a>
+                </li>
             </ul>
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">

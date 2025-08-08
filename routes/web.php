@@ -36,6 +36,8 @@ Route::middleware(['admin.auth'])->group(function () {
 Route::middleware(['rhu.auth'])->group(function () {
     Route::get('/rhu/pending', [RHUController::class, 'pending'])->name('rhu.pending');
     Route::resource('BHUs', RHUController::class);
+    Route::get('/rhu/reports', [RHUController::class, 'indexReports'])->name('rhu.reports');
+    Route::get('/rhu/reports/{id}', [RHUController::class, 'showReport'])->name('rhu.reports.view');
     Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
     Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');
     Route::get('/rhu/notifications', [NotificationController::class, 'index'])->name('rhu.notifications');
