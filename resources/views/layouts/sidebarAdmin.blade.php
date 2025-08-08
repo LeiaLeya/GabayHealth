@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background-color: #0b6ffd;">
     <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="{{ url('/') }}"
+        <a class="navbar-brand d-flex align-items-center" href="#"
             style="font-family: 'Poppins', sans-serif; font-size: 1.5rem; font-weight: 600;">
             <img src="{{ asset('images/GabayHealthDark.png') }}" style="height: 40px; margin-right: 10px;"
                 alt="GabayHealth Logo">
