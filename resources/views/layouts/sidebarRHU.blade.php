@@ -29,7 +29,7 @@
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('rhu.approvals') ? 'active' : '' }}"
                         href="{{ route('rhu.approvals') }}">
-                        BHU Approvals
+                        Approvals
                     </a>
                 </li>
                 <li class="nav-item">
