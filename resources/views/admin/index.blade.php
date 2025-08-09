@@ -12,7 +12,7 @@
                         @forelse($ruralHealthUnits as $unit)
                             <div class="col-md-3 mb-4">
                                 <div style="position: relative" class="card h-100">
-                                    <img src="{{ asset('images/Doctor.png') }}" class="card-img-top" alt="RHU Logo">
+                                    <img src="{{ asset('images/RHU.png') }}" class="card-img-top" alt="RHU Logo">
                                     <div class="card-body">
                                         <h6 class="card-title">{{ $unit['name'] ?? '' }}</h6>
                                     </div>

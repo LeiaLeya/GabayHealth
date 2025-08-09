@@ -12,7 +12,7 @@
             @forelse($bhus as $bhu)
                 <div class="col-md-3 mb-4">
                     <div class="card shadow-sm h-100">
-                        <img src="{{ asset('images/Doctor.png') }}" class="card-img-top" alt="RHU Logo">
+                        <img src="{{ asset('images/BHU.png') }}" class="card-img-top" alt="RHU Logo">
                         <div class="card-body">
                             <h6 class="card-title">{{ $bhu['healthCenterName'] ?? 'No Health Center Name' }}</h6>
                         </div>

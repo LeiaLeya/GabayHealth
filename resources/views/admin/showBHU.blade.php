@@ -29,11 +29,10 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">City/Municipality:</label>
-                                    <p
-                                        class="mb-0>{{ $cityName ?: $barangayHealthUnit['city'] ?? 'N/A' }}</p>
+                                    <p class="mb-0">{{ $cityName ?: $barangayHealthUnit['city'] ?? 'N/A' }}</p>
                                 </div>
                                 <div class="mb-3">
-                                        <label class="form-label fw-bold">Region:</label>
+                                    <label class="form-label fw-bold">Region:</label>
                                     <p class="mb-0">{{ $regionName ?: $barangayHealthUnit['region'] ?? 'N/A' }}</p>
                                 </div>
                                 <div class="mb-3">
@@ -99,12 +98,12 @@
                             </div>
                         </div>
 
-                        @if (!empty($barangayHealthUnit['description']))
+                        {{-- @if (!empty($barangayHealthUnit['description']))
                             <div class="mt-3">
                                 <label class="form-label fw-bold">Description:</label>
                                 <p class="mb-0">{{ $barangayHealthUnit['description'] }}</p>
                             </div>
-                        @endif
+                        @endif --}}
                     </div>
                 </div>
 

@@ -189,7 +189,7 @@ class AdminController extends Controller
             \Log::warning('Failed fetching health workers: ' . $e->getMessage());
         }
 
-        return view('admin.bhus.show', compact(
+        return view('admin.showBHU', compact(
             'barangayHealthUnit', 'barangayName', 'cityName', 'regionName', 'provinceName', 'healthWorkers', 'rhuId'
         ));
     }

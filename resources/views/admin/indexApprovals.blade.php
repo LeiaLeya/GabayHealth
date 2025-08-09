@@ -14,38 +14,49 @@
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
                         <h3>Rural Health Unit Applications</h3>
                     </div>
-                    
-                    <div class="card">
-                        <div class="card-body">
-                            <table class="table table-borderless">
-                                @forelse($ruralHealthUnits as $unit)
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Registration Id</th>
-                                            <th scope="col">Rural Health Unit</th>
-                                            <th scope="col"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
 
-                                        <tr>
-                                            <th scope="row">{{ $unit['id'] ?? '' }}</th>
-                                            <td>{{ $unit['name'] ?? '' }}</td>
-                                            <td>
+                    {{-- <div class="card"> --}}
+                    <div class="card-body">
+                        <div class="row">
+                            @forelse($ruralHealthUnits as $unit)
+                                <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+                                    <div class="card h-100 shadow-sm">
+                                        <div
+                                            class="bg-primary text-white d-flex align-items-center justify-content-center rounded-top">
+                                            <img src="{{ asset('images/RHU.png') }}" class="card-img-top" alt="RHU Logo">
+
+                                        </div>
+                                        <div class="card-body d-flex flex-column">
+                                            <h6 class="card-title mb-2">{{ $unit['name'] ?? 'Unnamed RHU' }}</h6>
+                                            @if (!empty($unit['cityName']) || !empty($unit['provinceName']))
+                                                <div class="text-muted small mb-3">
+                                                    {{ trim(($unit['cityName'] ?? '') . ', ' . ($unit['provinceName'] ?? ''), ' ,') }}
+                                                </div>
+                                            @endif
+                                            <div class="text-muted small mb-3">
+                                                Registration ID: {{ $unit['id'] ?? '—' }}
+                                            </div>
+                                            <div class="mt-auto d-flex justify-content-between align-items-center">
                                                 <a href="{{ route('RHUs.edit', $unit['id']) }}"
                                                     class="btn btn-primary btn-sm">Review</a>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center"><br>No pending applications.</td>
-                                    </tr>
-                                @endforelse
-                            </table>
-                            {{-- {{ $ruralHealthUnits->links() }} --}}
+                                                <span class="badge bg-warning text-dark text-capitalize">
+                                                    {{ $unit['status'] ?? 'pending' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12">
+                                    <div class="alert alert-info text-center mb-0">
+                                        No pending applications.
+                                    </div>
+                                </div>
+                            @endforelse
                         </div>
+                        {{-- {{ $ruralHealthUnits->links() }} --}}
                     </div>
+                    {{-- </div> --}}
                 </div>
             </div>
         </div>

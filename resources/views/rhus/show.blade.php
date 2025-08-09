@@ -68,12 +68,12 @@
                             </div>
                         </div>
 
-                        @if (isset($barangayHealthUnit['description']))
+                        {{-- @if (isset($barangayHealthUnit['description']))
                             <div class="mt-3">
                                 <label class="form-label fw-bold">Description:</label>
                                 <p class="mb-0">{{ $barangayHealthUnit['description'] }}</p>
                             </div>
-                        @endif
+                        @endif --}}
                     </div>
                 </div>
             </div>
