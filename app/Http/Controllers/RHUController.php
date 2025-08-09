@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\FirestoreService;
 use Illuminate\Support\Facades\Http;
+use App\Services\LocationService; // add
+use Carbon\Carbon;
 
 class RHUController extends Controller
 {
@@ -106,15 +108,26 @@ class RHUController extends Controller
         return view('rhus.indexDoctors', compact('doctors'));
     }
 
-    public function indexReports(FirestoreService $firestore)
+    public function indexReports(Request $request, FirestoreService $firestore)
     {
         $currentRhuId = session('user.id');
         if (!$currentRhuId) {
             return redirect()->route('login')->with('error', 'Session expired. Please login again.');
         }
 
-        // Get BHU (barangay health unit) IDs owned by this RHU
+        // Read filters
+        $filters = [
+            'status'   => strtolower(trim($request->query('status', ''))),
+            'barangay' => $request->query('barangay', ''),
+            'from'     => $request->query('from', ''),
+            'to'       => $request->query('to', ''),
+        ];
+        $fromDate = $filters['from'] ? Carbon::parse($filters['from'])->startOfDay() : null;
+        $toDate   = $filters['to']   ? Carbon::parse($filters['to'])->endOfDay()   : null;
+
+        // Get BHU IDs owned by this RHU
         $bhuIds = [];
+        $barangayOptions = [];
         try {
             $bhuQuery = $firestore->db->collection('barangay')
                 ->where('rhuId', '=', $currentRhuId)
@@ -122,6 +135,8 @@ class RHUController extends Controller
             foreach ($bhuQuery as $bhuDoc) {
                 if ($bhuDoc->exists()) {
                     $bhuIds[] = $bhuDoc->id();
+                    $bData = $bhuDoc->data();
+                    $barangayOptions[$bhuDoc->id()] = $bData['barangay'] ?? ($bData['healthCenterName'] ?? $bhuDoc->id());
                 }
             }
         } catch (\Exception $e) {
@@ -129,33 +144,59 @@ class RHUController extends Controller
         }
 
         $reports = [];
-        if (!empty($bhuIds)) {
-            // Preload barangay names for mapping (avoid repeated calls)
-            $barangayNameMap = [];
-            try {
-                foreach ($bhuIds as $bid) {
-                    $bDoc = $firestore->db->collection('barangay')->document($bid)->snapshot();
-                    if ($bDoc->exists()) {
-                        $bData = $bDoc->data();
-                        $barangayNameMap[$bid] = $bData['barangayName'] ?? $bData['barangay'] ?? ($bData['healthCenterName'] ?? $bid);
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Failed preloading barangay names: '.$e->getMessage());
-            }
+        $statusCounts = ['to be reviewed' => 0, 'reviewed' => 0, 'other' => 0];
+        $symptomCounts = [];
 
+        // Last 30 days trend seed
+        $trendSeed = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = Carbon::today()->subDays($i)->format('Y-m-d');
+            $trendSeed[$d] = 0;
+        }
+
+        if (!empty($bhuIds)) {
             try {
-                // Firestore PHP SDK has no native whereIn pre-aggregation in this code; brute force scan
+                // Scan all reports (optimize later if you add composite indexes)
                 $allReports = $firestore->db->collection('reports')->documents();
                 foreach ($allReports as $doc) {
-                    if ($doc->exists()) {
-                        $data = $doc->data();
-                        $barangayId = $data['barangayId'] ?? null;
-                        if (in_array($barangayId, $bhuIds, true)) {
-                            if ($barangayId && isset($barangayNameMap[$barangayId])) {
-                                $data['barangayName'] = $barangayNameMap[$barangayId];
-                            }
-                            $reports[] = array_merge(['id' => $doc->id()], $data);
+                    if (!$doc->exists()) continue;
+                    $data = $doc->data();
+                    $barangayId = $data['barangayId'] ?? null;
+                    if (!$barangayId || !in_array($barangayId, $bhuIds, true)) continue;
+
+                    // Build a normalized record
+                    $createdAt = isset($data['createdAt']) ? Carbon::parse($data['createdAt']) : null;
+
+                    // Apply filters
+                    if ($filters['status'] !== '' && strtolower($data['status'] ?? '') !== $filters['status']) continue;
+                    if ($filters['barangay'] !== '' && $barangayId !== $filters['barangay']) continue;
+                    if ($fromDate && (!$createdAt || $createdAt->lt($fromDate))) continue;
+                    if ($toDate && (!$createdAt || $createdAt->gt($toDate))) continue;
+
+                    $row = array_merge(['id' => $doc->id()], $data, [
+                        'barangayName' => $barangayOptions[$barangayId] ?? $barangayId,
+                        'createdAt'    => $createdAt ? $createdAt->toDateTimeString() : ($data['createdAt'] ?? ''),
+                    ]);
+                    $reports[] = $row;
+
+                    // Aggregate status
+                    $st = strtolower($data['status'] ?? '');
+                    if ($st === 'to be reviewed') $statusCounts['to be reviewed']++;
+                    elseif ($st === 'reviewed')   $statusCounts['reviewed']++;
+                    else                           $statusCounts['other']++;
+
+                    // Aggregate symptoms
+                    if (!empty($data['symptoms']) && is_array($data['symptoms'])) {
+                        foreach ($data['symptoms'] as $s) {
+                            $symptomCounts[$s] = ($symptomCounts[$s] ?? 0) + 1;
+                        }
+                    }
+
+                    // Aggregate trend (last 30 days by createdAt date)
+                    if ($createdAt) {
+                        $key = $createdAt->format('Y-m-d');
+                        if (array_key_exists($key, $trendSeed)) {
+                            $trendSeed[$key]++;
                         }
                     }
                 }
@@ -164,12 +205,25 @@ class RHUController extends Controller
             }
         }
 
-        // Sort newest first using createdAt ISO string
-        usort($reports, function ($a, $b) {
-            return strcmp($b['createdAt'] ?? '', $a['createdAt'] ?? '');
-        });
+        // Sort newest first
+        usort($reports, fn($a, $b) => strcmp($b['createdAt'] ?? '', $a['createdAt'] ?? ''));
 
-        return view('rhus.indexReports', compact('reports'));
+        // Prepare view data
+        arsort($symptomCounts);
+        $summary = [
+            'total'        => count($reports),
+            'toBeReviewed' => $statusCounts['to be reviewed'],
+            'reviewed'     => $statusCounts['reviewed'],
+            'other'        => $statusCounts['other'],
+        ];
+        $trend = [
+            'labels' => array_keys($trendSeed),
+            'data'   => array_values($trendSeed),
+        ];
+
+        return view('rhus.indexReports', compact(
+            'reports', 'summary', 'symptomCounts', 'trend', 'barangayOptions', 'filters'
+        ));
     }
 
     public function showReport($id, FirestoreService $firestore)
@@ -280,38 +334,29 @@ class RHUController extends Controller
             ->with('success', 'Application submitted successfully!');
     }
 
-    public function show($id, FirestoreService $firestore)
+    public function show($id, FirestoreService $firestore, LocationService $location)
     {
-        $document = $firestore->db->collection('barangay')->document($id)->snapshot();
-        
-        if (!$document->exists()) {
-            abort(404, 'Barangay Health Unit not found');
+        $doc = $firestore->db->collection('barangay')->document($id)->snapshot();
+        if (!$doc->exists()) {
+            abort(404, 'BHU not found');
         }
-        
-        $barangayHealthUnit = array_merge(['id' => $document->id()], $document->data());
-        
-        $barangayName = '';
-        if (isset($barangayHealthUnit['barangay'])) {
-            $barangayName = $this->getBarangayName($barangayHealthUnit['barangay']);
-        }
-        
-        $cityName = '';
-        if (isset($barangayHealthUnit['city'])) {
-            $cityName = $this->getCityName($barangayHealthUnit['city']);
-        }
-        
-        $healthWorkersQuery = $firestore->db->collection('health_worker')
-            ->where('barangayId', '=', $id)
-            ->documents();
-        
-        $healthWorkers = [];
-        foreach ($healthWorkersQuery as $workerDoc) {
-            if ($workerDoc->exists()) {
-                $healthWorkers[] = array_merge(['id' => $workerDoc->id()], $workerDoc->data());
-            }
-        }
-        
-        return view('rhus.show', compact('barangayHealthUnit', 'barangayName', 'cityName', 'healthWorkers'));
+
+        $barangayHealthUnit = array_merge(['id' => $doc->id()], $doc->data());
+
+        $geo = $location->convertCodesToNames([
+            'region'   => $barangayHealthUnit['region']   ?? null,
+            'province' => $barangayHealthUnit['province'] ?? null,
+            'city'     => $barangayHealthUnit['city']     ?? null,
+        ]);
+
+        $barangayName = $barangayHealthUnit['barangay'] ?? '';
+        $cityName     = $geo['cityName'] ?? '';
+        $regionName   = $geo['regionName'] ?? '';
+        $provinceName = $geo['provinceName'] ?? '';
+
+        return view('rhus.show', compact(
+            'barangayHealthUnit', 'barangayName', 'cityName', 'regionName', 'provinceName'
+        ));
     }
 
     public function showPending(FirestoreService $firestore)

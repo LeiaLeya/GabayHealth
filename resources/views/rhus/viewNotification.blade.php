@@ -7,83 +7,73 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Notification Details</h5>
-                        <a href="{{ route('rhu.notifications') }}" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-arrow-left"></i>Back
-                        </a>
+                        <div class="d-flex gap-2">
+                            @if (($notification['status'] ?? '') !== 'read')
+                                <form action="{{ route('rhu.notifications.read', $notification['id']) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Mark as read</button>
+                                </form>
+                            @endif
+                            <a href="{{ route('rhu.notifications') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i>Back
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         @if ($notification)
                             <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <strong>Status:</strong>
-                                </div>
+                                <div class="col-md-3"><strong>Status:</strong></div>
                                 <div class="col-md-9">
                                     <span
-                                        class="badge {{ $notification['status'] === 'unread' ? 'bg-warning' : 'bg-success' }}">
-                                        {{ ucfirst($notification['status']) }}
+                                        class="badge {{ ($notification['status'] ?? '') === 'read' ? 'bg-success' : 'bg-primary' }}">
+                                        {{ ucfirst($notification['status'] ?? 'unread') }}
                                     </span>
                                 </div>
                             </div>
 
                             <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <strong>Type:</strong>
-                                </div>
-                                <div class="col-md-9">
-                                    {{ $notification['type'] ?? 'N/A' }}
-                                </div>
+                                <div class="col-md-3"><strong>Type:</strong></div>
+                                <div class="col-md-9">{{ $notification['type'] ?? 'N/A' }}</div>
                             </div>
 
-                            @if (isset($notification['barangay_name']))
+                            @if (isset($notification['barangay_name']) || isset($notification['barangayName']))
                                 <div class="row mb-3">
-                                    <div class="col-md-3">
-                                        <strong>Barangay:</strong>
-                                    </div>
+                                    <div class="col-md-3"><strong>Barangay:</strong></div>
                                     <div class="col-md-9">
-                                        {{ $notification['barangay_name'] }}
-                                    </div>
+                                        {{ $notification['barangay_name'] ?? $notification['barangayName'] }}</div>
                                 </div>
                             @endif
 
-                            @if (isset($notification['barangay_id']))
+                            @if (isset($notification['barangay_id']) || isset($notification['barangayId']))
                                 <div class="row mb-3">
-                                    <div class="col-md-3">
-                                        <strong>Barangay ID:</strong>
-                                    </div>
-                                    <div class="col-md-9">
-                                        <code>{{ $notification['barangay_id'] }}</code>
+                                    <div class="col-md-3"><strong>Barangay ID:</strong></div>
+                                    <div class="col-md-9">{{ $notification['barangay_id'] ?? $notification['barangayId'] }}
                                     </div>
                                 </div>
                             @endif
 
                             <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <strong>Date:</strong>
-                                </div>
+                                <div class="col-md-3"><strong>Date:</strong></div>
                                 <div class="col-md-9">
-                                    {{ \Carbon\Carbon::parse($notification['created_at'])->format('M d, Y h:i A') }}
-                                    <small class="text-muted">
-                                        ({{ \Carbon\Carbon::parse($notification['created_at'])->diffForHumans() }})
+                                    {{ \Carbon\Carbon::parse($notification['created_at'] ?? now())->format('M d, Y h:i A') }}
+                                    <small class="text-muted ms-2">
+                                        {{ \Carbon\Carbon::parse($notification['created_at'] ?? now())->diffForHumans() }}
                                     </small>
                                 </div>
                             </div>
 
                             <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <strong>Description:</strong>
-                                </div>
+                                <div class="col-md-3"><strong>Description:</strong></div>
                                 <div class="col-md-9">
-                                    <div class="alert alert-info">
-                                        @if ($notification['type'] === 'barangay_registration')
-                                            <strong>{{ $notification['barangay_name'] ?? 'A barangay' }}</strong> has
-                                            submitted a new barangay health unit registration request. Please review the
-                                            details and take appropriate action.
-                                        @elseif($notification['type'] === 'appointment')
-                                            There is an appointment update for
-                                            <strong>{{ $notification['barangay_name'] ?? 'a barangay' }}</strong>. Please
-                                            check the appointment details.
+                                    <div class="alert alert-info mb-0">
+                                        @php $t = $notification['type'] ?? ''; @endphp
+                                        @if ($t === 'barangay_registration')
+                                            {{ ($notification['barangay_name'] ?? 'A BHU') . ' submitted a registration request.' }}
+                                        @elseif ($t === 'report_submitted')
+                                            A new health report was submitted by
+                                            {{ $notification['barangay_name'] ?? 'a BHU' }}.
                                         @else
-                                            New notification received. Please review the details above.
+                                            {{ $notification['message'] ?? 'No additional details provided.' }}
                                         @endif
                                     </div>
                                 </div>

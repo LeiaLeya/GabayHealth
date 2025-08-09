@@ -30,6 +30,7 @@ Route::post('/logout', [SysUserController::class, 'logout'])->name('logout');
 
 Route::middleware(['admin.auth'])->group(function () {
     Route::get('/RHUs/approvals', [AdminController::class, 'indexApprovals'])->name('RHUs.approvals');
+    Route::get('/RHUs/{rhu}/BHUs/{bhu}', [AdminController::class, 'showBHU'])->name('admin.BHUs.show');
     Route::resource('RHUs', AdminController::class);
 });
 
@@ -41,6 +42,5 @@ Route::middleware(['rhu.auth'])->group(function () {
     Route::get('/rhu/approvals', [RHUController::class, 'indexApprovals'])->name('rhu.approvals');
     Route::get('/rhu/doctors', [RHUController::class, 'indexDoctors'])->name('rhu.doctors');
     Route::get('/rhu/notifications', [NotificationController::class, 'index'])->name('rhu.notifications');
-    Route::get('/notifications/{id}/view', [NotificationController::class, 'view'])->name('notifications.view');
-    Route::post('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/rhu/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('rhu.notifications.read');
 });

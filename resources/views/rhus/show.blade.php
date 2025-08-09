@@ -5,7 +5,9 @@
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="mb-0">{{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['barangay'] ?? 'Health Center') }}</h3>
+                    <h3 class="mb-0">
+                        {{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['barangay'] ?? 'Health Center') }}
+                    </h3>
                     <a href="{{ route('BHUs.index') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i>Back
                     </a>
@@ -36,7 +38,12 @@
 
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Region:</label>
-                                    <p class="mb-0">{{ $barangayHealthUnit['region'] ?? 'N/A' }}</p>
+                                    <p class="mb-0">{{ $regionName ?: $barangayHealthUnit['region'] ?? 'N/A' }}</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Province:</label>
+                                    <p class="mb-0">{{ $provinceName ?: $barangayHealthUnit['province'] ?? 'N/A' }}</p>
                                 </div>
                             </div>
 

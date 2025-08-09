@@ -29,6 +29,8 @@ class RHURegistrationController extends Controller
             'province' => 'required|string|max:255',
             'region' => 'required|string|max:255',
             'zipCode' => 'nullable|string|max:10',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
         ]);
 
         $existingAdmin = $firestore->db->collection('admin')->where('loginField', '=', $validated['loginField'])->documents();
@@ -61,6 +63,8 @@ class RHURegistrationController extends Controller
                 'province' => $validated['province'],
                 'region' => $validated['region'],
                 'zipCode' => $validated['zipCode'] ?? '',
+                'latitude' => (float)$validated['latitude'],
+                'longitude' => (float)$validated['longitude'],
                 'status' => 'pending',
                 'createdAt' => now()->toDateTimeString(),
                 'updatedAt' => now()->toDateTimeString(),

@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const regionSelect = document.getElementById('region');
     const provinceSelect = document.getElementById('province');
     const citySelect = document.getElementById('city');
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+    const detectBtn = document.getElementById('btnDetectLocation');
+    const geoStatus = document.getElementById('geoStatus');
 
     if (!regionSelect) {
         return;
@@ -22,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             addFallbackRegions();
         }
-    }
+    }   
 
     async function loadProvinces(regionCode) {
         try {
@@ -110,4 +114,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     loadRegions();
+
+    // Geolocation handler
+    if (detectBtn && latInput && lngInput && navigator.geolocation) {
+        detectBtn.addEventListener('click', () => {
+            geoStatus.textContent = 'Detecting location...';
+            detectBtn.disabled = true;
+            navigator.geolocation.getCurrentPosition(position => {
+                latInput.value = position.coords.latitude.toFixed(6);
+                lngInput.value = position.coords.longitude.toFixed(6);
+                geoStatus.textContent = 'Location detected.';
+                detectBtn.disabled = false;
+            }, error => {
+                geoStatus.textContent = 'Unable to retrieve location (' + error.message + ').';
+                detectBtn.disabled = false;
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        });
+    } else if (geoStatus) {
+        geoStatus.textContent = 'Geolocation not supported by this browser.';
+    }
 });

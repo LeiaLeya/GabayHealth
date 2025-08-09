@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers; 
+namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\FirestoreService;
 use Illuminate\Support\Facades\Http;
+use App\Services\LocationService;
 
 class AdminController extends Controller
 {
@@ -22,7 +23,7 @@ class AdminController extends Controller
         return view('admin.index', compact('ruralHealthUnits'));
     }
 
-    
+
     public function indexApprovals(FirestoreService $firestore)
     {
         $documents = $firestore->getCollection('rhu');
@@ -108,7 +109,7 @@ class AdminController extends Controller
         return view('admin.show', compact('ruralHealthUnits'));
     }
 
-    
+
     public function edit($id, FirestoreService $firestore)
     {
         $document = $firestore->db->collection('rhu')->document($id)->snapshot();
@@ -120,7 +121,7 @@ class AdminController extends Controller
         return view('admin.edit', compact('ruralHealthUnit', 'cityName'));
     }
 
-    
+
     public function update(Request $request, $id, FirestoreService $firestore)
     {
         $document = $firestore->db->collection('rhu')->document($id);
@@ -144,6 +145,55 @@ class AdminController extends Controller
         return back()->with('success', 'RHU deleted successfully!');
     }
 
+    public function showBHU($rhuId, $bhuId, FirestoreService $firestore, LocationService $location)
+    {
+        // Fetch BHU
+        $doc = $firestore->db->collection('barangay')->document($bhuId)->snapshot();
+        if (!$doc->exists()) {
+            abort(404, 'Barangay Health Unit not found');
+        }
+        $barangayHealthUnit = array_merge(['id' => $doc->id()], $doc->data());
+
+        // Optional ownership check
+        if (!empty($barangayHealthUnit['rhuId']) && $barangayHealthUnit['rhuId'] !== $rhuId) {
+            abort(403, 'This BHU does not belong to the specified RHU.');
+        }
+
+        // Barangay name (if code)
+        $barangayName = isset($barangayHealthUnit['barangay'])
+            ? $this->getBarangayName($barangayHealthUnit['barangay'])
+            : '';
+
+        // Resolve region/province/city names via LocationService
+        $geo = $location->convertCodesToNames([
+            'region'   => $barangayHealthUnit['region']   ?? null,
+            'province' => $barangayHealthUnit['province'] ?? null,
+            'city'     => $barangayHealthUnit['city']     ?? null,
+        ]);
+        $regionName   = $geo['regionName']   ?? '';
+        $provinceName = $geo['provinceName'] ?? '';
+        $cityName     = $geo['cityName']     ?? '';
+
+        // Health workers
+        $healthWorkers = [];
+        try {
+            $workers = $firestore->db->collection('health_worker')
+                ->where('barangayId', '=', $bhuId)
+                ->documents();
+            foreach ($workers as $w) {
+                if ($w->exists()) {
+                    $healthWorkers[] = array_merge(['id' => $w->id()], $w->data());
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Failed fetching health workers: ' . $e->getMessage());
+        }
+
+        return view('admin.bhus.show', compact(
+            'barangayHealthUnit', 'barangayName', 'cityName', 'regionName', 'provinceName', 'healthWorkers', 'rhuId'
+        ));
+    }
+
     private function getCityName($cityCode)
     {
         if (!$cityCode) return '';
@@ -151,6 +201,22 @@ class AdminController extends Controller
         if ($response->successful()) {
             return $response->json('name');
         }
-        return $cityCode; 
+        // Fallback to cities-municipalities endpoint
+        $fallback = Http::get("https://psgc.gitlab.io/api/cities-municipalities/{$cityCode}");
+        if ($fallback->successful()) {
+            return $fallback->json('name');
+        }
+        return $cityCode;
+    }
+
+    private function getBarangayName($barangayCode)
+    {
+        if (!$barangayCode) return '';
+        $response = Http::get("https://psgc.gitlab.io/api/barangays/{$barangayCode}");
+        if ($response->successful()) {
+            return $response->json('name');
+        }
+        // If already a name (not code), just return it
+        return $barangayCode;
     }
 }

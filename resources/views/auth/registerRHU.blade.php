@@ -95,6 +95,33 @@
                             </div>
 
                             <div class="row">
+                                <div class="col-md-5 mb-3">
+                                    <label for="latitude" class="form-label">Latitude <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" step="0.000001" class="form-control" id="latitude"
+                                        name="latitude" value="{{ old('latitude') }}" placeholder="e.g. 14.599512"
+                                        required>
+                                </div>
+                                <div class="col-md-5 mb-3">
+                                    <label for="longitude" class="form-label">Longitude <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" step="0.000001" class="form-control" id="longitude"
+                                        name="longitude" value="{{ old('longitude') }}" placeholder="e.g. 120.984222"
+                                        required>
+                                </div>
+                                <div class="col-md-2 mb-3 d-flex align-items-end">
+                                    <button type="button" class="btn btn-outline-primary w-100" id="btnDetectLocation"
+                                        title="Use device location">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </button>
+                                </div>
+                                <div class="col-12 mb-2">
+                                    <small class="text-muted" id="geoStatus">Allow browser permission to auto-fill
+                                        coordinates.</small>
+                                </div>
+                            </div>
+
+                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="region" class="form-label">Region <span
                                             class="text-danger">*</span></label>
@@ -128,7 +155,8 @@
                             </div>
 
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                                <a href="{{ route('register.select') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                                <a href="{{ route('register.select') }}"
+                                    class="btn btn-outline-secondary me-md-2">Cancel</a>
                                 <button type="submit" class="btn btn-primary">Submit Registration</button>
                             </div>
                         </form>

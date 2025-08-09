@@ -17,7 +17,10 @@
                             <h6 class="card-title">{{ $bhu['healthCenterName'] ?? 'No Health Center Name' }}</h6>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <a href="#" class="btn btn-primary btn-sm mb-2">View Details</a>
+                            <a href="{{ route('admin.BHUs.show', ['rhu' => $ruralHealthUnit['id'], 'bhu' => $bhu['id']]) }}"
+                                class="btn btn-primary btn-sm mb-2">
+                                View Details
+                            </a>
                         </div>
                     </div>
                 </div>

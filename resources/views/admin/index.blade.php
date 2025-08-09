@@ -13,11 +13,8 @@
                             <div class="col-md-3 mb-4">
                                 <div style="position: relative" class="card h-100">
                                     <img src="{{ asset('images/Doctor.png') }}" class="card-img-top" alt="RHU Logo">
-                                    {{-- <img src="{{ asset('images/seal.png') }}" class="card-img-top" style="position: absolute; top: 50px; left: 50px; width: 150px; height:150px; "> --}}
                                     <div class="card-body">
-                                        <h5 class="card-title">{{ $unit['name'] ?? '' }}</h5>
-                                        {{-- <p class="card-text" style="font-size: 0.9rem">
-                                    {{ $unit['description'] ?? 'No description provided.' }}</p> --}}
+                                        <h6 class="card-title">{{ $unit['name'] ?? '' }}</h6>
                                     </div>
                                     <div class="card-footer bg-transparent border-0">
                                         <a href="{{ route('RHUs.show', $unit['id']) }}"
