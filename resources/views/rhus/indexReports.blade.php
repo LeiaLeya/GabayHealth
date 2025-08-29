@@ -9,44 +9,6 @@
             @endif
         </div>
 
-        {{-- Filters --}}
-        <form method="GET" action="{{ route('rhu.reports') }}" class="card mb-3">
-            <div class="card-body row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        @php $st = strtolower($filters['status'] ?? ''); @endphp
-                        <option value="">All</option>
-                        <option value="to be reviewed" {{ $st === 'to be reviewed' ? 'selected' : '' }}>To be reviewed</option>
-                        <option value="reviewed" {{ $st === 'reviewed' ? 'selected' : '' }}>Reviewed</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Barangay</label>
-                    <select name="barangay" class="form-select">
-                        <option value="">All</option>
-                        @foreach ($barangayOptions ?? [] as $bid => $bname)
-                            <option value="{{ $bid }}" {{ ($filters['barangay'] ?? '') === $bid ? 'selected' : '' }}>
-                                {{ $bname }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">From</label>
-                    <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="form-control">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">To</label>
-                    <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="form-control">
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100">Filter</button>
-                    <a href="{{ route('rhu.reports') }}" class="btn btn-outline-secondary">Clear</a>
-                </div>
-            </div>
-        </form>
-
         {{-- Summary cards --}}
         @if (isset($summary))
             <div class="row mb-3">
