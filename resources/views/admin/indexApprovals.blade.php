@@ -34,14 +34,12 @@
                                                 </div>
                                             @endif
                                             <div class="text-muted small mb-3">
-                                                Registration ID: {{ $unit['id'] ?? '—' }}
+                                                
                                             </div>
                                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                                 <a href="{{ route('RHUs.edit', $unit['id']) }}"
                                                     class="btn btn-primary btn-sm">Review</a>
-                                                <span class="badge bg-warning text-dark text-capitalize">
-                                                    {{ $unit['status'] ?? 'pending' }}
-                                                </span>
+                                                
                                             </div>
                                         </div>
                                     </div>

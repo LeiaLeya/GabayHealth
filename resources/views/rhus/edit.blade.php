@@ -19,15 +19,16 @@
 
         <div class="mb-4">
             <ul class="list-unstyled">
+                <li><strong>RHU ID:</strong> {{ $barangayHealthUnit['rhuId'] ?? 'N/A' }}</li>
                 <li><strong>Address:</strong> {{ $barangayHealthUnit['fullAddress'] ?? 'N/A' }}</li>
                 <li><strong>City:</strong> {{ $barangayHealthUnit['city'] ?? 'N/A' }}</li>
                 <li><strong>Barangay:</strong> {{ $barangayHealthUnit['barangay'] ?? 'N/A' }}</li>
                 <li><strong>Province:</strong> {{ $barangayHealthUnit['province'] ?? 'N/A' }}</li>
                 <li><strong>Region:</strong> {{ $barangayHealthUnit['region'] ?? 'N/A' }}</li>
                 <li><strong>Postal Code:</strong> {{ $barangayHealthUnit['postalCode'] ?? 'N/A' }}</li>
-                <li><strong>RHU ID:</strong> {{ $barangayHealthUnit['rhuId'] ?? 'N/A' }}</li>
-                <li><strong>Username:</strong> {{ $barangayHealthUnit['username'] ?? 'N/A' }}</li>
-                <li><strong>Created:</strong> {{ $barangayHealthUnit['created_at'] ?? 'N/A' }}</li>
+                <li><strong>Created:</strong>
+                    {{ isset($barangayHealthUnit['created_at']) ? date('F d, Y', strtotime($barangayHealthUnit['created_at'])) : 'N/A' }}
+                </li>
             </ul>
         </div>
 

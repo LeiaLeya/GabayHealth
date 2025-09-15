@@ -64,14 +64,6 @@
                                         {{ $barangayHealthUnit['postalCode'] ?? ($barangayHealthUnit['zipCode'] ?? 'N/A') }}
                                     </p>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">Status</label>
-                                    @php $st = strtolower($barangayHealthUnit['status'] ?? ''); @endphp
-                                    <span
-                                        class="badge {{ $st === 'approved' ? 'bg-success' : ($st === 'pending' ? 'bg-warning text-dark' : 'bg-danger') }}">
-                                        {{ ucfirst($barangayHealthUnit['status'] ?? 'Unknown') }}
-                                    </span>
-                                </div>
                             </div>
                         </div>
 

@@ -28,7 +28,6 @@
         <div class="mb-4">
             <ul class="list-unstyled">
                 <li><strong>RHU Head Name:</strong> {{ $ruralHealthUnit['headName'] ?? 'N/A' }}</li>
-                <li><strong>License Number:</strong> {{ $ruralHealthUnit['licenseNumber'] ?? 'N/A' }}</li>
                 <li><strong>Operating Hours:</strong> {{ $ruralHealthUnit['operatingHours'] ?? 'N/A' }}</li>
                 {{-- <li><strong>Description:</strong> {{ $ruralHealthUnit['description'] ?? 'N/A' }}</li> --}}
             </ul>
