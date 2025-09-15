@@ -6,13 +6,17 @@
     <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
         <div>
             <h2 class="fw-bold text-dark mb-1">Inventory Management</h2>
-            <p class="text-muted mb-0">Manage your health center's inventory items</p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <form method="GET" action="" class="mb-0">
+            <form method="GET" action="{{ route('inventory.index') }}" class="mb-0">
                 <div class="input-group" style="max-width: 350px;">
                     <input type="text" name="search" class="form-control" placeholder="Search inventory..." value="{{ $search ?? '' }}">
                     <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
+                    @if(!empty($search))
+                        <a href="{{ route('inventory.index') }}" class="btn btn-outline-secondary" title="Clear search">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    @endif
                 </div>
             </form>
             <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addItemModal">
@@ -31,7 +35,66 @@
         </div>
     @endif
 
-    @if($items->count())
+    <!-- Inventory Summary Cards -->
+    <div class="row mb-4">
+        <!-- Total Items -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
+                            Total Items
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['total_items'] ?? 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Items -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
+                            Available Items
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['available'] ?? 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
+                            Low Stock
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['low_stock'] ?? 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Out of Stock -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
+                            Out of Stock
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['out_of_stock'] ?? 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if(count($items) > 0)
         <!-- Inventory Table Card -->
         <div class="card shadow-sm border border-primary-subtle" style="border-width:2px;">
             <div class="card-body p-0">
@@ -41,7 +104,8 @@
                             <tr>
                                 <th class="border-0 px-4 py-3 fw-semibold">Item Name</th>
                                 <th class="border-0 px-4 py-3 fw-semibold">Type</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Unit</th>
+                                <th class="border-0 px-4 py-3 fw-semibold">Quantity</th>
+                                <th class="border-0 px-4 py-3 fw-semibold">Unit Type</th>
                                 <th class="border-0 px-4 py-3 fw-semibold">Status</th>
                                 <th class="border-0 px-4 py-3 fw-semibold">Description</th>
                                 <th class="border-0 px-4 py-3 fw-semibold text-end">Actions</th>
@@ -51,22 +115,33 @@
                             @foreach($items as $item)
                                 <tr class="border-bottom">
                                     <td class="px-4 py-3">
-                                        <div class="fw-semibold text-dark">{{ $item['name'] }}</div>
+                                        <div class="fw-semibold text-dark">
+                                            <a href="{{ route('inventory.show', $item['id']) }}" class="text-decoration-none">
+                                                {{ $item['name'] }}
+                                                <i class="bi bi-arrow-right-circle ms-2 text-primary"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="badge bg-light text-dark border">{{ $item['type'] }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-muted">{{ $item['unit'] ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="fw-semibold text-dark">{{ $item['quantity'] ?? 'N/A' }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="badge bg-light text-dark border">{{ ucfirst($item['unit_type'] ?? 'N/A') }}</span>
+                                    </td>
                                     <td class="px-4 py-3">
                                         @php
                                             $badge = match($item['status']) {
-                                                'Available' => 'success',
-                                                'Low Stock' => 'warning',
-                                                'Out of Stock' => 'danger',
+                                                'available' => 'success',
+                                                'low_stock' => 'warning',
+                                                'out_of_stock' => 'danger',
                                                 default => 'secondary'
                                             };
+                                            $displayStatus = ucwords(str_replace('_', ' ', $item['status']));
                                         @endphp
-                                        <span class="badge bg-{{ $badge }}">{{ $item['status'] }}</span>
+                                        <span class="badge bg-{{ $badge }}">{{ $displayStatus }}</span>
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="text-muted" style="max-width: 200px;">
@@ -88,87 +163,69 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- Edit Modal for this item -->
-                                <div class="modal fade" id="editItemModal{{ $item['id'] }}" tabindex="-1" aria-labelledby="editItemModalLabel{{ $item['id'] }}" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="editItemModalLabel{{ $item['id'] }}">
-                                                    <i class="bi bi-pencil-square me-2"></i>Edit Item
-                                                </h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <form action="{{ route('inventory.update', $item['id']) }}" method="POST">
-                                                @csrf
-                                                @method('PUT')
-                                                <div class="modal-body">
-                                                    <div class="row">
-                                                        <div class="col-md-6 mb-3">
-                                                            <label for="edit_name_{{ $item['id'] }}" class="form-label fw-semibold">Item Name <span class="text-danger">*</span></label>
-                                                            <input type="text" class="form-control" id="edit_name_{{ $item['id'] }}" name="name" value="{{ $item['name'] }}" required>
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                            <label for="edit_type_{{ $item['id'] }}" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
-                                                            <select class="form-select" id="edit_type_{{ $item['id'] }}" name="type" required>
-                                                                <option value="Medicine" {{ $item['type'] == 'Medicine' ? 'selected' : '' }}>Medicine</option>
-                                                                <option value="Equipment" {{ $item['type'] == 'Equipment' ? 'selected' : '' }}>Equipment</option>
-                                                                <option value="Supplies" {{ $item['type'] == 'Supplies' ? 'selected' : '' }}>Supplies</option>
-                                                                <option value="Vaccine" {{ $item['type'] == 'Vaccine' ? 'selected' : '' }}>Vaccine</option>
-                                                                <option value="Other" {{ $item['type'] == 'Other' ? 'selected' : '' }}>Other</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-md-6 mb-3">
-                                                            <label for="edit_unit_{{ $item['id'] }}" class="form-label fw-semibold">Unit</label>
-                                                            <input type="text" class="form-control" id="edit_unit_{{ $item['id'] }}" name="unit" value="{{ $item['unit'] }}" placeholder="e.g., pieces, bottles, boxes">
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                            <label for="edit_status_{{ $item['id'] }}" class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-                                                            <select class="form-select" id="edit_status_{{ $item['id'] }}" name="status" required>
-                                                                <option value="Available" {{ $item['status'] == 'Available' ? 'selected' : '' }}>Available</option>
-                                                                <option value="Low Stock" {{ $item['status'] == 'Low Stock' ? 'selected' : '' }}>Low Stock</option>
-                                                                <option value="Out of Stock" {{ $item['status'] == 'Out of Stock' ? 'selected' : '' }}>Out of Stock</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="edit_description_{{ $item['id'] }}" class="form-label fw-semibold">Description</label>
-                                                        <textarea class="form-control" id="edit_description_{{ $item['id'] }}" name="description" rows="3" placeholder="Enter item description...">{{ $item['description'] }}</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                        <i class="bi bi-x-circle me-1"></i>Cancel
-                                                    </button>
-                                                    <button type="submit" class="btn btn-primary">
-                                                        <i class="bi bi-check-circle me-1"></i>Update Item
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <!-- Pagination -->
+        @if($items->hasPages())
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Inventory pagination">
+                    <ul class="pagination justify-content-center mb-0">
+                        {{-- Previous Page Link --}}
+                        @if ($items->onFirstPage())
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li>
+                        @else
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $items->previousPageUrl() }}" rel="prev">Previous</a>
+                            </li>
+                        @endif
+
+                        {{-- Pagination Elements --}}
+                        @foreach ($items->getUrlRange(1, $items->lastPage()) as $page => $url)
+                            @if ($page == $items->currentPage())
+                                <li class="page-item active">
+                                    <span class="page-link">{{ $page }}</span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                </li>
+                            @endif
+                        @endforeach
+
+                        {{-- Next Page Link --}}
+                        @if ($items->hasMorePages())
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $items->nextPageUrl() }}" rel="next">Next</a>
+                            </li>
+                        @else
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Next</a>
+                            </li>
+                        @endif
+                    </ul>
+                </nav>
+            </div>
+        @endif
     @else
         <div class="text-center py-5">
             <div class="text-muted">
                 <i class="bi bi-inbox display-4 d-block mb-3"></i>
                 <h5>No inventory items found</h5>
-                <p class="mb-0">Start by adding your first inventory item using the button above.</p>
+                @if(!empty($search))
+                    <p class="mb-0">No items found matching "{{ $search }}". Try a different search term or <a href="{{ route('inventory.index') }}" class="text-decoration-none">view all items</a>.</p>
+                @else
+                    <p class="mb-0">Start by adding your first inventory item using the button above.</p>
+                @endif
             </div>
         </div>
     @endif
-    <!-- Pagination -->
-    <div class="d-flex justify-content-center my-4">
-        {{ $items->withQueryString()->onEachSide(1)->links('pagination::bootstrap-5') }}
-    </div>
 </div>
 
 <!-- Add Item Modal -->
@@ -203,19 +260,22 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="unit" class="form-label fw-semibold">Unit</label>
-                            <input type="text" class="form-control" id="unit" name="unit" placeholder="e.g., pieces, bottles, boxes">
+                            <label for="quantity" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" min="0" required placeholder="Enter quantity">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="status" class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="status" name="status" required>
-                                <option value="">Select status...</option>
-                                <option value="Available">Available</option>
-                                <option value="Low Stock">Low Stock</option>
-                                <option value="Out of Stock">Out of Stock</option>
+                            <label for="unit_type" class="form-label fw-semibold">Unit Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="unit_type" name="unit_type" required>
+                                <option value="">Select unit type...</option>
+                                <option value="capsules">Capsules</option>
+                                <option value="tablets">Tablets</option>
+                                <option value="pieces">Pieces</option>
+                                <option value="boxes">Boxes</option>
+                                <option value="packs">Packs</option>
                             </select>
                         </div>
                     </div>
+
                     <div class="mb-3">
                         <label for="description" class="form-label fw-semibold">Description</label>
                         <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter item description..."></textarea>
@@ -234,8 +294,75 @@
     </div>
 </div>
 
-<style>
+<!-- Edit Item Modals (Outside Table Structure) -->
+@if(count($items) > 0)
+    @foreach($items as $item)
+        <div class="modal fade" id="editItemModal{{ $item['id'] }}" tabindex="-1" aria-labelledby="editItemModalLabel{{ $item['id'] }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editItemModalLabel{{ $item['id'] }}">
+                            <i class="bi bi-pencil-square me-2"></i>Edit Item
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{{ route('inventory.update', $item['id']) }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_name_{{ $item['id'] }}" class="form-label fw-semibold">Item Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="edit_name_{{ $item['id'] }}" name="name" value="{{ $item['name'] }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_type_{{ $item['id'] }}" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="edit_type_{{ $item['id'] }}" name="type" required>
+                                        <option value="Medicine" {{ $item['type'] == 'Medicine' ? 'selected' : '' }}>Medicine</option>
+                                        <option value="Equipment" {{ $item['type'] == 'Equipment' ? 'selected' : '' }}>Equipment</option>
+                                        <option value="Supplies" {{ $item['type'] == 'Supplies' ? 'selected' : '' }}>Supplies</option>
+                                        <option value="Vaccine" {{ $item['type'] == 'Vaccine' ? 'selected' : '' }}>Vaccine</option>
+                                        <option value="Other" {{ $item['type'] == 'Other' ? 'selected' : '' }}>Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_quantity_{{ $item['id'] }}" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="edit_quantity_{{ $item['id'] }}" name="quantity" value="{{ $item['quantity'] ?? 0 }}" min="0" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_unit_type_{{ $item['id'] }}" class="form-label fw-semibold">Unit Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="edit_unit_type_{{ $item['id'] }}" name="unit_type" required>
+                                        <option value="capsules" {{ ($item['unit_type'] ?? '') == 'capsules' ? 'selected' : '' }}>Capsules</option>
+                                        <option value="tablets" {{ ($item['unit_type'] ?? '') == 'tablets' ? 'selected' : '' }}>Tablets</option>
+                                        <option value="pieces" {{ ($item['unit_type'] ?? '') == 'pieces' ? 'selected' : '' }}>Pieces</option>
+                                        <option value="boxes" {{ ($item['unit_type'] ?? '') == 'boxes' ? 'selected' : '' }}>Boxes</option>
+                                        <option value="packs" {{ ($item['unit_type'] ?? '') == 'packs' ? 'selected' : '' }}>Packs</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_description_{{ $item['id'] }}" class="form-label fw-semibold">Description</label>
+                                <textarea class="form-control" id="edit_description_{{ $item['id'] }}" name="description" rows="3">{{ $item['description'] ?? '' }}</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle me-1"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Update Item
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endif
 
+<style>
 .table th, .table td {
     vertical-align: middle;
     background: #fff;
@@ -278,11 +405,49 @@
     border-radius: 0.75rem;
     overflow: hidden;
     border: 2px solid #1657c1 !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.2s ease;
 }
 
 .badge {
     font-size: 0.75rem;
     padding: 0.375rem 0.75rem;
+}
+
+/* Summary Cards Styling */
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.text-dark {
+    color: #212529 !important;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Summary Cards Hover Effects */
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease;
+}
+
+/* Card Body Enhancements */
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Text Enhancements */
+.text-uppercase {
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.h5 {
+    font-size: 1.75rem;
+    font-weight: 700;
 }
 
 /* Add visible outline inside the table */
@@ -303,6 +468,17 @@
 .inventory-table tbody tr {
     border-top: none;
     border-bottom: 1.5px solid #b6c6e3 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .h5 {
+        font-size: 1.5rem;
+    }
 }
 </style>
 @endsection

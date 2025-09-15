@@ -18,17 +18,30 @@
 
     <ul class="nav-links">
         @php
-            $navItems = [
-                ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
-                ['route' => 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
-                ['route' => 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
-                ['route' => 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
-                ['route' => 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
-                ['route' => 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
-                ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
-            ];
+            $userRole = session('user.role');
+            
+            if ($userRole === 'admin') {
+                $navItems = [
+                    ['route' => 'RHUs.index', 'label' => 'Rural Health Units', 'icon' => 'bi-building'],
+                    ['route' => 'RHUs.approvals', 'label' => 'Pending Approvals', 'icon' => 'bi-clock-history'],
+                    ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                ];
+            } else {
+                $navItems = [
+                    ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                    ['route' => 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
+                    ['route' => 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
+                    ['route' => 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                    ['route' => 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
+                    ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                    ['route' => 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
+                    ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                ];
+            }
         @endphp
 
         @foreach ($navItems as $item)
@@ -36,6 +49,9 @@
                 <a href="{{ route($item['route']) }}">
                     @php
                         $iconMap = [
+                            'Rural Health Units' => 'bi-building',
+                            'Pending Approvals' => 'bi-clock-history',
+                            'User Requests' => 'bi-person-plus',
                             'Reports' => 'bi-file-earmark-bar-graph',
                             'Verify Reports' => 'bi-patch-check',
                             'Schedules' => 'bi-calendar-event',

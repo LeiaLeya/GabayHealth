@@ -27,4 +27,24 @@ class FirebaseService
     {
         return $this->storage;
     }
+
+    public function getCollection($collectionName)
+    {
+        return $this->firestore->collection($collectionName)->documents();
+    }
+
+    public function addDocument($collectionName, $data)
+    {
+        return $this->firestore->collection($collectionName)->add($data);
+    }
+
+    public function updateDocument($collectionName, $documentId, $data)
+    {
+        return $this->firestore->collection($collectionName)->document($documentId)->update($data);
+    }
+
+    public function deleteDocument($collectionName, $documentId)
+    {
+        return $this->firestore->collection($collectionName)->document($documentId)->delete();
+    }
 }

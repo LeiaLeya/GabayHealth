@@ -21,5 +21,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+        
+        // Set timezone to Asia/Manila
+        $timezone = env('APP_TIMEZONE', 'Asia/Manila');
+        date_default_timezone_set($timezone);
+        config(['app.timezone' => $timezone]);
     }
 }

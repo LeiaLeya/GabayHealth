@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RuralHealthUnit;
 use Illuminate\Http\Request;
+use App\Services\FirebaseService;
 
 
 class RuralHealthUnitController extends Controller
@@ -13,18 +14,64 @@ class RuralHealthUnitController extends Controller
      */
     public function index()
     {
-        $ruralHealthUnits = RuralHealthUnit::where('status', 'approved')->latest()->paginate(8);
+        $firestore = app(FirebaseService::class)->getFirestore();
+        $docs = $firestore->collection('rhu')->where('status', '=', 'approved')->documents();
         
-        return view('ruralHealthUnit.index', compact('ruralHealthUnits'));
+        $ruralHealthUnits = collect();
+        foreach ($docs as $doc) {
+            if ($doc->exists()) {
+                $data = $doc->data();
+                $data['id'] = $doc->id();
+                $ruralHealthUnits->push((object) $data);
+            }
+        }
+        
+        // Simple pagination for Firestore data
+        $perPage = 8;
+        $currentPage = request()->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        $paginatedData = $ruralHealthUnits->slice($offset, $perPage);
+        
+        $ruralHealthUnits = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginatedData,
+            $ruralHealthUnits->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'pageName' => 'page']
+        );
+        
+        return view('admin.index', compact('ruralHealthUnits'));
     }
 
     public function indexApprovals()
     {
-        $ruralHealthUnits = RuralHealthUnit::where('status', 'pending')->latest()->paginate(5);
+        $firestore = app(FirebaseService::class)->getFirestore();
+        $docs = $firestore->collection('rhu')->where('status', '=', 'pending')->documents();
         
-
-        return view('ruralHealthUnit.indexApprovals', compact('ruralHealthUnits')
+        $ruralHealthUnits = collect();
+        foreach ($docs as $doc) {
+            if ($doc->exists()) {
+                $data = $doc->data();
+                $data['id'] = $doc->id();
+                $ruralHealthUnits->push((object) $data);
+            }
+        }
+        
+        // Simple pagination for Firestore data
+        $perPage = 5;
+        $currentPage = request()->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        $paginatedData = $ruralHealthUnits->slice($offset, $perPage);
+        
+        $ruralHealthUnits = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginatedData,
+            $ruralHealthUnits->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'pageName' => 'page']
         );
+
+        return view('admin.indexApprovals', compact('ruralHealthUnits'));
     }
 
     /**
@@ -33,7 +80,7 @@ class RuralHealthUnitController extends Controller
     public function create()
     {
         $ruralHealthUnits = RuralHealthUnit::latest()->get();
-        return view('ruralHealthUnit.create', compact('ruralHealthUnits'));
+        return view('admin.create', compact('ruralHealthUnits'));
     }
 
     /**
@@ -59,9 +106,18 @@ class RuralHealthUnitController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(RuralHealthUnit $ruralHealthUnit)
+    public function show($id)
     {
-        return view('ruralHealthUnit.show', compact('ruralHealthUnit'));
+        $firestore = app(FirebaseService::class)->getFirestore();
+        $doc = $firestore->collection('rhu')->document($id)->snapshot();
+        
+        if (!$doc->exists()) {
+            abort(404);
+        }
+        
+        $ruralHealthUnit = (object) array_merge(['id' => $id], $doc->data());
+        
+        return view('admin.show', compact('ruralHealthUnit'));
     }
 
     /**
@@ -70,7 +126,7 @@ class RuralHealthUnitController extends Controller
     public function edit(RuralHealthUnit $ruralHealthUnit)
     {
         $ruralHealthUnits = RuralHealthUnit::where('status', 'pending')->latest()->get();
-        return view('RuralHealthUnit.edit', compact('ruralHealthUnits'));
+        return view('admin.edit', compact('ruralHealthUnits'));
     }
 
     /**

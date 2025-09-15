@@ -27,10 +27,10 @@
                         <tbody>
                             @forelse($ruralHealthUnits as $unit)
                                 <tr>
-                                    <th scope="row">{{ $unit->id }}</th>
-                                    <td>{{ $unit->name }}</td>
+                                    <th scope="row">{{ $unit['id'] ?? '' }}</th>
+                                    <td>{{ $unit['name'] ?? '' }}</td>
                                     <td>
-                                        <a href="{{ route('RHUs.edit', $unit->id) }}"
+                                        <a href="{{ route('RHUs.edit', $unit['id']) }}"
                                             class="btn btn-primary btn-sm">Review</a>
                                     </td>
                                 </tr>
@@ -41,7 +41,7 @@
                             @endforelse
                         </tbody>
                     </table>
-                    {{ $ruralHealthUnits->links() }}
+                    {{-- {{ $ruralHealthUnits->links() }} --}}
                 </div>
             </div>
         </div>

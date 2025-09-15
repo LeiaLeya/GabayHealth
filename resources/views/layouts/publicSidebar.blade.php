@@ -15,7 +15,7 @@
             </a>
         </li>
         <li>
-            <a href="{{ route('register') }}" class="nav-link text-white {{ request()->routeIs('register') ? 'active' : '' }}">
+            <a href="{{ route('register.landing') }}" class="nav-link text-white {{ request()->routeIs('register.landing') ? 'active' : '' }}">
                 Register
             </a>
         </li>

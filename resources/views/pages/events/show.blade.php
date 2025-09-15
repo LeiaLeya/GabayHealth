@@ -8,7 +8,7 @@
             <div class="lead text-muted mb-3" style="font-size:1.25rem;">{{ $event['description'] }}</div>
         </div>
         <a href="{{ route('events.index') }}" class="btn btn-outline-primary d-flex align-items-center gap-2 back-btn" style="min-width: 110px;">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> Back to Events
         </a>
     </div>
 
@@ -21,24 +21,36 @@
         </div>
         <div class="col-auto d-flex align-items-center gap-2">
             <i class="bi bi-calendar-event-fill text-primary"></i>
-            <span>{{ \Carbon\Carbon::parse($event['date'])->format('F d, Y') }}, {{ $event['time'] }}</span>
+            <span>
+                {{ \Carbon\Carbon::parse($event['date'])->format('F d, Y') }}, 
+                @if(isset($event['start_time']) && isset($event['end_time']))
+                    {{ \Carbon\Carbon::parse($event['start_time'])->format('h:iA') }} - {{ \Carbon\Carbon::parse($event['end_time'])->format('h:iA') }}
+                @elseif(isset($event['time']))
+                    {{ $event['time'] }}
+                @else
+                    N/A
+                @endif
+            </span>
         </div>
         <div class="col-auto d-flex align-items-center gap-2">
             <i class="bi bi-people-fill text-primary"></i>
-            <span>Registered: {{ count($attendees) }}/{{ $event['capacity'] ?? '∞' }}</span>
+            <span>Registered: {{ count($attendees) }}</span>
         </div>
-        <div class="col-auto d-flex align-items-center gap-2">
-            <i class="bi bi-star-fill text-primary"></i>
-            <span>Priority: {{ $event['category'] ?? '—' }}</span>
-        </div>
+        @if(isset($event['in_charge']) && $event['in_charge'])
+            <div class="col-auto d-flex align-items-center gap-2">
+                <i class="bi bi-person-badge-fill text-primary"></i>
+                <span>In Charge: {{ $event['in_charge'] }}</span>
+            </div>
+        @endif
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="fw-semibold" style="font-size:1.2rem;">Attendees</div>
-        <form action="{{ route('events.exportCsv', $event['id']) }}" method="POST">
-            @csrf
-            <button class="btn btn-sm btn-primary px-4">Export as CSV</button>
-        </form>
+        <div class="d-flex gap-2">
+            <a href="{{ route('events.exportPdf', $event['id']) }}" class="btn btn-sm btn-danger px-4">
+                <i class="bi bi-filetype-pdf me-1"></i> Export PDF
+            </a>
+        </div>
     </div>
 
     <div class="table-responsive">

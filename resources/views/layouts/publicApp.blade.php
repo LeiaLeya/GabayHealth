@@ -5,14 +5,9 @@
     <meta charset="UTF-8">
     <title>GabayHealth</title>
     <style>
-        @font-face {
-            font-family: 'Bilo';
-            src: url('/fonts/Bilo.otf') format('opentype');
-        }
-
+        /* Removed custom font-family, use default */
         * {
-
-            font-family: 'Bilo', sans-serif;
+            /* font-family intentionally left blank for default */
         }
 
         .main-wrapper {

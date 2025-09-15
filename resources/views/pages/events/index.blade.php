@@ -40,7 +40,7 @@
                                     <i class="bi bi-calendar-event display-6 text-secondary"></i>
                                 </div>
                             @endif
-                            <div>
+                            <div style="padding-right: 100px;">
                                 <h5 class="fw-bold mb-1">{{ $event['title'] ?? 'Untitled' }}</h5>
                                 <div class="text-muted small">{{ $event['description'] ?? 'No description' }}</div>
                             </div>
@@ -54,9 +54,31 @@
                             <i class="bi bi-clock text-primary"></i>
                             <span class="text-dark small">
                                 {{ isset($event['date']) ? \Carbon\Carbon::parse($event['date'])->format('F d, Y') : 'N/A' }},
-                                {{ $event['time'] ?? 'N/A' }}
+                                @if(isset($event['start_time']) && isset($event['end_time']))
+                                    {{ \Carbon\Carbon::parse($event['start_time'])->format('h:iA') }} - {{ \Carbon\Carbon::parse($event['end_time'])->format('h:iA') }}
+                                @else
+                                    {{ $event['time'] ?? 'N/A' }}
+                                @endif
                             </span>
                         </div>
+                        @if(isset($event['targetAttendees']) && $event['targetAttendees'])
+                            <div class="mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-people text-success"></i>
+                                <span class="text-dark small">{{ $event['targetAttendees'] }}</span>
+                            </div>
+                        @endif
+                        @if(isset($event['isOpenToAll']) && $event['isOpenToAll'])
+                            <div class="mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-globe text-info"></i>
+                                <span class="text-dark small">Open to All Barangays</span>
+                            </div>
+                        @endif
+                        @if(isset($event['in_charge']) && $event['in_charge'])
+                            <div class="mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-person-badge text-primary"></i>
+                                <span class="text-dark small">In Charge: {{ $event['in_charge'] }}</span>
+                            </div>
+                        @endif
                         <div class="mt-auto d-flex gap-2">
                             <a href="{{ route('events.show', $event['id']) }}" class="btn btn-outline-secondary btn-sm">View Details</a>
                         </div>
@@ -87,12 +109,29 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Time <span class="text-danger">*</span></label>
-                                    <input type="time" name="time" class="form-control" value="{{ $event['time'] ?? '' }}" required>
+                                    <label class="form-label fw-semibold">Start Time <span class="text-danger">*</span></label>
+                                    <input type="time" name="start_time" class="form-control" value="{{ $event['start_time'] ?? '' }}" required>
                                 </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">End Time <span class="text-danger">*</span></label>
+                                    <input type="time" name="end_time" class="form-control" value="{{ $event['end_time'] ?? '' }}" required>
+                                    <div class="invalid-feedback">
+                                        End time must be after start time.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-semibold">Location <span class="text-danger">*</span></label>
                                     <input type="text" name="location" class="form-control" value="{{ $event['location'] ?? '' }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Status</label>
+                                    <select name="status" class="form-select">
+                                        <option value="Upcoming" {{ ($event['status'] ?? '') == 'Upcoming' ? 'selected' : '' }}>Upcoming</option>
+                                        <option value="Done" {{ ($event['status'] ?? '') == 'Done' ? 'selected' : '' }}>Done</option>
+                                        <option value="Cancelled" {{ ($event['status'] ?? '') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -103,13 +142,32 @@
                                 <label class="form-label fw-semibold">Event Image</label>
                                 <input type="file" name="image" class="form-control" accept="image/*">
                             </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Target Attendees</label>
+                                    <select name="targetAttendees" class="form-select">
+                                        <option value="">Select target audience...</option>
+                                        <option value="All Residents" {{ ($event['targetAttendees'] ?? '') == 'All Residents' ? 'selected' : '' }}>All Residents</option>
+                                        <option value="Seniors Only" {{ ($event['targetAttendees'] ?? '') == 'Seniors Only' ? 'selected' : '' }}>Seniors Only</option>
+                                        <option value="Children Only" {{ ($event['targetAttendees'] ?? '') == 'Children Only' ? 'selected' : '' }}>Children Only</option>
+                                        <option value="Pregnant Women" {{ ($event['targetAttendees'] ?? '') == 'Pregnant Women' ? 'selected' : '' }}>Pregnant Women</option>
+                                        <option value="Adults Only" {{ ($event['targetAttendees'] ?? '') == 'Adults Only' ? 'selected' : '' }}>Adults Only</option>
+                                        <option value="Health Workers" {{ ($event['targetAttendees'] ?? '') == 'Health Workers' ? 'selected' : '' }}>Health Workers</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">In Charge / Head of Event</label>
+                                    <input type="text" name="in_charge" class="form-control" value="{{ $event['in_charge'] ?? '' }}" placeholder="Enter name of person in charge">
+                                </div>
+                            </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Status</label>
-                                <select name="status" class="form-select">
-                                    <option value="Upcoming" {{ ($event['status'] ?? '') == 'Upcoming' ? 'selected' : '' }}>Upcoming</option>
-                                    <option value="Done" {{ ($event['status'] ?? '') == 'Done' ? 'selected' : '' }}>Done</option>
-                                    <option value="Cancelled" {{ ($event['status'] ?? '') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
-                                </select>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="isOpenToAll" id="isOpenToAll{{ $event['id'] }}" value="1" {{ ($event['isOpenToAll'] ?? false) ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-semibold" for="isOpenToAll{{ $event['id'] }}">
+                                        <i class="bi bi-globe me-1"></i>Open to All Barangays
+                                    </label>
+                                    <small class="form-text text-muted d-block">Check this if the event is open to residents from other barangays</small>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -157,12 +215,29 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Time <span class="text-danger">*</span></label>
-                        <input type="time" name="time" class="form-control" required>
+                        <label class="form-label fw-semibold">Start Time <span class="text-danger">*</span></label>
+                        <input type="time" name="start_time" id="start_time" class="form-control" required>
                     </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">End Time <span class="text-danger">*</span></label>
+                        <input type="time" name="end_time" id="end_time" class="form-control" required>
+                        <div class="invalid-feedback" id="end_time_error">
+                            End time must be after start time.
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Location <span class="text-danger">*</span></label>
                         <input type="text" name="location" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="Upcoming">Upcoming</option>
+                            <option value="Done">Done</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
                     </div>
                 </div>
                 <div class="mb-3">
@@ -173,13 +248,32 @@
                     <label class="form-label fw-semibold">Event Image</label>
                     <input type="file" name="image" class="form-control" accept="image/*">
                 </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Target Attendees</label>
+                        <select name="targetAttendees" class="form-select">
+                            <option value="">Select target audience...</option>
+                            <option value="All Residents">All Residents</option>
+                            <option value="Seniors Only">Seniors Only</option>
+                            <option value="Children Only">Children Only</option>
+                            <option value="Pregnant Women">Pregnant Women</option>
+                            <option value="Adults Only">Adults Only</option>
+                            <option value="Health Workers">Health Workers</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">In Charge / Head of Event</label>
+                        <input type="text" name="in_charge" class="form-control" placeholder="Enter name of person in charge">
+                    </div>
+                </div>
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="Upcoming">Upcoming</option>
-                        <option value="Done">Done</option>
-                        <option value="Cancelled">Cancelled</option>
-                    </select>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isOpenToAll" id="isOpenToAll" value="1">
+                        <label class="form-check-label fw-semibold" for="isOpenToAll">
+                            <i class="bi bi-globe me-1"></i>Open to All Barangays
+                        </label>
+                        <small class="form-text text-muted d-block">Check this if the event is open to residents from other barangays</small>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -204,4 +298,61 @@
     border-color: #0d6efd22;
 }
 </style>
+
+<script>
+// Time validation for add event form
+document.addEventListener('DOMContentLoaded', function() {
+    const startTimeInput = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+    
+    if (startTimeInput && endTimeInput) {
+        function validateTime() {
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            
+            if (startTime && endTime) {
+                if (startTime >= endTime) {
+                    endTimeInput.setCustomValidity('End time must be after start time.');
+                    endTimeInput.classList.add('is-invalid');
+                } else {
+                    endTimeInput.setCustomValidity('');
+                    endTimeInput.classList.remove('is-invalid');
+                }
+            }
+        }
+        
+        startTimeInput.addEventListener('change', validateTime);
+        endTimeInput.addEventListener('change', validateTime);
+        endTimeInput.addEventListener('input', validateTime);
+    }
+    
+    // Time validation for edit event forms
+    const editForms = document.querySelectorAll('form[action*="/events/"]');
+    editForms.forEach(form => {
+        const startTimeField = form.querySelector('input[name="start_time"]');
+        const endTimeField = form.querySelector('input[name="end_time"]');
+        
+        if (startTimeField && endTimeField) {
+            function validateEditTime() {
+                const startTime = startTimeField.value;
+                const endTime = endTimeField.value;
+                
+                if (startTime && endTime) {
+                    if (startTime >= endTime) {
+                        endTimeField.setCustomValidity('End time must be after start time.');
+                        endTimeField.classList.add('is-invalid');
+                    } else {
+                        endTimeField.setCustomValidity('');
+                        endTimeField.classList.remove('is-invalid');
+                    }
+                }
+            }
+            
+            startTimeField.addEventListener('change', validateEditTime);
+            endTimeField.addEventListener('change', validateEditTime);
+            endTimeField.addEventListener('input', validateEditTime);
+        }
+    });
+});
+</script>
 @endsection

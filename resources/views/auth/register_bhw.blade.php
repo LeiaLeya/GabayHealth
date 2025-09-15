@@ -44,7 +44,9 @@
                 <h2 class="fw-bold mb-1" style="font-size: 2rem; color: #222;">Register Barangay Health Center</h2>
                 <div class="mb-2" style="color: #666; font-size: 1.08rem;">Let’s get you all set up so you can access your account.</div>
                 @if(session('success'))
-                    <div class="alert alert-success py-2 px-3 mb-2" style="font-size:0.95rem;">{{ session('success') }}</div>
+                    <div id="toast-success" class="toast-alert position-fixed top-0 end-0 m-4 alert alert-success" style="z-index: 1055; min-width: 320px;">
+                        {{ session('success') }}
+                    </div>
                 @endif
                 <form class="registration-form" method="POST" action="{{ route('register.bhw.submit') }}">
                     @csrf
@@ -171,6 +173,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    // Toast auto-dismiss
+    const toast = document.getElementById('toast-success');
+    if (toast) {
+        setTimeout(() => {
+            toast.style.display = 'none';
+            window.location.href = "{{ route('login') }}";
+        }, 3000);
+    }
 });
 </script>
+<style>
+.toast-alert {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    padding: 1rem 1.5rem;
+    opacity: 0.97;
+    transition: opacity 0.3s;
+}
+</style>
 @endsection
