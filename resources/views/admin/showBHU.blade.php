@@ -3,7 +3,7 @@
 @section('content')
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
-            <h3 class="mb-0">
+            <h3 class="mb-0 fw-bold">
                 {{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['name'] ?? ($barangayHealthUnit['barangay'] ?? 'Barangay Health Unit')) }}
             </h3>
             <a href="{{ route('RHUs.show', $rhuId) }}" class="btn btn-outline-secondary">
@@ -18,54 +18,54 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Health Center Name:</label>
+                                    <label class="form-label fw-bold">Health Center Name</label>
                                     <p class="mb-0">
                                         {{ $barangayHealthUnit['healthCenterName'] ?? ($barangayHealthUnit['name'] ?? 'N/A') }}
                                     </p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Barangay:</label>
+                                    <label class="form-label fw-bold">Barangay</label>
                                     <p class="mb-0">{{ $barangayName ?: $barangayHealthUnit['barangay'] ?? 'N/A' }}</p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">City/Municipality:</label>
+                                    <label class="form-label fw-bold">City/Municipality</label>
                                     <p class="mb-0">{{ $cityName ?: $barangayHealthUnit['city'] ?? 'N/A' }}</p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Region:</label>
+                                    <label class="form-label fw-bold">Region</label>
                                     <p class="mb-0">{{ $regionName ?: $barangayHealthUnit['region'] ?? 'N/A' }}</p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Province:</label>
+                                    <label class="form-label fw-bold">Province</label>
                                     <p class="mb-0">{{ $provinceName ?: $barangayHealthUnit['province'] ?? 'N/A' }}</p>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Email:</label>
+                                    <label class="form-label fw-bold">Email</label>
                                     <p class="mb-0">{{ $barangayHealthUnit['email'] ?? 'N/A' }}</p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Contact Number:</label>
+                                    <label class="form-label fw-bold">Contact Number</label>
                                     <p class="mb-0">
                                         {{ $barangayHealthUnit['contact_number'] ?? ($barangayHealthUnit['contactInfo'] ?? 'N/A') }}
                                     </p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Full Address:</label>
+                                    <label class="form-label fw-bold">Full Address</label>
                                     <p class="mb-0">
                                         {{ $barangayHealthUnit['fullAddress'] ?? ($barangayHealthUnit['address'] ?? 'N/A') }}
                                     </p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Postal Code:</label>
+                                    <label class="form-label fw-bold">Postal Code</label>
                                     <p class="mb-0">
                                         {{ $barangayHealthUnit['postalCode'] ?? ($barangayHealthUnit['zipCode'] ?? 'N/A') }}
                                     </p>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Status:</label>
+                                    <label class="form-label fw-bold">Status</label>
                                     @php $st = strtolower($barangayHealthUnit['status'] ?? ''); @endphp
                                     <span
                                         class="badge {{ $st === 'approved' ? 'bg-success' : ($st === 'pending' ? 'bg-warning text-dark' : 'bg-danger') }}">

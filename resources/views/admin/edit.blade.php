@@ -4,7 +4,7 @@
     <div class="container pt-5 mt-3">
         {{-- Header Section --}}
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="">{{ $ruralHealthUnit['name'] ?? 'No Name' }}</h3>
+            <h3 class="fw-bold">{{ $ruralHealthUnit['name'] ?? 'No Name' }}</h3>
             <a href="{{ route('RHUs.approvals') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>

@@ -5,7 +5,7 @@
         <div class="row">
             <div class="col-lg-8">
                 <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
-                    <h3 class="mb-0">Report Details</h3>
+                    <h3 class="mb-0 fw-bold">Report Details</h3>
                     <a href="{{ route('rhu.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>
                         Back</a>
                 </div>

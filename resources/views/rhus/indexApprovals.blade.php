@@ -12,7 +12,7 @@
 
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
-                        <h3>BHU Applications</h3>
+                        <h3 class="fw-bold">BHU Applications</h3>
                     </div>
                     <div class="card">
                         <div class="card-body">

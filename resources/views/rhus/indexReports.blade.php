@@ -3,13 +3,12 @@
 @section('content')
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
-            <h3 class="mb-0">Reports</h3>
+            <h3 class="mb-0 fw-bold">Reports</h3>
             @if (isset($summary))
                 <span class="text-muted">Showing {{ $summary['total'] }} result(s)</span>
             @endif
         </div>
 
-        {{-- Summary cards --}}
         @if (isset($summary))
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
@@ -36,11 +35,9 @@
                         </div>
                     </div>
                 </div>
-                <!-- 'Other' summary card removed -->
             </div>
         @endif
 
-        {{-- Table --}}
         <div class="card mt-3">
             <div class="card-body px-2 px-md-4 py-3">
                 @if (session('error'))

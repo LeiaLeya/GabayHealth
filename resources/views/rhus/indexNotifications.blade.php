@@ -3,7 +3,7 @@
 @section('content')
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-            <h3 class="mb-0">Notifications</h3>
+            <h3 class="mb-0 fw-bold">Notifications</h3>
             @php
                 $unreadCount = 0;
                 foreach ($notifications ?? [] as $n) {
@@ -17,7 +17,7 @@
             @endif
         </div>
 
-        <div class="card">
+        {{-- <div class="card"> --}}
             <div class="card-body p-0">
                 @if (empty($notifications))
                     <div class="text-center text-muted py-5">No notifications yet.</div>
@@ -77,6 +77,6 @@
                     </div>
                 @endif
             </div>
-        </div>
+        {{-- </div> --}}
     </div>
 @endsection

@@ -12,7 +12,7 @@
 
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
-                        <h3>Rural Health Unit Applications</h3>
+                        <h3 class="fw-bold">Rural Health Unit Applications</h3>
                     </div>
 
                     {{-- <div class="card"> --}}

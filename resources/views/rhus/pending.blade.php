@@ -5,7 +5,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="card shadow">
-                    <div class="card-header bg-warning text-dark">
+                    <div class="card-header bg-primary text-white">
                         <h4 class="mb-0">
                             <i class="bi bi-clock-history me-2"></i>
                             Account Pending Approval

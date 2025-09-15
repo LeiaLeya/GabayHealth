@@ -5,7 +5,7 @@
         <div class="row justify-content-center">
             <div class="col-md-12">
                 <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h3 class="">Rural Health Units</h3>
+                    <h3 class="fw-bold">Rural Health Units</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
