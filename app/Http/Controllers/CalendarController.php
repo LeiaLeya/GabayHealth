@@ -350,9 +350,27 @@ class CalendarController extends Controller
 
     private function parseAppointmentDate($appointmentString)
     {
-        // Expected formats: "monday 10:00AM-12:00PM" or "Monday 10:00 AM - 12:00 PM"
+        // Supported formats:
+        // 1) "09/22/2025" or "09/22/2025 10:00AM-12:00PM" (MM/DD/YYYY)
+        // 2) "monday 10:00AM-12:00PM" or "Monday 10:00 AM - 12:00 PM"
         if (!$appointmentString) {
             return [];
+        }
+
+        // Try MM/DD/YYYY with optional time range
+        $usDatePattern = '/^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}:\d{2}\s*[APMapm]{2})\s*[-–]\s*(\d{1,2}:\d{2}\s*[APMapm]{2}))?/';
+        if (preg_match($usDatePattern, $appointmentString, $m)) {
+            $month = (int)$m[1];
+            $day = (int)$m[2];
+            $year = (int)$m[3];
+            $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            $start12 = isset($m[4]) ? strtoupper(str_replace(' ', '', $m[4])) : null;
+            $end12 = isset($m[5]) ? strtoupper(str_replace(' ', '', $m[5])) : null;
+            return [
+                'date' => $date,
+                'start_time' => $start12 ? $this->convert12To24($start12) : null,
+                'end_time' => $end12 ? $this->convert12To24($end12) : null,
+            ];
         }
 
         $pattern = '/^\s*([A-Za-z]+)\s+(\d{1,2}:\d{2}\s*[APMapm]{2})\s*[-–]\s*(\d{1,2}:\d{2}\s*[APMapm]{2})/';
