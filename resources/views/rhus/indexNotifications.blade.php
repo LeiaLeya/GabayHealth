@@ -22,60 +22,53 @@
                 @if (empty($notifications))
                     <div class="text-center text-muted py-5">No notifications yet.</div>
                 @else
-                    <div class="list-group list-group-flush">
+                    <div class="d-flex flex-column gap-3 px-2 px-md-4 py-2">
                         @foreach ($notifications as $n)
                             @php
-                                $title = $n['title'] ?? 'Notification';
-                                $barangay = $n['barangayName'] ?? ($n['barangay_name'] ?? null);
+                                $name = $n['senderName'] ?? ($n['title'] ?? 'Unknown');
+                                $activity = $n['message'] ?? '';
                                 $type = $n['type'] ?? '';
+                                $project = $n['project'] ?? ($n['barangayName'] ?? ($n['barangay_name'] ?? null));
                                 $created = $n['created_at'] ?? ($n['createdAt'] ?? '');
                                 $human = $n['createdAtHuman'] ?? '';
                                 $isRead = !empty($n['isRead']);
-
-                                $desc = $n['message'] ?? null;
+                                $timestamp =
+                                    $human ?: ($created ? \Carbon\Carbon::parse($created)->diffForHumans() : '');
+                                $desc = $activity;
                                 if (!$desc) {
                                     if ($type === 'barangay_registration') {
                                         $desc =
-                                            ($barangay ?: 'A Barangay Health Unit') .
+                                            ($project ?: 'A Barangay Health Unit') .
                                             ' submitted a registration request.';
                                     } elseif ($type === 'report_submitted') {
-                                        $desc = 'A new health report was submitted by ' . ($barangay ?: 'a BHU') . '.';
+                                        $desc = 'A new health report was submitted by ' . ($project ?: 'a BHU') . '.';
                                     } else {
                                         $desc = 'You have a new notification.';
                                     }
                                 }
                             @endphp
+                            <div>
+                                <div class="card shadow-sm border-0 h-100"
+                                    style="background:{{ $isRead ? '#fff' : '#f7fafd' }}; border-radius: 16px;">
+                                    <div class="card-body d-flex align-items-center py-3">
+                                        <img src="{{ asset('images/RHU.png') }}" alt="avatar" class="rounded-circle me-3"
+                                            style="width:40px;height:40px;object-fit:cover;">
+                                        <div class="flex-grow-1">
+                                            <div class="mb-1">
+                                                <span class="fw-bold" style="color:#222;">{{ $name }}</span>
 
-                            <div class="list-group-item">
-                                <div class="d-flex">
-                                    <div class="me-3 d-flex align-items-start">
-                                        <span class="rounded-circle d-inline-block mt-1"
-                                            style="width:10px;height:10px;background-color:{{ $isRead ? '#ced4da' : '#0b6ffd' }};"></span>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="fw-semibold">{{ $title }}</div>
-                                            <div class="text-end">
-                                                <div class="small text-muted">{{ $created ?: '—' }}</div>
-                                                @if ($human)
-                                                    <div class="small text-muted">{{ $human }}</div>
+                                            </div>
+                                            <div class="mb-1">
+                                                <span
+                                                    style="color:#222;font-size:1.08em;font-weight:500;">{{ $desc }}</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if ($timestamp)
+                                                    <span class="text-muted">{{ $project }}</span>
+                                                    <span class="mx-1" style="font-size:1.2em; color:#bbb;">&bull;</span>
+                                                    <span class="text-muted small">{{ $timestamp }}</span>
                                                 @endif
                                             </div>
-                                        </div>
-
-                                        <div class="text-muted">{{ $desc }}</div>
-
-                                        <div class="d-flex align-items-center gap-3 mt-2">
-                                            @if ($barangay)
-                                                <span class="badge bg-light text-dark">Barangay: {{ $barangay }}</span>
-                                            @endif
-                                            @if (!$isRead)
-                                                <form action="{{ route('rhu.notifications.read', $n['id']) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button class="btn btn-sm btn-outline-secondary">Mark as read</button>
-                                                </form>
-                                            @endif
                                         </div>
                                     </div>
                                 </div>

@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
             <h3 class="mb-0">Reports</h3>
             @if (isset($summary))
                 <span class="text-muted">Showing {{ $summary['total'] }} result(s)</span>
@@ -11,8 +11,8 @@
 
         {{-- Summary cards --}}
         @if (isset($summary))
-            <div class="row mb-3">
-                <div class="col-md-3">
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <div class="text-muted small">Total</div>
@@ -20,67 +20,29 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <div class="text-muted small">To be reviewed</div>
-                            <div class="fs-4 fw-bold text-warning">{{ $summary['toBeReviewed'] }}</div>
+                            <div class="fs-4 fw-bold">{{ $summary['toBeReviewed'] }}</div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <div class="text-muted small">Reviewed</div>
-                            <div class="fs-4 fw-bold text-success">{{ $summary['reviewed'] }}</div>
+                            <div class="fs-4 fw-bold">{{ $summary['reviewed'] }}</div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <div class="text-muted small">Other</div>
-                            <div class="fs-4 fw-bold text-secondary">{{ $summary['other'] }}</div>
-                        </div>
-                    </div>
-                </div>
+                <!-- 'Other' summary card removed -->
             </div>
         @endif
 
-        {{-- Trend + Top symptoms --}}
-        <div class="row mb-4">
-            <div class="col-lg-8">
-                <div class="card h-100">
-                    <div class="card-header d-flex align-items-center justify-content-between">
-                        <strong>Reports (last 30 days)</strong>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="reportsTrendChart" height="120"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 mt-3 mt-lg-0">
-                <div class="card h-100">
-                    <div class="card-header"><strong>Top Symptoms / Cases</strong></div>
-                    <div class="card-body">
-                        @if (!empty($symptomCounts))
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (array_slice($symptomCounts, 0, 12) as $s => $cnt)
-                                    <span class="badge bg-primary">{{ $s }} <span
-                                            class="bg-light text-dark ms-1 px-1 rounded">{{ $cnt }}</span></span>
-                                @endforeach
-                            </div>
-                        @else
-                            <span class="text-muted">No symptoms recorded.</span>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
         {{-- Table --}}
-        <div class="card">
-            <div class="card-body">
+        <div class="card mt-3">
+            <div class="card-body px-2 px-md-4 py-3">
                 @if (session('error'))
                     <div class="alert alert-danger">{{ session('error') }}</div>
                 @endif
@@ -98,7 +60,6 @@
                                     <th>Created</th>
                                     <th>Barangay</th>
                                     <th>Affected Person</th>
-                                    <th>Symptoms / Cases</th>
                                     <th>Status</th>
                                     <th></th>
                                 </tr>
@@ -106,30 +67,35 @@
                             <tbody>
                                 @foreach ($reports as $report)
                                     <tr>
-                                        <td style="white-space:nowrap;">{{ $report['createdAt'] ?? 'N/A' }}</td>
-                                        <td>{{ $report['barangayName'] ?? ($report['barangayId'] ?? 'N/A') }}</td>
-                                        <td>{{ ucfirst($report['affectedPerson'] ?? 'N/A') }}</td>
-                                        <td>
-                                            @if (!empty($report['symptoms']) && is_array($report['symptoms']))
-                                                <div class="d-flex flex-wrap gap-1">
-                                                    @foreach ($report['symptoms'] as $symptom)
-                                                        <span class="badge bg-secondary">{{ $symptom }}</span>
-                                                    @endforeach
-                                                </div>
+                                        <td style="white-space:nowrap;">
+                                            @if (!empty($report['createdAt']))
+                                                {{ \Carbon\Carbon::parse($report['createdAt'])->format('M d, Y') }}
                                             @else
-                                                <span class="text-muted">None</span>
+                                                N/A
                                             @endif
                                         </td>
+                                        <td>{{ $report['barangayName'] ?? ($report['barangayId'] ?? 'N/A') }}</td>
+                                        <td>{{ ucfirst($report['affectedPerson'] ?? 'N/A') }}</td>
+
                                         <td>
                                             @php $status = strtolower($report['status'] ?? ''); @endphp
-                                            <span
-                                                class="badge {{ $status === 'to be reviewed' ? 'bg-warning text-dark' : ($status === 'reviewed' ? 'bg-success' : 'bg-secondary') }}">
-                                                {{ ucfirst($report['status'] ?? 'N/A') }}
-                                            </span>
+                                            @if ($status === 'to be reviewed')
+                                                <span class="badge" style="background-color: #000; color: #fff;">
+                                                    {{ ucfirst($report['status'] ?? 'N/A') }}
+                                                </span>
+                                            @elseif ($status === 'reviewed')
+                                                <span class="badge" style="background-color: #198754; color: #fff;">
+                                                    {{ ucfirst($report['status'] ?? 'N/A') }}
+                                                </span>
+                                            @else
+                                                <span class="badge" style="background-color: #6c757d; color: #fff;">
+                                                    {{ ucfirst($report['status'] ?? 'N/A') }}
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="text-end">
                                             <a href="{{ route('rhu.reports.view', $report['id']) }}"
-                                                class="btn btn-sm btn-outline-primary">View</a>
+                                                class="btn btn-sm btn-outline-primary">View Symptoms</a>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -140,51 +106,4 @@
             </div>
         </div>
     </div>
-@endsection
-
-@section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        (function() {
-            const ctx = document.getElementById('reportsTrendChart');
-            if (!ctx) return;
-            const labels = @json($trend['labels'] ?? []);
-            const data = @json($trend['data'] ?? []);
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: 'Reports',
-                        data,
-                        fill: true,
-                        tension: 0.25,
-                        borderColor: '#0b6ffd',
-                        backgroundColor: 'rgba(11,111,253,0.12)',
-                        pointRadius: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                maxTicksLimit: 7
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            precision: 0
-                        }
-                    }
-                }
-            });
-        })();
-    </script>
 @endsection

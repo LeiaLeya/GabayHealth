@@ -234,14 +234,23 @@ class RHUController extends Controller
         }
         $report = null;
         try {
-            $doc = $firestore->db->collection('reports')->document($id)->snapshot();
+            $docRef = $firestore->db->collection('reports')->document($id);
+            $doc = $docRef->snapshot();
             if ($doc->exists()) {
                 $data = $doc->data();
-                // Validate ownership via barangay -> rhu mapping
                 if (!empty($data['barangayId'])) {
                     $barangayDoc = $firestore->db->collection('barangay')->document($data['barangayId'])->snapshot();
                     if ($barangayDoc->exists() && ($barangayDoc->data()['rhuId'] ?? null) === $currentRhuId) {
-                        $report = array_merge(['id' => $doc->id()], $data);
+                        // If status is 'to be reviewed', update to 'reviewed'
+                        if (strtolower($data['status'] ?? '') === 'to be reviewed') {
+                            $docRef->update([
+                                ['path' => 'status', 'value' => 'reviewed'],
+                                ['path' => 'updated_at', 'value' => now()->toDateTimeString()]
+                            ]);
+                            $data['status'] = 'reviewed';
+                        }
+                        $barangayName = $barangayDoc->data()['barangay'] ?? ($barangayDoc->data()['healthCenterName'] ?? $data['barangayId']);
+                        $report = array_merge(['id' => $doc->id()], $data, ['barangayName' => $barangayName]);
                     }
                 }
             }

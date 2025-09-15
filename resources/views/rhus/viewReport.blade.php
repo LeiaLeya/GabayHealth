@@ -15,28 +15,26 @@
                             <div class="alert alert-danger">{{ session('error') }}</div>
                         @endif
                         @if (!empty($report))
-                            <div class="mb-3">
-                                <strong>Barangay:</strong> {{ $report['barangayName'] ?? ($report['barangayId'] ?? 'N/A') }}
+                            <div class="mb-4">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><strong>Barangay:</strong>
+                                        {{ $report['barangayName'] ?? ($report['barangayId'] ?? 'N/A') }}
+                                    </li>
+                                    <li class="mb-2"><strong>Affected Person:</strong>
+                                        {{ ucfirst($report['affectedPerson'] ?? 'N/A') }}</li>
+                                    <li class="mb-2"><strong>Date Reported:</strong>
+                                        @if (!empty($report['createdAt']))
+                                            {{ \Carbon\Carbon::parse($report['createdAt'])->format('M d, Y') }}
+                                        @else
+                                            N/A
+                                        @endif
+                                    </li>
+                                </ul>
                             </div>
-                            <div class="mb-3">
-                                <strong>Affected Person:</strong> {{ ucfirst($report['affectedPerson'] ?? 'N/A') }}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Status:</strong>
-                                @php $status = strtolower($report['status'] ?? ''); @endphp
-                                <span
-                                    class="badge {{ $status === 'to be reviewed' ? 'bg-warning text-dark' : ($status === 'reviewed' ? 'bg-success' : 'bg-secondary') }}">{{ ucfirst($report['status'] ?? 'N/A') }}</span>
-                            </div>
-                            <div class="mb-3">
-                                <strong>Start Date:</strong> {{ $report['startDate'] ?? 'N/A' }}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Created At:</strong> {{ $report['createdAt'] ?? 'N/A' }}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Symptoms / Cases:</strong>
+                            <div class="mb-4">
+                                <h5 class="mb-3">Symptoms</h5>
                                 @if (!empty($report['symptoms']) && is_array($report['symptoms']))
-                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                    <div class="d-flex flex-wrap gap-2">
                                         @foreach ($report['symptoms'] as $symptom)
                                             <span class="badge bg-primary">{{ $symptom }}</span>
                                         @endforeach
@@ -45,10 +43,12 @@
                                     <div class="text-muted">None listed</div>
                                 @endif
                             </div>
-                            <div class="mb-3">
-                                <strong>Additional Info:</strong>
-                                <p class="mb-0">{{ $report['additionalInfo'] ?? 'N/A' }}</p>
-                            </div>
+                            @if (!empty($report['additionalInfo']))
+                                <div class="mb-4">
+                                    <h5 class="mb-3">Additional Info</h5>
+                                    <p class="mb-0">{{ $report['additionalInfo'] }}</p>
+                                </div>
+                            @endif
                         @else
                             <div class="alert alert-warning">Report not found.</div>
                         @endif

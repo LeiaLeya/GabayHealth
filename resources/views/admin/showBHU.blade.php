@@ -85,7 +85,7 @@
                                 <div class="mb-2"><strong>Close Time:</strong>
                                     {{ $barangayHealthUnit['close_time'] ?? 'N/A' }}</div>
                             </div>
-                            <div class="col-md-6">
+                            {{-- <div class="col-md-6">
                                 <div class="mb-2"><strong>Created:</strong>
                                     {{ $barangayHealthUnit['created_at'] ?? ($barangayHealthUnit['createdAt'] ?? 'N/A') }}
                                 </div>
@@ -95,7 +95,7 @@
                                 <div class="mb-2"><strong>RHU ID:</strong>
                                     <code>{{ $barangayHealthUnit['rhuId'] ?? 'N/A' }}</code>
                                 </div>
-                            </div>
+                            </div> --}}
                         </div>
 
                         {{-- @if (!empty($barangayHealthUnit['description']))
@@ -107,7 +107,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                {{-- <div class="card">
                     <div class="card-header">
                         <strong>Health Workers</strong>
                     </div>
@@ -128,7 +128,7 @@
                             </div>
                         @endif
                     </div>
-                </div>
+                </div> --}}
 
             </div>
         </div>
