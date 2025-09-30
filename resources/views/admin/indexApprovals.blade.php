@@ -15,7 +15,6 @@
                         <h3 class="fw-bold">Rural Health Unit Applications</h3>
                     </div>
 
-                    {{-- <div class="card"> --}}
                     <div class="card-body">
                         <div class="row">
                             @forelse($ruralHealthUnits as $unit)
@@ -52,9 +51,7 @@
                                 </div>
                             @endforelse
                         </div>
-                        {{-- {{ $ruralHealthUnits->links() }} --}}
                     </div>
-                    {{-- </div> --}}
                 </div>
             </div>
         </div>
