@@ -4,14 +4,22 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Kreait\Firebase\Exception\AuthException;
+use Kreait\Firebase\Exception\FirebaseException;
 
 class InventoryController extends Controller
 {
     protected $firestore;
+    protected $auth;
 
     public function __construct(FirebaseService $firebase)
     {
         $this->firestore = $firebase->getFirestore();
+        $this->auth = $firebase->getAuth();
     }
 
     public function index(Request $request)
@@ -25,8 +33,15 @@ class InventoryController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access inventory management.');
         }
         
-        // Get search parameter
+        // Get search and filter parameters
         $search = $request->get('search', '');
+        $filterType = $request->get('type', '');
+        $filterStatus = $request->get('status', '');
+        $filterUnitType = $request->get('unit_type', '');
+
+        // Sorting parameters
+        $sortBy = $request->get('sort_by', ''); // name|quantity
+        $sortDir = strtolower($request->get('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         
         // Initialize items as empty array (view expects $items)
         $items = [];
@@ -78,7 +93,72 @@ class InventoryController extends Controller
                             continue; // Skip this item if it doesn't match search
                         }
                     }
+
+                    // Apply type filter
+                    if (!empty($filterType)) {
+                        if (strcasecmp($itemData['type'] ?? '', $filterType) !== 0) {
+                            continue;
+                        }
+                    }
+
+                    // Apply status filter
+                    if (!empty($filterStatus)) {
+                        if (strcasecmp($itemData['status'] ?? '', $filterStatus) !== 0) {
+                            continue;
+                        }
+                    }
+
+                    // Apply unit type filter
+                    if (!empty($filterUnitType)) {
+                        if (strcasecmp($itemData['unit_type'] ?? '', $filterUnitType) !== 0) {
+                            continue;
+                        }
+                    }
                     
+                    $soonestExpirationDays = null;
+                    $hasExpirationData = false;
+                    $today = Carbon::now()->startOfDay();
+                    
+                    // Get batches for this item to count batches and check expiration
+                    try {
+                        $batchesQuery = $this->firestore
+                            ->collection($user['role'])
+                            ->document($user['id'])
+                            ->collection('inventory')
+                            ->document($doc->id())
+                            ->collection('batches')
+                            ->documents();
+                        
+                        foreach ($batchesQuery as $batchDoc) {
+                            if ($batchDoc->exists()) {
+                                $batchData = $batchDoc->data();
+                                $inventorySummary['total_batches']++;
+                                
+                                // Check expiration dates
+                                if (!empty($batchData['expiration_date'])) {
+                                    $hasExpirationData = true;
+
+                                    $expirationDate = Carbon::parse($batchData['expiration_date'])->startOfDay();
+                                    $diffInDays = $today->diffInDays($expirationDate, false);
+
+                                    if ($diffInDays <= 0) {
+                                        $inventorySummary['expired']++;
+                                    } elseif ($diffInDays <= 30) {
+                                        $inventorySummary['expiring_soon']++;
+                                    }
+
+                                    if ($soonestExpirationDays === null || $diffInDays < $soonestExpirationDays) {
+                                        $soonestExpirationDays = $diffInDays;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning('Error fetching batches for item ' . $doc->id() . ': ' . $e->getMessage());
+                    }
+
+                    $itemData['soonest_expiration_days'] = $hasExpirationData ? $soonestExpirationDays : null;
+
                     $items[] = $itemData;
                     $count++;
                     
@@ -107,52 +187,90 @@ class InventoryController extends Controller
                             $inventorySummary['available']++;
                             break;
                     }
-                    
-                    // Get batches for this item to count batches and check expiration
-                    try {
-                        $batchesQuery = $this->firestore
-                            ->collection($user['role'])
-                            ->document($user['id'])
-                            ->collection('inventory')
-                            ->document($doc->id())
-                            ->collection('batches')
-                            ->documents();
-                        
-                        foreach ($batchesQuery as $batchDoc) {
-                            if ($batchDoc->exists()) {
-                                $batchData = $batchDoc->data();
-                                $inventorySummary['total_batches']++;
-                                
-                                // Check expiration dates
-                                if (isset($batchData['expiration_date'])) {
-                                    $expirationDate = strtotime($batchData['expiration_date']);
-                                    $today = strtotime('today');
-                                    $thirtyDays = strtotime('+30 days');
-                                    
-                                    if ($expirationDate <= $today) {
-                                        $inventorySummary['expired']++;
-                                    } elseif ($expirationDate <= $thirtyDays) {
-                                        $inventorySummary['expiring_soon']++;
-                                    }
-                                }
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        \Log::warning('Error fetching batches for item ' . $doc->id() . ': ' . $e->getMessage());
-                    }
                 }
             }
             
-            // Implement pagination
+            // Apply sorting before pagination
+            $sortedItems = $items;
+
+            if (!empty($sortBy)) {
+                usort($sortedItems, function($a, $b) use ($sortBy, $sortDir) {
+                    $direction = $sortDir === 'desc' ? -1 : 1;
+                    switch ($sortBy) {
+                        case 'name':
+                            return $direction * strcasecmp($a['name'] ?? '', $b['name'] ?? '');
+                        case 'quantity':
+                            $qa = (int)($a['quantity'] ?? 0);
+                            $qb = (int)($b['quantity'] ?? 0);
+                            if ($qa === $qb) return 0;
+                            return $direction * (($qa < $qb) ? -1 : 1);
+                        default:
+                            return 0;
+                    }
+                });
+            }
+
+            $medicineGroupsMap = [];
+            $materialItems = [];
+
+            foreach ($sortedItems as $item) {
+                $type = $item['type'] ?? '';
+                $isMedicine = in_array($type, ['Medicine', 'Vaccine']);
+
+                if ($isMedicine) {
+                    $genericRaw = trim($item['generic_name'] ?? '');
+                    $genericName = $genericRaw !== '' ? $genericRaw : 'Unassigned Generic Name';
+                    $genericKey = strtolower($genericName);
+
+                    if (!isset($medicineGroupsMap[$genericKey])) {
+                        $medicineGroupsMap[$genericKey] = [
+                            'generic_name' => $genericName,
+                            'description' => $item['generic_description'] ?? '',
+                            'items' => [],
+                            'total_quantity' => 0,
+                            'soonest_expiration_days' => $item['soonest_expiration_days'] ?? null,
+                        ];
+                    }
+
+                    $medicineGroupsMap[$genericKey]['items'][] = $item;
+                    $medicineGroupsMap[$genericKey]['total_quantity'] += $item['quantity'] ?? 0;
+
+                    if (empty($medicineGroupsMap[$genericKey]['description']) && !empty($item['generic_description'])) {
+                        $medicineGroupsMap[$genericKey]['description'] = $item['generic_description'];
+                    }
+
+                    $itemExpiration = $item['soonest_expiration_days'] ?? null;
+                    $currentGroupExpiration = $medicineGroupsMap[$genericKey]['soonest_expiration_days'];
+
+                    if ($itemExpiration !== null && ($currentGroupExpiration === null || $itemExpiration < $currentGroupExpiration)) {
+                        $medicineGroupsMap[$genericKey]['soonest_expiration_days'] = $itemExpiration;
+                    }
+                } else {
+                    $materialItems[] = $item;
+                }
+            }
+
+            foreach ($medicineGroupsMap as &$group) {
+                usort($group['items'], function($a, $b) {
+                    return strcasecmp($a['name'] ?? '', $b['name'] ?? '');
+                });
+            }
+            unset($group);
+
+            $medicineGroups = array_values($medicineGroupsMap);
+            usort($medicineGroups, function($a, $b) {
+                return strcasecmp($a['generic_name'], $b['generic_name']);
+            });
+
+            // Implement pagination for materials/supplies table
             $perPage = 10;
             $currentPage = $request->get('page', 1);
             $offset = ($currentPage - 1) * $perPage;
-            $paginatedItems = array_slice($items, $offset, $perPage);
+            $paginatedMaterials = array_slice($materialItems, $offset, $perPage);
             
-            // Create paginator
-            $items = new \Illuminate\Pagination\LengthAwarePaginator(
-                $paginatedItems,
-                count($items),
+            $materials = new LengthAwarePaginator(
+                $paginatedMaterials,
+                count($materialItems),
                 $perPage,
                 $currentPage,
                 [
@@ -164,10 +282,33 @@ class InventoryController extends Controller
             
             \Log::info('InventoryController - Found ' . $count . ' inventory items');
 
-            return view('pages.inventory.index', compact('items', 'inventorySummary', 'search'));
+            return view('pages.inventory.index', [
+                'medicineGroups' => $medicineGroups,
+                'materials' => $materials,
+                'inventorySummary' => $inventorySummary,
+                'search' => $search,
+                'filterType' => $filterType,
+                'filterStatus' => $filterStatus,
+                'filterUnitType' => $filterUnitType,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching inventory: ' . $e->getMessage());
-            return view('pages.inventory.index', compact('items', 'inventorySummary', 'search'))->with('error', 'Error loading inventory data. Please try again.');
+            return view('pages.inventory.index', [
+                'medicineGroups' => [],
+                'materials' => new LengthAwarePaginator([], 0, 10, 1, [
+                    'path' => request()->url(),
+                    'pageName' => 'page',
+                ]),
+                'inventorySummary' => $inventorySummary,
+                'search' => $search,
+                'filterType' => $filterType,
+                'filterStatus' => $filterStatus,
+                'filterUnitType' => $filterUnitType,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
+            ])->with('error', 'Error loading inventory data. Please try again.');
         }
     }
 
@@ -443,7 +584,7 @@ class InventoryController extends Controller
                         // Combine batch and distribution info
                         $allReleases[] = [
                             'id' => $distributionDoc->id(),
-                            'batch_number' => $batchData['batch_number'] ?? 'Unknown',
+                            'lot_number' => $batchData['lot_number'] ?? 'Unknown',
                             'batch_id' => $batchDoc->id(),
                             'resident_name' => $distributionData['resident_name'] ?? 'Unknown',
                             'resident_id' => $distributionData['resident_id'] ?? null,
@@ -488,7 +629,18 @@ class InventoryController extends Controller
             'quantity' => 'required|integer|min:0',
             'unit_type' => 'required|in:capsules,tablets,pieces,boxes,packs',
             'description' => 'nullable|string|max:500',
+            'generic_name' => 'nullable|string|max:255',
+            'generic_description' => 'nullable|string|max:500',
+            'milligrams' => 'nullable|numeric|min:0',
         ]);
+
+        // Enforce generic_name for medicines and vaccines
+        if (in_array($request->type, ['Medicine', 'Vaccine']) && empty(trim($request->generic_name ?? ''))) {
+            return redirect()->back()->withErrors(['generic_name' => 'Generic name is required for medicines and vaccines.'])->withInput();
+        }
+        if (in_array($request->type, ['Medicine', 'Vaccine']) && ($request->milligrams === null || $request->milligrams === '')) {
+            return redirect()->back()->withErrors(['milligrams' => 'Milligrams is required for medicines and vaccines.'])->withInput();
+        }
 
         // Calculate automatic status based on quantity
         $status = $this->calculateStatus($request->quantity, $request->unit_type);
@@ -504,6 +656,9 @@ class InventoryController extends Controller
                 'unit_type' => $request->unit_type,
                 'status' => $status,
                 'description' => $request->description,
+                'generic_name' => in_array($request->type, ['Medicine','Vaccine']) ? trim($request->generic_name) : null,
+                'generic_description' => in_array($request->type, ['Medicine','Vaccine']) ? ($request->generic_description ?? '') : null,
+                'milligrams' => in_array($request->type, ['Medicine','Vaccine']) ? (float)$request->milligrams : null,
                 'created_at' => now()->toISOString(),
                 'updated_at' => now()->toISOString(),
             ]);
@@ -521,6 +676,7 @@ class InventoryController extends Controller
 
         $request->validate([
             'parent_medicine_id' => 'required|string',
+            'lot_number' => 'required|string|max:255',
             'quantity' => 'required|integer|min:1',
             'expiration_date' => 'required|date|after:today',
             'notes' => 'nullable|string|max:500',
@@ -528,11 +684,8 @@ class InventoryController extends Controller
 
         $parentId = $request->parent_medicine_id;
 
-        // Generate auto batch number
-        $batchNumber = $this->generateBatchNumber($parentId, $user);
-
         $batchData = [
-            'batch_number' => $batchNumber,
+            'lot_number' => $request->lot_number,
             'quantity' => $request->quantity,
             'expiration_date' => $request->expiration_date,
             'notes' => $request->notes,
@@ -568,7 +721,17 @@ class InventoryController extends Controller
             'quantity' => 'required|integer|min:0',
             'unit_type' => 'required|in:capsules,tablets,pieces,boxes,packs',
             'description' => 'nullable|string|max:500',
+            'generic_name' => 'nullable|string|max:255',
+            'generic_description' => 'nullable|string|max:500',
+            'milligrams' => 'nullable|numeric|min:0',
         ]);
+
+        if (in_array($request->type, ['Medicine', 'Vaccine']) && empty(trim($request->generic_name ?? ''))) {
+            return redirect()->back()->withErrors(['generic_name' => 'Generic name is required for medicines and vaccines.'])->withInput();
+        }
+        if (in_array($request->type, ['Medicine', 'Vaccine']) && ($request->milligrams === null || $request->milligrams === '')) {
+            return redirect()->back()->withErrors(['milligrams' => 'Milligrams is required for medicines and vaccines.'])->withInput();
+        }
 
         // Calculate automatic status based on quantity
         $status = $this->calculateStatus($request->quantity, $request->unit_type);
@@ -585,6 +748,9 @@ class InventoryController extends Controller
                 'unit_type' => $request->unit_type,
                 'status' => $status,
                 'description' => $request->description,
+                'generic_name' => in_array($request->type, ['Medicine','Vaccine']) ? trim($request->generic_name) : null,
+                'generic_description' => in_array($request->type, ['Medicine','Vaccine']) ? ($request->generic_description ?? '') : null,
+                'milligrams' => in_array($request->type, ['Medicine','Vaccine']) ? (float)$request->milligrams : null,
                 'updated_at' => now()->toISOString(),
             ]);
 
@@ -721,7 +887,7 @@ class InventoryController extends Controller
         }
 
         $request->validate([
-            'batch_number' => 'required|string|max:255',
+            'lot_number' => 'required|string|max:255',
             'quantity' => 'required|integer|min:0',
             'expiration_date' => 'required|date',
             'notes' => 'nullable|string|max:500',
@@ -750,7 +916,7 @@ class InventoryController extends Controller
             ->collection('batches')
             ->document($batchId)
             ->update([
-                ['path' => 'batch_number', 'value' => $request->batch_number],
+                ['path' => 'lot_number', 'value' => $request->lot_number],
                 ['path' => 'quantity', 'value' => $request->quantity],
                 ['path' => 'expiration_date', 'value' => $request->expiration_date],
                 ['path' => 'notes', 'value' => $request->notes],
@@ -777,6 +943,8 @@ class InventoryController extends Controller
             'quantity_to_release' => 'required|integer|min:1',
             'release_date' => 'required|date',
             'reason' => 'nullable|string|max:500',
+            'released_by' => 'required|string|max:255',
+            'personnel_id' => 'nullable|string',
         ]);
 
         // Handle new resident registration if no resident_id provided
@@ -852,7 +1020,8 @@ class InventoryController extends Controller
                 'release_date' => $request->release_date,
                 'reason' => $request->reason,
                 'released_at' => now()->toISOString(),
-                'released_by' => session('user.name', 'Health Worker'),
+                'released_by' => $request->released_by ?? session('user.name', 'Health Worker'),
+                'personnel_id' => $request->personnel_id ?? null,
             ];
 
             $this->firestore
@@ -866,7 +1035,7 @@ class InventoryController extends Controller
                 ->add($releaseData);
 
             $releasedFromBatches[] = [
-                'batch_number' => $batch['batch_number'] ?? 'Unknown',
+                'lot_number' => $batch['lot_number'] ?? 'Unknown',
                 'quantity' => $quantityToTake
             ];
 
@@ -878,7 +1047,8 @@ class InventoryController extends Controller
 
         // Create success message with release details
         $batchDetails = collect($releasedFromBatches)->map(function($batch) {
-            return "{$batch['quantity']} from Batch {$batch['batch_number']}";
+            $lotNumber = $batch['lot_number'] ?? 'Unknown';
+            return "{$batch['quantity']} from Lot No {$lotNumber}";
         })->join(', ');
 
         return redirect()->back()->with('success', "Successfully released {$requestedQuantity} units to {$request->resident_name}! (Released: {$batchDetails})");
@@ -974,6 +1144,150 @@ class InventoryController extends Controller
         }
     }
 
+    public function storeResident(Request $request)
+    {
+        $user = session('user');
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'first_name' => 'required|string|max:120',
+            'last_name' => 'required|string|max:120',
+            'email' => 'required|email',
+            'purok' => 'required|string|max:150',
+            'password' => 'required|string|min:8|confirmed',
+        ], [
+            'password.confirmed' => 'The password confirmation does not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $firstName = trim($request->first_name);
+        $lastName = trim($request->last_name);
+        $fullName = trim($firstName . ' ' . $lastName);
+        $email = strtolower($request->email);
+        $purok = trim($request->purok);
+        $barangayName = $user['name'] ?? 'Barangay Health Center';
+        $barangayId = $user['barangayId'] ?? $user['id'];
+        $createdAt = now()->toIso8601String();
+        $username = Str::slug($fullName, '');
+        if (empty($username)) {
+            $username = 'user' . substr(md5($email . microtime()), 0, 6);
+        }
+
+        $fullAddress = "Purok {$purok}, {$barangayName}";
+        $uid = null;
+
+        try {
+            $authUser = $this->auth->createUser([
+                'email' => $email,
+                'password' => $request->password,
+                'displayName' => $fullName,
+                'emailVerified' => false,
+            ]);
+
+            $uid = $authUser->uid;
+
+            $userDocument = [
+                'uid' => $uid,
+                'fullname' => $fullName,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'purok' => $purok,
+                'fulladdress' => $fullAddress,
+                'barangay' => $barangayName,
+                'barangayId' => $barangayId,
+                'role' => 'user',
+                'status' => 'approved',
+                'matchedBarangayId' => $barangayId,
+                'accountSource' => 'medicine_release',
+                'createdAt' => $createdAt,
+                'createdBy' => $user['id'],
+            ];
+
+            $this->firestore
+                ->collection('users')
+                ->document($uid)
+                ->set($userDocument);
+
+            $userRequestDocument = [
+                'id' => $uid,
+                'uid' => $uid,
+                'name' => $fullName,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'username' => $username,
+                'purok' => $purok,
+                'location' => $fullAddress,
+                'status' => 'approved',
+                'role' => 'user',
+                'registered_via' => 'medicine_release',
+                'registered_by' => $user['id'],
+                'created_at' => $createdAt,
+                'approved_at' => $createdAt,
+            ];
+
+            $this->firestore
+                ->collection($user['role'])
+                ->document($user['id'])
+                ->collection('userRequests')
+                ->document($uid)
+                ->set($userRequestDocument);
+
+            return response()->json([
+                'message' => 'Resident registered successfully.',
+                'id' => $uid,
+                'name' => $fullName,
+                'email' => $email,
+                'username' => $username,
+                'location' => $fullAddress,
+            ], 201);
+        } catch (AuthException $e) {
+            \Log::error('Firebase Auth error when creating resident: ' . $e->getMessage());
+
+            $message = 'Failed to create account.';
+            if (str_contains($e->getMessage(), 'EMAIL_EXISTS')) {
+                $message = 'The email address is already registered.';
+                $status = 422;
+            } else {
+                $status = 500;
+            }
+
+            return response()->json(['message' => $message], $status);
+        } catch (FirebaseException $e) {
+            \Log::error('Firebase exception when creating resident: ' . $e->getMessage());
+
+            if ($uid) {
+                try {
+                    $this->auth->deleteUser($uid);
+                } catch (\Throwable $cleanupException) {
+                    \Log::warning('Failed to cleanup auth user after Firestore error: ' . $cleanupException->getMessage());
+                }
+            }
+
+            return response()->json(['message' => 'Failed to save resident record. Please try again.'], 500);
+        } catch (\Throwable $e) {
+            \Log::error('Unexpected error when creating resident: ' . $e->getMessage());
+
+            if ($uid) {
+                try {
+                    $this->auth->deleteUser($uid);
+                } catch (\Throwable $cleanupException) {
+                    \Log::warning('Failed to cleanup auth user after unexpected error: ' . $cleanupException->getMessage());
+                }
+            }
+
+            return response()->json(['message' => 'Failed to create resident. Please try again.'], 500);
+        }
+    }
+
     // Search residents from userRequests collection
     public function searchResidents(Request $request)
     {
@@ -983,10 +1297,7 @@ class InventoryController extends Controller
         }
 
         $searchTerm = $request->get('q', '');
-        
-        if (strlen($searchTerm) < 2) {
-            return response()->json([]);
-        }
+        $limit = strlen($searchTerm) >= 2 ? 10 : 50; // Show more results when no search term
 
         try {
             // Search in userRequests collection (approved users)
@@ -995,7 +1306,7 @@ class InventoryController extends Controller
                 ->document($user['id'])
                 ->collection('userRequests')
                 ->where('status', '=', 'approved')
-                ->limit(10)
+                ->limit($limit)
                 ->documents();
 
             $residents = [];
@@ -1017,27 +1328,84 @@ class InventoryController extends Controller
                         $displayName = 'Unknown User';
                     }
                     
-                    // Search in username, email, address, location, or contact number
-                    $searchFields = strtolower($username . ' ' . $email . ' ' . $address . ' ' . $location . ' ' . $contactNumber . ' ' . $displayName);
-                    
-                    if (str_contains($searchFields, strtolower($searchTerm))) {
-                        $residents[] = [
-                            'id' => $doc->id(),
-                            'name' => $displayName,
-                            'email' => $email,
-                            'username' => $username,
-                            'address' => $address,
-                            'contact_number' => $contactNumber,
-                            'location' => $location,
-                            'display_text' => $displayName . (!empty($email) ? ' (' . $email . ')' : (!empty($username) ? ' (@' . $username . ')' : ''))
-                        ];
+                    // If search term is provided, filter results; otherwise show all
+                    if (strlen($searchTerm) >= 2) {
+                        // Search in username, email, address, location, or contact number
+                        $searchFields = strtolower($username . ' ' . $email . ' ' . $address . ' ' . $location . ' ' . $contactNumber . ' ' . $displayName);
+                        
+                        if (!str_contains($searchFields, strtolower($searchTerm))) {
+                            continue; // Skip if doesn't match search
+                        }
                     }
+                    
+                    $residents[] = [
+                        'id' => $doc->id(),
+                        'name' => $displayName,
+                        'email' => $email,
+                        'username' => $username,
+                        'address' => $address,
+                        'contact_number' => $contactNumber,
+                        'location' => $location,
+                        'display_text' => $displayName . (!empty($email) ? ' (' . $email . ')' : (!empty($username) ? ' (@' . $username . ')' : ''))
+                    ];
                 }
             }
 
             return response()->json($residents);
         } catch (\Exception $e) {
             \Log::error('Error searching residents: ' . $e->getMessage());
+            return response()->json(['error' => 'Search failed'], 500);
+        }
+    }
+
+    // Search personnel for release medicine form
+    public function searchPersonnel(Request $request)
+    {
+        $user = session('user');
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $searchTerm = $request->get('q', '');
+        $limit = strlen($searchTerm) >= 2 ? 10 : 50; // Show more results when no search term
+
+        try {
+            // Search in personnel collection
+            $personnelQuery = $this->firestore
+                ->collection($user['role'])
+                ->document($user['id'])
+                ->collection('personnel')
+                ->limit($limit)
+                ->documents();
+
+            $personnel = [];
+            foreach ($personnelQuery as $doc) {
+                if ($doc->exists()) {
+                    $data = $doc->data();
+                    $name = $data['name'] ?? '';
+                    $position = $data['position'] ?? '';
+                    
+                    // If search term is provided, filter results; otherwise show all
+                    if (strlen($searchTerm) >= 2) {
+                        // Search in name or position
+                        $searchFields = strtolower($name . ' ' . $position);
+                        
+                        if (!str_contains($searchFields, strtolower($searchTerm))) {
+                            continue; // Skip if doesn't match search
+                        }
+                    }
+                    
+                    $personnel[] = [
+                        'id' => $doc->id(),
+                        'name' => $name,
+                        'position' => $position,
+                    ];
+                }
+            }
+
+            return response()->json($personnel);
+        } catch (\Exception $e) {
+            \Log::error('Error searching personnel: ' . $e->getMessage());
             return response()->json(['error' => 'Search failed'], 500);
         }
     }
@@ -1075,66 +1443,4 @@ class InventoryController extends Controller
         }
     }
 
-    // Generate auto batch number
-    private function generateBatchNumber($parentId, $user)
-    {
-        try {
-            // Get existing batches for this medicine to determine next number
-            $batches = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
-                ->collection('inventory')
-                ->document($parentId)
-                ->collection('batches')
-                ->documents();
-
-            $batchCount = 0;
-            $existingNumbers = [];
-            
-            foreach ($batches as $batch) {
-                if ($batch->exists()) {
-                    $batchCount++;
-                    $data = $batch->data();
-                    $batchNumber = $data['batch_number'] ?? '';
-                    $existingNumbers[] = $batchNumber;
-                }
-            }
-
-            // Get medicine name for batch prefix
-            $parentDoc = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
-                ->collection('inventory')
-                ->document($parentId)
-                ->snapshot();
-            
-            $medicineName = 'MED';
-            if ($parentDoc->exists()) {
-                $parentData = $parentDoc->data();
-                $medicineName = $parentData['name'] ?? 'MED';
-                // Clean medicine name for use in batch number (remove spaces, special chars)
-                $medicineName = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $medicineName));
-                // Limit to 6 characters
-                $medicineName = substr($medicineName, 0, 6);
-            }
-
-            // Generate batch number format: MEDNAME-001, MEDNAME-002, etc.
-            $nextNumber = $batchCount + 1;
-            $batchNumber = $medicineName . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
-
-            // Ensure uniqueness (in case of concurrent requests)
-            while (in_array($batchNumber, $existingNumbers)) {
-                $nextNumber++;
-                $batchNumber = $medicineName . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
-            }
-
-            \Log::info("Generated batch number: {$batchNumber} for medicine: {$parentId}");
-            
-            return $batchNumber;
-        } catch (\Exception $e) {
-            \Log::error("Error generating batch number: " . $e->getMessage());
-            // Fallback to timestamp-based batch number
-            return 'BATCH-' . time();
-        }
-    }
 }
