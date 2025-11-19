@@ -12,6 +12,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\UserRequestController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 
@@ -96,6 +97,7 @@ Route::middleware('auth.check')->group(function () {
     Route::get('/events/{id}', [EventController::class, 'show'])->name('events.show');
     Route::get('/events/{id}/edit', [EventController::class, 'edit'])->name('events.edit');
     Route::put('/events/{id}', [EventController::class, 'update'])->name('events.update');
+    Route::post('/events/{id}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
     Route::get('/events/{id}/export-pdf', [EventController::class, 'exportPdf'])->name('events.exportPdf');
 
     // Inventory routes
@@ -103,6 +105,8 @@ Route::middleware('auth.check')->group(function () {
     Route::get('/inventory/add-batch', [InventoryController::class, 'showAddBatch'])->name('inventory.add-batch');
     Route::get('/inventory/{id}/sort', [InventoryController::class, 'showSorted'])->name('inventory.show.sorted');
     Route::get('/inventory/residents/search', [InventoryController::class, 'searchResidents'])->name('inventory.residents.search');
+    Route::post('/inventory/residents', [InventoryController::class, 'storeResident'])->name('inventory.residents.store');
+    Route::get('/inventory/personnel/search', [InventoryController::class, 'searchPersonnel'])->name('inventory.personnel.search');
     Route::get('/inventory/{id}/release-history', [InventoryController::class, 'showReleaseHistory'])->name('inventory.release-history');
     Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('inventory.show');
     Route::get('/inventory/{parentId}/batches/{batchId}/history', [InventoryController::class, 'showDistributionHistory'])->name('inventory.batches.history');
@@ -128,8 +132,14 @@ Route::middleware('auth.check')->group(function () {
     // Reports routes (for health workers)
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
     Route::get('/reports/verify', [ReportsController::class, 'verify'])->name('reports.verify');
+    Route::get('/reports/rejected', [ReportsController::class, 'rejected'])->name('reports.rejected');
     Route::post('/reports/{id}/approve', [ReportsController::class, 'approve'])->name('reports.approve');
     Route::post('/reports/{id}/reject', [ReportsController::class, 'reject'])->name('reports.reject');
+
+    // Notifications routes
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 
 
 

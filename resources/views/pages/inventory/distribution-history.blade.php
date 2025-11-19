@@ -6,7 +6,7 @@
     <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
         <div>
             <h2 class="fw-bold text-dark mb-0">Distribution History</h2>
-            <p class="text-muted mb-0">{{ $parentData['name'] }} - Batch {{ $batchData['batch_number'] }}</p>
+            <p class="text-muted mb-0">{{ $parentData['name'] }} - Lot No: {{ $batchData['lot_number'] ?? 'N/A' }}</p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <a href="{{ route('inventory.show', $parentData['id']) }}" class="btn btn-outline-secondary btn-sm">

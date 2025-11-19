@@ -140,6 +140,47 @@ class ReportsController extends Controller
         return view('pages.reports.verify', compact('pendingReports', 'stats'));
     }
 
+    public function rejected()
+    {
+        // Set timeout to prevent execution timeout
+        set_time_limit(60);
+        
+        $user = session('user');
+        
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to access rejected reports.');
+        }
+        
+        // Get the barangayId for filtering reports
+        $barangayId = null;
+        if ($user['role'] === 'barangay') {
+            $barangayId = $user['id'];
+        } else {
+            $barangayId = $user['barangayId'] ?? null;
+        }
+        
+        \Log::info('ReportsController rejected - BarangayId for filtering: ' . $barangayId);
+        
+        // Check if barangayId is available
+        if (!$barangayId) {
+            \Log::error('ReportsController rejected - No barangayId available, showing empty reports');
+            return view('pages.reports.rejected', [
+                'rejectedReports' => [],
+                'stats' => [
+                    'total_rejected' => 0,
+                    'rejected_today' => 0,
+                    'rejected_this_month' => 0
+                ]
+            ])->with('warning', 'Unable to determine barangay. Showing empty reports.');
+        }
+        
+        // Get rejected reports for current barangay
+        $rejectedReports = $this->getRejectedReports($barangayId);
+        $stats = $this->getRejectedStats($barangayId);
+        
+        return view('pages.reports.rejected', compact('rejectedReports', 'stats'));
+    }
+
     public function approve($id)
     {
         $user = session('user');
@@ -194,13 +235,18 @@ class ReportsController extends Controller
         }
     }
 
-    public function reject($id)
+    public function reject(Request $request, $id)
     {
         $user = session('user');
         
         if (!$user) {
             return redirect()->back()->with('error', 'Please login to reject reports.');
         }
+        
+        // Validate rejection reason
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
         
         // Get the barangayId for filtering reports
         $barangayId = null;
@@ -238,7 +284,8 @@ class ReportsController extends Controller
                     ['path' => 'status', 'value' => 'rejected'],
                     ['path' => 'rejected_at', 'value' => now()->toDateTimeString()],
                     ['path' => 'rejected_by', 'value' => session('user.name', 'Health Worker')],
-                    ['path' => 'rejected_by_id', 'value' => session('user.id')]
+                    ['path' => 'rejected_by_id', 'value' => session('user.id')],
+                    ['path' => 'rejection_reason', 'value' => $request->rejection_reason]
                 ]);
 
             return redirect()->back()->with('success', 'Report rejected successfully!');
@@ -373,6 +420,113 @@ class ReportsController extends Controller
         }
 
         return $pendingReports;
+    }
+
+    private function getRejectedReports($barangayId)
+    {
+        $rejectedReports = [];
+        
+        // Check if barangayId is available
+        if (!$barangayId) {
+            \Log::error('getRejectedReports - No barangayId available');
+            return $rejectedReports;
+        }
+        
+        try {
+            // Get all reports from the main reports collection
+            $allDocs = $this->firestore
+                ->collection("reports")
+                ->where('barangayId', '=', $barangayId)
+                ->documents();
+            
+            $allReports = [];
+            foreach ($allDocs as $doc) {
+                if ($doc->exists()) {
+                    $reportData = $doc->data();
+                    $allReports[] = [
+                        'id' => $doc->id(),
+                        'status' => $reportData['status'] ?? 'unknown',
+                        'data' => $reportData
+                    ];
+                }
+            }
+            
+            // Filter for rejected reports
+            foreach ($allReports as $report) {
+                $status = $report['status'];
+                
+                if ($status === 'rejected') {
+                    $rejectedReports[] = array_merge($report['data'], ['id' => $report['id']]);
+                }
+            }
+            
+            // Sort by rejected_at date (newest first)
+            usort($rejectedReports, function($a, $b) {
+                $dateA = $a['rejected_at'] ?? $a['createdAt'] ?? '';
+                $dateB = $b['rejected_at'] ?? $b['createdAt'] ?? '';
+                return strtotime($dateB) - strtotime($dateA);
+            });
+            
+            \Log::info('ReportsController - Rejected reports found: ' . count($rejectedReports));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error fetching rejected reports: ' . $e->getMessage());
+            return [];
+        }
+
+        return $rejectedReports;
+    }
+
+    private function getRejectedStats($barangayId)
+    {
+        try {
+            $stats = [
+                'total_rejected' => 0,
+                'rejected_today' => 0,
+                'rejected_this_month' => 0
+            ];
+            
+            // Check if barangayId is available
+            if (!$barangayId) {
+                \Log::error('getRejectedStats - No barangayId available');
+                return $stats;
+            }
+            
+            $today = Carbon::today();
+            
+            // Get all reports from the main reports collection
+            $allDocs = $this->firestore
+                ->collection("reports")
+                ->where('barangayId', '=', $barangayId)
+                ->documents();
+            
+            foreach ($allDocs as $doc) {
+                if ($doc->exists()) {
+                    $reportData = $doc->data();
+                    $status = $reportData['status'] ?? 'unknown';
+                    
+                    if ($status === 'rejected') {
+                        $stats['total_rejected']++;
+                        
+                        // Count rejected today
+                        if (isset($reportData['rejected_at'])) {
+                            $rejectedAt = Carbon::parse($reportData['rejected_at']);
+                            if ($rejectedAt->isToday()) {
+                                $stats['rejected_today']++;
+                            }
+                            if ($rejectedAt->isSameMonth($today)) {
+                                $stats['rejected_this_month']++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return $stats;
+        } catch (\Exception $e) {
+            \Log::error('Error getting rejected stats: ' . $e->getMessage());
+            return ['total_rejected' => 0, 'rejected_today' => 0, 'rejected_this_month' => 0];
+        }
     }
 
     private function getVerificationStats($barangayId)
