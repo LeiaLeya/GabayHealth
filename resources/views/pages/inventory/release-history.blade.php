@@ -79,7 +79,7 @@
                                 <th width="15%">Date & Time</th>
                                 <th width="15%">Recipient</th>
                                 <th width="10%">Quantity</th>
-                                <th width="12%">Batch Number</th>
+                                <th width="12%">Lot Number</th>
                                 <th width="12%">Batch Expiry</th>
                                 <th width="20%">Reason</th>
                                 <th width="16%">Released By</th>
@@ -113,7 +113,7 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <code class="bg-light text-dark p-1 rounded">{{ $release['batch_number'] }}</code>
+                                        <code class="bg-light text-dark p-1 rounded">{{ $release['lot_number'] ?? 'N/A' }}</code>
                                     </td>
                                     <td>
                                         @php

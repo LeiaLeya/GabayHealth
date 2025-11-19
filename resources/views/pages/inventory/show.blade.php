@@ -51,6 +51,7 @@
                 </h5>
             </div>
             <div class="card-body">
+                <div id="residentInlineAlert" class="alert d-none" role="alert"></div>
                 <form action="{{ route('inventory.release', $parentData['id']) }}" method="POST">
                     @csrf
                     @method('PUT')
@@ -73,6 +74,17 @@
                             <input type="date" class="form-control" id="release_date" name="release_date" value="{{ date('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-3 mb-3">
+                            <label for="released_by" class="form-label fw-semibold">Released By <span class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" id="personnel_search" autocomplete="off" placeholder="Search personnel name..." required>
+                                <input type="hidden" id="released_by" name="released_by" required>
+                                <input type="hidden" id="personnel_id" name="personnel_id">
+                                <div id="personnel_dropdown" class="dropdown-menu w-100" style="max-height: 250px; overflow-y: auto; display: none; z-index: 1050; word-wrap: break-word;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="reason" class="form-label fw-semibold">Reason for Release</label>
                             <input type="text" class="form-control" id="reason" name="reason" placeholder="e.g., fever, headache, etc.">
                         </div>
@@ -141,7 +153,7 @@
                                 <tr class="border-bottom {{ $status === 'expired' ? 'table-danger' : ($status === 'expiring_soon' ? 'table-warning' : '') }}">
                                     <td class="px-4 py-3">
                                         <div class="fw-semibold text-dark">{{ $parentData['name'] }}</div>
-                                        <small class="text-muted">Batch: {{ $batch['batch_number'] }}</small>
+                                        <small class="text-muted">Lot No: {{ $batch['lot_number'] ?? 'N/A' }}</small>
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="text-muted">{{ $parentData['type'] }}</span>
@@ -204,6 +216,68 @@
     @endif
 </div>
 
+<!-- Add Resident Modal -->
+<div class="modal fade" id="newResidentModal" tabindex="-1" aria-labelledby="newResidentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="newResidentModalLabel">
+                    <i class="bi bi-person-plus me-2"></i>Add New Resident
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="newResidentForm">
+                <div class="modal-body">
+                    <div id="newResidentFormAlert" class="alert d-none" role="alert"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="newResidentFirstName" class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newResidentFirstName" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="newResidentLastName" class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newResidentLastName" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="newResidentEmail" class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="newResidentEmail" name="email" placeholder="name@example.com" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="newResidentPurok" class="form-label fw-semibold">Purok / Street <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newResidentPurok" name="purok" placeholder="e.g., Purok Sunflower" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="newResidentPassword" class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="newResidentPassword" name="password" minlength="8" autocomplete="new-password" required>
+                            <small class="text-muted">Minimum of 8 characters.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="newResidentPasswordConfirmation" class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="newResidentPasswordConfirmation" name="password_confirmation" minlength="8" autocomplete="new-password" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Role</label>
+                        <input type="text" class="form-control" value="User" readonly>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="newResidentSubmitBtn">
+                        <span class="submit-label">Create Resident Account</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Add Batch Modal -->
 <div class="modal fade" id="addBatchModal" tabindex="-1" aria-labelledby="addBatchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -230,7 +304,10 @@
                                 @endforeach
                             </select>
                         </div>
-
+                        <div class="col-md-6 mb-3">
+                            <label for="lot_number" class="form-label fw-semibold">Lot Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="lot_number" name="lot_number" required placeholder="Enter lot number">
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -249,10 +326,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i>Cancel
+                        Cancel
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle me-1"></i>Save Batch
+                        Save Batch
                     </button>
                 </div>
             </form>
@@ -278,9 +355,8 @@
                         <div class="modal-body">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="batch_number_{{ $batch['id'] }}" class="form-label fw-semibold">Batch Number <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="batch_number_{{ $batch['id'] }}" name="batch_number" value="{{ $batch['batch_number'] }}" required readonly>
-                                    <small class="text-muted">Auto-generated batch numbers cannot be edited</small>
+                                    <label for="lot_number_{{ $batch['id'] }}" class="form-label fw-semibold">Lot Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="lot_number_{{ $batch['id'] }}" name="lot_number" value="{{ $batch['lot_number'] ?? '' }}" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="quantity_{{ $batch['id'] }}" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
@@ -300,10 +376,10 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="bi bi-x-circle me-1"></i>Cancel
+                                Cancel
                             </button>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-1"></i>Update Batch
+                                Update Batch
                             </button>
                         </div>
                     </form>
@@ -419,6 +495,12 @@
 
 <script>
 let currentSortDirection = '{{ $sortDirection ?? "asc" }}';
+const residentStoreUrl = '{{ route('inventory.residents.store') }}';
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '{{ csrf_token() }}';
+}
+let newResidentModalInstance = null;
 
 function toggleExpirationSort() {
     // Toggle sort direction
@@ -469,7 +551,171 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize resident search functionality
     initializeResidentSearch();
+    // Initialize personnel search functionality
+    initializePersonnelSearch();
+    // Setup modal for registering new residents
+    setupNewResidentModal();
 });
+
+function setupNewResidentModal() {
+    const modalElement = document.getElementById('newResidentModal');
+    if (modalElement && typeof bootstrap !== 'undefined') {
+        newResidentModalInstance = new bootstrap.Modal(modalElement);
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            resetNewResidentForm();
+        });
+    }
+
+    const residentForm = document.getElementById('newResidentForm');
+    if (residentForm) {
+        residentForm.addEventListener('submit', submitNewResidentForm);
+    }
+}
+
+function openNewResidentModal(initialName = '') {
+    resetNewResidentForm();
+
+    if (initialName) {
+        const parts = initialName.trim().split(/\s+/);
+        const firstNameField = document.getElementById('newResidentFirstName');
+        const lastNameField = document.getElementById('newResidentLastName');
+        if (firstNameField) {
+            firstNameField.value = parts.shift() || '';
+        }
+        if (lastNameField) {
+            lastNameField.value = parts.join(' ');
+        }
+    }
+
+    const emailField = document.getElementById('newResidentEmail');
+    if (emailField && !emailField.value) {
+        emailField.focus();
+    }
+
+    if (newResidentModalInstance) {
+        newResidentModalInstance.show();
+    }
+}
+
+function resetNewResidentForm() {
+    const form = document.getElementById('newResidentForm');
+    if (form) {
+        form.reset();
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
+    clearNewResidentFormAlert();
+}
+
+function clearNewResidentFormAlert() {
+    const alertEl = document.getElementById('newResidentFormAlert');
+    if (!alertEl) return;
+    alertEl.classList.add('d-none');
+    alertEl.classList.remove('alert-success', 'alert-danger');
+    alertEl.innerHTML = '';
+}
+
+function showNewResidentFormMessage(type, message) {
+    const alertEl = document.getElementById('newResidentFormAlert');
+    if (!alertEl) return;
+    alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
+    alertEl.classList.add(`alert-${type}`);
+    alertEl.innerHTML = message;
+}
+
+function displayNewResidentErrors(errors) {
+    const messages = [];
+    Object.keys(errors || {}).forEach(field => {
+        const fieldErrors = errors[field];
+        const input = document.querySelector(`#newResidentForm [name="${field}"]`);
+        if (input) {
+            input.classList.add('is-invalid');
+        }
+        (fieldErrors || []).forEach(message => messages.push(message));
+    });
+
+    if (messages.length) {
+        const list = `<ul class="mb-0 ps-3">${messages.map(msg => `<li>${msg}</li>`).join('')}</ul>`;
+        showNewResidentFormMessage('danger', list);
+    }
+}
+
+function submitNewResidentForm(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    clearNewResidentFormAlert();
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+    const submitBtn = document.getElementById('newResidentSubmitBtn');
+    const originalLabel = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Saving...';
+    }
+
+    const payload = {
+        first_name: form.first_name ? form.first_name.value.trim() : '',
+        last_name: form.last_name ? form.last_name.value.trim() : '',
+        email: form.email ? form.email.value.trim() : '',
+        purok: form.purok ? form.purok.value.trim() : '',
+        password: form.password ? form.password.value : '',
+        password_confirmation: form.password_confirmation ? form.password_confirmation.value : '',
+    };
+
+    fetch(residentStoreUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            if (response.status === 422 && data.errors) {
+                displayNewResidentErrors(data.errors);
+            } else {
+                showNewResidentFormMessage('danger', data.message || 'Failed to create resident.');
+            }
+            throw new Error('Request failed');
+        }
+        return data;
+    })
+    .then(data => {
+        selectResident(data.id, data.name, data.email, data.username);
+        showResidentInlineAlert('success', `Resident account created for ${data.name}.`);
+        if (newResidentModalInstance) {
+            newResidentModalInstance.hide();
+        }
+    })
+    .catch(error => {
+        console.error('Error creating resident:', error);
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalLabel;
+        }
+    });
+}
+
+function showResidentInlineAlert(type, message) {
+    const alertEl = document.getElementById('residentInlineAlert');
+    if (!alertEl) return;
+    alertEl.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+    alertEl.classList.add(`alert-${type}`);
+    alertEl.innerHTML = message;
+}
+
+function hideResidentInlineAlert() {
+    const alertEl = document.getElementById('residentInlineAlert');
+    if (!alertEl) return;
+    alertEl.classList.add('d-none');
+    alertEl.classList.remove('alert-success', 'alert-danger', 'alert-info');
+    alertEl.innerHTML = '';
+}
 
 // Resident Search Functionality
 function initializeResidentSearch() {
@@ -478,21 +724,32 @@ function initializeResidentSearch() {
     const hiddenNameInput = document.getElementById('resident_name');
     const hiddenIdInput = document.getElementById('resident_id');
     let searchTimeout;
+    let hasShownInitialList = false;
+    
+    // Show all residents when field is focused/clicked
+    searchInput.addEventListener('focus', function() {
+        if (!hasShownInitialList && this.value.trim() === '') {
+            searchResidents('');
+            hasShownInitialList = true;
+        }
+    });
     
     // Search for residents as user types
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
+        hideResidentInlineAlert();
+        
+        // Reset flag when field is cleared
+        if (query === '') {
+            hasShownInitialList = false;
+        }
         
         clearTimeout(searchTimeout);
         
-        if (query.length < 2) {
-            hideDropdown();
-            return;
-        }
-        
+        // Show all results if empty, or search if has query
         searchTimeout = setTimeout(() => {
             searchResidents(query);
-        }, 300);
+        }, query.length >= 2 ? 300 : 100);
     });
     
     // Hide dropdown when clicking outside
@@ -528,22 +785,36 @@ function displayResidents(residents, query) {
     const dropdown = document.getElementById('resident_dropdown');
     
     if (residents.length === 0) {
-        dropdown.innerHTML = `
-            <div class="dropdown-item" style="white-space: normal; padding: 12px;">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-person-plus me-3 text-success" style="margin-top: 2px;"></i>
-                    <div style="line-height: 1.4;">
-                        <strong style="color: #333;">No residents found</strong><br>
-                        <small class="text-muted">Click to add "${query}" as new resident</small>
+        if (query.length >= 2) {
+            dropdown.innerHTML = `
+                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-person-plus me-3 text-success" style="margin-top: 2px;"></i>
+                        <div style="line-height: 1.4;">
+                            <strong style="color: #333;">No residents found</strong><br>
+                            <small class="text-muted">Click to add "${query}" as new resident</small>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-        
-        // Add click handler for new resident
-        dropdown.querySelector('.dropdown-item').addEventListener('click', function() {
-            addNewResident(query);
-        });
+            `;
+            
+            // Add click handler for new resident
+            dropdown.querySelector('.dropdown-item').addEventListener('click', function() {
+                addNewResident(query);
+            });
+        } else {
+            dropdown.innerHTML = `
+                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-info-circle me-3 text-info" style="margin-top: 2px;"></i>
+                        <div style="line-height: 1.4;">
+                            <strong style="color: #333;">No residents found</strong><br>
+                            <small class="text-muted">Start typing to search for residents</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
     } else {
         let html = '';
         
@@ -562,19 +833,21 @@ function displayResidents(residents, query) {
             `;
         });
         
-        // Add option to create new resident
-        html += `
-            <div class="dropdown-divider"></div>
-            <div class="dropdown-item" data-new-resident="${query}" style="white-space: normal; padding: 12px;">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-person-plus me-3 text-success" style="margin-top: 2px;"></i>
-                    <div style="line-height: 1.4; flex: 1;">
-                        <strong style="color: #333;">Add "${query}" as new resident</strong><br>
-                        <small class="text-muted">Register this person for the first time</small>
+        // Add option to create new resident (only if query is provided)
+        if (query.length >= 2) {
+            html += `
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" data-new-resident="${query}" style="white-space: normal; padding: 12px;">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-person-plus me-3 text-success" style="margin-top: 2px;"></i>
+                        <div style="line-height: 1.4; flex: 1;">
+                            <strong style="color: #333;">Add "${query}" as new resident</strong><br>
+                            <small class="text-muted">Register this person for the first time</small>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
         
         dropdown.innerHTML = html;
         
@@ -603,12 +876,8 @@ function selectResident(id, name, email, username) {
 }
 
 function addNewResident(name) {
-    // For now, just set the name directly
-    // In the future, this could open a modal for additional details
-    document.getElementById('resident_search').value = name;
-    document.getElementById('resident_name').value = name;
-    document.getElementById('resident_id').value = ''; // Empty ID indicates new resident
     hideDropdown();
+    openNewResidentModal(name);
 }
 
 function showDropdown() {
@@ -617,6 +886,153 @@ function showDropdown() {
 
 function hideDropdown() {
     document.getElementById('resident_dropdown').style.display = 'none';
+}
+
+// Personnel Search Functionality
+function initializePersonnelSearch() {
+    const searchInput = document.getElementById('personnel_search');
+    const dropdown = document.getElementById('personnel_dropdown');
+    const hiddenNameInput = document.getElementById('released_by');
+    const hiddenIdInput = document.getElementById('personnel_id');
+    let searchTimeout;
+    let hasShownInitialList = false;
+    
+    if (!searchInput || !dropdown || !hiddenNameInput) {
+        return; // Exit if elements don't exist
+    }
+    
+    // Show all personnel when field is focused/clicked
+    searchInput.addEventListener('focus', function() {
+        if (!hasShownInitialList && this.value.trim() === '') {
+            searchPersonnel('');
+            hasShownInitialList = true;
+        }
+    });
+    
+    // Search for personnel as user types
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Reset flag when field is cleared
+        if (query === '') {
+            hasShownInitialList = false;
+        }
+        
+        clearTimeout(searchTimeout);
+        
+        // Show all results if empty, or search if has query
+        searchTimeout = setTimeout(() => {
+            searchPersonnel(query);
+        }, query.length >= 2 ? 300 : 100);
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            hidePersonnelDropdown();
+        }
+    });
+    
+    // Clear selection when input is manually changed
+    searchInput.addEventListener('keydown', function() {
+        hiddenNameInput.value = '';
+        hiddenIdInput.value = '';
+    });
+}
+
+function searchPersonnel(query) {
+    const dropdown = document.getElementById('personnel_dropdown');
+    
+    fetch(`{{ route('inventory.personnel.search') }}?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(personnel => {
+            displayPersonnel(personnel, query);
+        })
+        .catch(error => {
+            console.error('Error searching personnel:', error);
+            dropdown.innerHTML = '<div class="dropdown-item text-danger">Error searching personnel</div>';
+            showPersonnelDropdown();
+        });
+}
+
+function displayPersonnel(personnel, query) {
+    const dropdown = document.getElementById('personnel_dropdown');
+    
+    if (personnel.length === 0) {
+        if (query.length >= 2) {
+            dropdown.innerHTML = `
+                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-person-x me-3 text-warning" style="margin-top: 2px;"></i>
+                        <div style="line-height: 1.4;">
+                            <strong style="color: #333;">No personnel found</strong><br>
+                            <small class="text-muted">No matching personnel found for "${query}"</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            dropdown.innerHTML = `
+                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-info-circle me-3 text-info" style="margin-top: 2px;"></i>
+                        <div style="line-height: 1.4;">
+                            <strong style="color: #333;">No personnel found</strong><br>
+                            <small class="text-muted">No personnel available. Start typing to search.</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        let html = '';
+        
+        personnel.forEach(person => {
+            html += `
+                <div class="dropdown-item" data-personnel-id="${person.id}" data-personnel-name="${person.name}" style="white-space: normal; padding: 12px; cursor: pointer;">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-person-badge me-3 text-primary" style="margin-top: 2px;"></i>
+                        <div style="line-height: 1.4; flex: 1;">
+                            <strong style="color: #333;">${person.name}</strong>
+                            ${person.position ? `<br><small class="text-muted">${person.position}</small>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        dropdown.innerHTML = html;
+        
+        // Add click handlers
+        dropdown.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', function() {
+                selectPersonnel(this.dataset.personnelId, this.dataset.personnelName);
+            });
+        });
+    }
+    
+    showPersonnelDropdown();
+}
+
+function selectPersonnel(id, name) {
+    document.getElementById('personnel_search').value = name;
+    document.getElementById('released_by').value = name;
+    document.getElementById('personnel_id').value = id;
+    hidePersonnelDropdown();
+}
+
+function showPersonnelDropdown() {
+    const dropdown = document.getElementById('personnel_dropdown');
+    if (dropdown) {
+        dropdown.style.display = 'block';
+    }
+}
+
+function hidePersonnelDropdown() {
+    const dropdown = document.getElementById('personnel_dropdown');
+    if (dropdown) {
+        dropdown.style.display = 'none';
+    }
 }
 </script>
 @endsection 

@@ -36,6 +36,18 @@
             <i class="bi bi-people-fill text-primary"></i>
             <span>Registered: {{ count($attendees) }}</span>
         </div>
+        @if(isset($event['isOpenToAll']) && $event['isOpenToAll'])
+            <div class="col-auto d-flex align-items-center gap-2">
+                <i class="bi bi-globe text-primary"></i>
+                <span>Open to All Barangays</span>
+            </div>
+        @endif
+        @if(!empty($allowedBarangayNames ?? []))
+            <div class="col-12 d-flex align-items-start gap-2">
+                <i class="bi bi-geo-alt-fill text-primary"></i>
+                <span>Allowed Barangays: {{ implode(', ', $allowedBarangayNames) }}</span>
+            </div>
+        @endif
         @if(isset($event['in_charge']) && $event['in_charge'])
             <div class="col-auto d-flex align-items-center gap-2">
                 <i class="bi bi-person-badge-fill text-primary"></i>

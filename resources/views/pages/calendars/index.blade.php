@@ -136,7 +136,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="eventModalLabel">
-                        <i class="bi bi-calendar-event me-2"></i>Event Details
+                        <i class="bi bi-calendar-event me-2"></i><span id="eventModalTitleText">Event Details</span>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -654,6 +654,16 @@ function showEventDetails(eventId, eventType) {
     if (!event) return;
     
     let modalContent = '';
+    const modalTitleText = document.getElementById('eventModalTitleText');
+    if (modalTitleText) {
+        let titleText = 'Event Details';
+        if (eventType === 'appointment') {
+            titleText = 'Appointment Details';
+        } else if (eventType === 'schedule') {
+            titleText = 'Schedule Details';
+        }
+        modalTitleText.textContent = titleText;
+    }
     
     if (eventType === 'event') {
         // Add strikethrough for "Done" events in modal
@@ -770,7 +780,7 @@ function showEventDetails(eventId, eventType) {
             </div>
             <div class="event-detail-item">
                 <div class="event-detail-icon">
-                    <i class="bi bi-stethoscope"></i>
+                    <i class="bi bi-briefcase"></i>
                 </div>
                 <div class="event-detail-content">
                     <h6>Service</h6>
@@ -788,17 +798,15 @@ function showEventDetails(eventId, eventType) {
                 </div>
             </div>
             ` : ''}
-            ${event.notes ? `
             <div class="event-detail-item">
                 <div class="event-detail-icon">
                     <i class="bi bi-chat-text"></i>
                 </div>
                 <div class="event-detail-content">
                     <h6>Notes</h6>
-                    <p>${event.notes}</p>
+                    <p>${event.notes ? event.notes : '-'}</p>
                 </div>
             </div>
-            ` : ''}
         `;
     } else if (eventType === 'schedule') {
         modalContent = `
@@ -1013,58 +1021,124 @@ function setDefaultWeekDates() {
 }
 
 function initializeScheduleForm() {
-    // Handle schedule type change
-    const scheduleTypeSelect = document.getElementById('scheduleType');
-    console.log('scheduleTypeSelect element:', scheduleTypeSelect);
-    if (scheduleTypeSelect) {
-        scheduleTypeSelect.addEventListener('change', function() {
-            console.log('Schedule type changed to:', this.value);
-            const personnelSelect = document.getElementById('personnelSelect');
-            const type = this.value;
-            
-            personnelSelect.innerHTML = '<option value="">Select Personnel</option>';
-            
-            // For now, we'll need to fetch personnel data via AJAX
-            // This will be implemented when we add the personnel data to the calendar page
-            if (type === 'midwife') {
-                console.log('Processing midwives:', availablePersonnel);
-                availablePersonnel.forEach(personnel => {
-                    console.log('Processing personnel:', personnel);
-                    const option = document.createElement('option');
-                    option.value = personnel.id;
-                    option.textContent = personnel.name || personnel.full_name || 'Unknown';
-                    option.dataset.name = personnel.name || personnel.full_name || 'Unknown';
-                    personnelSelect.appendChild(option);
-                });
-                console.log('Final personnel options:', personnelSelect.options.length);
-            } else if (type === 'doctor') {
-                console.log('Processing doctors:', assignedDoctors);
-                assignedDoctors.forEach(doctor => {
-                    console.log('Processing doctor:', doctor);
-                    const option = document.createElement('option');
-                    option.value = doctor.id;
-                    option.textContent = doctor.name || doctor.full_name || 'Unknown';
-                    option.dataset.name = doctor.name || doctor.full_name || 'Unknown';
-                    personnelSelect.appendChild(option);
-                });
-                console.log('Final doctor options:', personnelSelect.options.length);
+    const personnelSearchInput = document.getElementById('personnelSearch');
+    const personnelOptions = document.getElementById('personnelOptions');
+    const personnelIdInput = document.getElementById('personnelId');
+    const personnelNameInput = document.getElementById('personnelName');
+    const personnelTypeInput = document.getElementById('personnelType');
+    const personnelDesignationInput = document.getElementById('personnelDesignation');
+    const capitalize = (value) => {
+        if (!value || typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    };
+
+    const getPersonnelName = (person) => {
+        if (!person) return '';
+        return (
+            person.full_name ||
+            person.fullName ||
+            person.name ||
+            [person.first_name, person.last_name].filter(Boolean).join(' ').trim() ||
+            [person.firstName, person.lastName].filter(Boolean).join(' ').trim() ||
+            person.email ||
+            ''
+        ).trim();
+    };
+
+    const normalizePersonnel = (person, defaultType) => {
+        const name = getPersonnelName(person);
+        const resolvedDesignation = person?.designation || person?.role || (defaultType === 'doctor' ? 'Doctor' : 'Midwife');
+        return {
+            id: person?.id || '',
+            name: name || 'Unknown',
+            type: defaultType,
+            designation: capitalize(resolvedDesignation)
+        };
+    };
+
+    const allPersonnel = [
+        ...(availablePersonnel || []).map(person => normalizePersonnel(person, 'midwife')),
+        ...(assignedDoctors || []).map(person => normalizePersonnel(person, 'doctor'))
+    ].filter(person => person.id && person.name);
+
+    const populatePersonnelOptions = () => {
+        if (!personnelOptions) return;
+        personnelOptions.innerHTML = '';
+        allPersonnel.forEach((person, index) => {
+            const option = document.createElement('option');
+            option.value = person.name;
+            option.textContent = `${person.name} (${person.designation})`;
+            option.dataset.personIndex = index.toString();
+            personnelOptions.appendChild(option);
+        });
+    };
+
+    const findPersonnelByValue = (value) => {
+        if (!value || !personnelOptions) return null;
+        const trimmed = value.trim().toLowerCase();
+        const matchingOption = Array.from(personnelOptions.options || []).find(
+            option => option.value.trim().toLowerCase() === trimmed
+        );
+        if (matchingOption && matchingOption.dataset.personIndex) {
+            const idx = parseInt(matchingOption.dataset.personIndex, 10);
+            if (!Number.isNaN(idx)) {
+                return allPersonnel[idx];
             }
-        });
-    }
-    
-    // Handle personnel selection
-    const personnelSelect = document.getElementById('personnelSelect');
-    if (personnelSelect) {
-        personnelSelect.addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            document.getElementById('personnelName').value = selectedOption.dataset.name || '';
-        });
+        }
+        return allPersonnel.find(person => person.name.trim().toLowerCase() === trimmed) || null;
+    };
+
+    const setPersonnelFields = (person) => {
+        if (!person) {
+            personnelIdInput && (personnelIdInput.value = '');
+            personnelNameInput && (personnelNameInput.value = '');
+            personnelTypeInput && (personnelTypeInput.value = '');
+            personnelDesignationInput && (personnelDesignationInput.value = '');
+            if (personnelSearchInput) {
+                if (personnelSearchInput.value.trim() === '') {
+                    personnelSearchInput.classList.remove('is-invalid');
+                } else {
+                    personnelSearchInput.classList.add('is-invalid');
+                }
+            }
+            return;
+        }
+
+        if (personnelIdInput) personnelIdInput.value = person.id;
+        if (personnelNameInput) personnelNameInput.value = person.name;
+        if (personnelTypeInput) personnelTypeInput.value = person.type;
+        if (personnelDesignationInput) personnelDesignationInput.value = person.designation;
+        if (personnelSearchInput) {
+            personnelSearchInput.classList.remove('is-invalid');
+        }
+    };
+
+    if (personnelSearchInput && personnelOptions) {
+        populatePersonnelOptions();
+
+        const handlePersonnelInput = () => {
+            const selectedPersonnel = findPersonnelByValue(personnelSearchInput.value);
+            setPersonnelFields(selectedPersonnel);
+        };
+
+        personnelSearchInput.addEventListener('input', handlePersonnelInput);
+        personnelSearchInput.addEventListener('change', handlePersonnelInput);
+        personnelSearchInput.addEventListener('blur', handlePersonnelInput);
     }
     
     // Handle form submission
     const scheduleForm = document.querySelector('#addScheduleModal form');
     if (scheduleForm) {
         scheduleForm.addEventListener('submit', function(e) {
+            if (personnelSearchInput && (!personnelIdInput.value || !personnelTypeInput.value)) {
+                e.preventDefault();
+                personnelSearchInput.classList.add('is-invalid');
+                personnelSearchInput.focus();
+                return;
+            }
+
             // Update all formatted times before submission
             const timeGroups = document.querySelectorAll('.time-input-group');
             timeGroups.forEach(group => {
@@ -1130,20 +1204,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 @csrf
                 <div class="modal-body">
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Schedule Type</label>
-                            <select class="form-select" name="type" id="scheduleType" required>
-                                <option value="">Select Type</option>
-                                <option value="midwife">Midwife</option>
-                                <option value="doctor">Doctor</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <label class="form-label">Personnel</label>
-                            <select class="form-select" name="personnel_id" id="personnelSelect" required>
-                                <option value="">Select Personnel</option>
-                            </select>
+                            <input type="search" class="form-control" id="personnelSearch" placeholder="Search by staff name" list="personnelOptions" autocomplete="off" required>
+                            <datalist id="personnelOptions"></datalist>
+                            <input type="hidden" name="personnel_id" id="personnelId">
                             <input type="hidden" name="personnel_name" id="personnelName">
+                            <input type="hidden" name="type" id="personnelType">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Designation</label>
+                            <input type="text" class="form-control" id="personnelDesignation" placeholder="Select personnel" readonly>
                         </div>
                     </div>
                     
