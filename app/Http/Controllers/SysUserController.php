@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Services\FirestoreService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
+use Laravel\Socialite\Facades\Socialite;
 
 class SysUserController extends Controller
 {
@@ -200,5 +201,110 @@ class SysUserController extends Controller
         $firestore->db->collection('admin')->add($data);
 
         return redirect()->route('login')->with('success', 'Admin registered successfully. You can now log in.');
+    }
+
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    public function handleGoogleCallback(FirestoreService $firestore)
+    {
+        try {
+            $googleUser = Socialite::driver('google')->user();
+        } catch (\Exception $e) {
+            return redirect()->route('login')->with('error', 'Failed to authenticate with Google.');
+        }
+
+        $email = $googleUser->getEmail();
+        $name = $googleUser->getName();
+        $googleId = $googleUser->getId();
+
+        try {
+            // Check if user exists in admin collection
+            $adminUsers = $firestore->db->collection('admin')
+                ->where('email', '=', $email)
+                ->documents();
+            
+            foreach ($adminUsers as $userDoc) {
+                if ($userDoc->exists()) {
+                    $user = $userDoc->data();
+                    Session::put('user', [
+                        'id' => $userDoc->id(),
+                        'email' => $email,
+                        'name' => $user['username'] ?? $name,
+                        'role' => 'admin',
+                        'google_id' => $googleId
+                    ]);
+                    return redirect()->route('RHUs.index')->with('success', 'Welcome back, Admin!');
+                }
+            }
+
+            // Check if user exists in rhu collection
+            $rhuUsers = $firestore->db->collection('rhu')
+                ->where('email', '=', $email)
+                ->documents();
+            
+            foreach ($rhuUsers as $userDoc) {
+                if ($userDoc->exists()) {
+                    $user = $userDoc->data();
+                    
+                    if ($user['status'] === 'pending') {
+                        Session::put('user', [
+                            'id' => $userDoc->id(),
+                            'email' => $email,
+                            'name' => $user['name'] ?? $name,
+                            'role' => 'rhu',
+                            'google_id' => $googleId,
+                            'rhuData' => array_merge(['id' => $userDoc->id()], $user)
+                        ]);
+                        return redirect()->route('rhu.pending');
+                    }
+                    
+                    if ($user['status'] !== 'approved') {
+                        $statusMessage = match($user['status']) {
+                            'rejected' => 'Your RHU registration has been rejected. Please contact administrator.',
+                            default => 'Your RHU account is not active. Please contact administrator.'
+                        };
+                        return redirect()->route('login')->with('error', $statusMessage);
+                    }
+                    
+                    Session::put('user', [
+                        'id' => $userDoc->id(),
+                        'email' => $email,
+                        'name' => $user['name'] ?? $name,
+                        'role' => 'rhu',
+                        'google_id' => $googleId,
+                        'rhuData' => array_merge(['id' => $userDoc->id()], $user)
+                    ]);
+                    return redirect()->route('BHUs.index')->with('success', 'Welcome back, ' . ($user['name'] ?? 'RHU User') . '!');
+                }
+            }
+
+            // User not found, create new admin user with Google OAuth
+            $adminData = [
+                'email' => $email,
+                'name' => $name,
+                'google_id' => $googleId,
+                'status' => 'approved',
+                'created_at' => now()->format('Y-m-d H:i:s'),
+                'updated_at' => now()->format('Y-m-d H:i:s')
+            ];
+            
+            $docRef = $firestore->addDocument('admin', $adminData);
+            
+            Session::put('user', [
+                'id' => $docRef->id(),
+                'email' => $email,
+                'name' => $name,
+                'role' => 'admin',
+                'google_id' => $googleId
+            ]);
+
+            return redirect()->route('RHUs.index')->with('success', 'Welcome, ' . $name . '! Your account has been created.');
+
+        } catch (\Exception $e) {
+            return redirect()->route('login')->with('error', 'Login failed. Please try again.');
+        }
     }
 }

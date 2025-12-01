@@ -14,6 +14,10 @@ Route::get('/firestore-test', [FirestoreTestController::class, 'index']);
 Route::get('/login', [SysUserController::class, 'login'])->name('login');
 Route::post('/login', [SysUserController::class, 'authenticate'])->name('login');
 
+// Google OAuth routes
+Route::get('/auth/google', [SysUserController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('/auth/google/callback', [SysUserController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+
 Route::get('/register', function () {
     return view('auth.registerSelect');
 })->name('register.select');
