@@ -27,6 +27,7 @@
                     ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
                     ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
                     ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } else {
                 $navItems = [
@@ -41,6 +42,7 @@
                     ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
                     ['route' => 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
                     ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             }
         @endphp
@@ -63,6 +65,7 @@
                             'Services' => 'bi-heart-pulse',
                             'Personnel' => 'bi-people',
                             'Account Management' => 'bi-person-gear',
+                            'Logout' => 'bi-door-open',
                         ];
                     @endphp
                     <i class="bi {{ $iconMap[$item['label']] ?? $item['icon'] }} nav-icon"></i>
@@ -71,14 +74,6 @@
             </li>
         @endforeach
     </ul>
-
-    <!-- Logout -->
-    <div class="logout-section mt-auto">
-        <a href="{{ route('logout') }}">
-            <i class="bi bi-door-open nav-icon"></i>
-            <span>Logout</span>
-        </a>
-    </div>
 </div>
 
 <style>
@@ -155,29 +150,5 @@
     .nav-icon {
         width: 18px;
         height: 18px;
-    }
-
-    .logout-section {
-        padding: 0 35px 16px 35px;
-        margin-top: auto;
-    }
-
-    .logout-section a {
-        color: white;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 15px;
-        line-height: 1;
-    }
-
-    .logout-section .nav-icon {
-        width: 20px;
-        height: 20px;
-    }
-
-    .logout-section a span {
-        margin-top: -2px;
     }
 </style>

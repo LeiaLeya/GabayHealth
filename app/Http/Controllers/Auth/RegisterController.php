@@ -49,33 +49,61 @@ class RegisterController extends Controller
             'rhuId' => 'required|string',
         ]);
 
-        $firestore = app(FirebaseService::class)->getFirestore();
-        $docRef = $firestore->collection('barangay')->add([
-            'username' => $request->username,
-            'password' => bcrypt($request->password),
-            'healthCenterName' => $request->healthCenterName,
-            'fullAddress' => $request->fullAddress,
-            'region' => $request->region,
-            'province' => $request->province,
-            'city' => $request->city,
-            'barangay' => $request->barangay,
-            'postalCode' => $request->postalCode,
-            'rhuId' => $request->rhuId,
-            'status' => 'pending',
-            'created_at' => now()->toDateTimeString(),
-        ]);
+        $firebaseService = app(FirebaseService::class);
+        $firestore = $firebaseService->getFirestore();
+        $auth = $firebaseService->getAuth();
 
-        // Notify the selected RHU (add a notification document)
-        $firestore->collection('rhu')->document($request->rhuId)
-            ->collection('notifications')->add([
-                'type' => 'barangay_registration',
-                'barangay_id' => $docRef->id(),
-                'barangay_name' => $request->healthCenterName,
-                'created_at' => now()->toDateTimeString(),
-                'status' => 'unread',
+        try {
+            // Generate email from username for Firebase Auth
+            $email = strtolower($request->username) . '@gabay-health.local';
+            
+            // Create Firebase Auth user
+            $authUser = $auth->createUser([
+                'email' => $email,
+                'password' => $request->password,
+                'displayName' => $request->healthCenterName,
+                'emailVerified' => false,
             ]);
 
-        return back()->with('success', 'Barangay registration submitted! Waiting for RHU approval.');
+            $uid = $authUser->uid;
+
+            // Store user data in Firestore using Firebase UID as document ID
+            $firestore->collection('barangay')->document($uid)->set([
+                'username' => $request->username,
+                'email' => $email,
+                'uid' => $uid, // Store Firebase UID
+                'password' => bcrypt($request->password), // Keep for backward compatibility
+                'healthCenterName' => $request->healthCenterName,
+                'fullAddress' => $request->fullAddress,
+                'region' => $request->region,
+                'province' => $request->province,
+                'city' => $request->city,
+                'barangay' => $request->barangay,
+                'postalCode' => $request->postalCode,
+                'rhuId' => $request->rhuId,
+                'role' => 'barangay',
+                'status' => 'pending',
+                'created_at' => now()->toDateTimeString(),
+            ]);
+
+            // Notify the selected RHU (add a notification document)
+            $firestore->collection('rhu')->document($request->rhuId)
+                ->collection('notifications')->add([
+                    'type' => 'barangay_registration',
+                    'barangay_id' => $uid,
+                    'barangay_name' => $request->healthCenterName,
+                    'created_at' => now()->toDateTimeString(),
+                    'status' => 'unread',
+                ]);
+
+            return back()->with('success', 'Barangay registration submitted! Waiting for RHU approval.');
+        } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
+            \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
+            return back()->withErrors(['username' => 'This username is already registered.'])->withInput();
+        } catch (\Exception $e) {
+            \Log::error('Error during BHC registration: ' . $e->getMessage());
+            return back()->withErrors(['registration' => 'Registration failed. Please try again.'])->withInput();
+        }
     }
 
     // Show RHU Officer registration form
@@ -97,22 +125,50 @@ class RegisterController extends Controller
             'city' => 'required|string',
         ]);
 
-        $firestore = app(FirebaseService::class)->getFirestore();
-        $docRef = $firestore->collection('rhu')->add([
-            'username' => $request->username,
-            'password' => bcrypt($request->password),
-            'name' => $request->rhuName,
-            'fullAddress' => $request->fullAddress,
-            'region' => $request->region,
-            'province' => $request->province,
-            'city' => $request->city,
-            'status' => 'pending',
-            'created_at' => now()->toDateTimeString(),
-        ]);
+        $firebaseService = app(FirebaseService::class);
+        $firestore = $firebaseService->getFirestore();
+        $auth = $firebaseService->getAuth();
 
-        // Optionally, notify admin (could add to an 'admin_notifications' collection)
-        // $firestore->collection('admin_notifications')->add([...]);
+        try {
+            // Generate email from username for Firebase Auth
+            $email = strtolower($request->username) . '@gabay-health.local';
+            
+            // Create Firebase Auth user
+            $authUser = $auth->createUser([
+                'email' => $email,
+                'password' => $request->password,
+                'displayName' => $request->rhuName,
+                'emailVerified' => false,
+            ]);
 
-        return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
+            $uid = $authUser->uid;
+
+            // Store user data in Firestore using Firebase UID as document ID
+            $firestore->collection('rhu')->document($uid)->set([
+                'username' => $request->username,
+                'email' => $email,
+                'uid' => $uid, // Store Firebase UID
+                'password' => bcrypt($request->password), // Keep for backward compatibility
+                'name' => $request->rhuName,
+                'fullAddress' => $request->fullAddress,
+                'region' => $request->region,
+                'province' => $request->province,
+                'city' => $request->city,
+                'role' => 'rhu',
+                'status' => 'pending',
+                'created_at' => now()->toDateTimeString(),
+            ]);
+
+            // Optionally, notify admin (could add to an 'admin_notifications' collection)
+            // $firestore->collection('admin_notifications')->add([...]);
+
+            return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
+        } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
+            \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
+            return back()->withErrors(['username' => 'This username is already registered.'])->withInput();
+        } catch (\Exception $e) {
+            \Log::error('Error during RHU registration: ' . $e->getMessage());
+            return back()->withErrors(['registration' => 'Registration failed. Please try again.'])->withInput();
+        }
     }
 } 

@@ -1,0 +1,159 @@
+<?php
+/**
+ * EXAMPLE: Role-Based Route Structure
+ * 
+ * This file shows how to organize routes by role.
+ * You can integrate this into your main web.php file.
+ * 
+ * Benefits:
+ * - Clear separation of concerns
+ * - Easy to maintain and extend
+ * - Role-based access control built-in
+ * - No code duplication
+ */
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\RHUController;
+
+// ============================================
+// PUBLIC ROUTES (No authentication required)
+// ============================================
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+
+// Registration routes
+Route::get('/register', [RegisterController::class, 'landing'])->name('register.landing');
+Route::get('/register/bhw', [RegisterController::class, 'showBhwForm'])->name('register.bhw');
+Route::post('/register/bhw', [RegisterController::class, 'registerBhw'])->name('register.bhw.submit');
+Route::get('/register/rhu', [RegisterController::class, 'showRhuForm'])->name('register.rhu');
+Route::post('/register/rhu', [RegisterController::class, 'registerRhu'])->name('register.rhu.submit');
+
+// ============================================
+// AUTHENTICATED ROUTES (All roles)
+// ============================================
+Route::middleware('auth.check')->group(function () {
+    
+    // Home route - redirects based on role
+    Route::get('/', function() {
+        $role = session('user.role');
+        return match($role) {
+            'admin' => redirect()->route('admin.rhus.index'),
+            'rhu' => redirect()->route('rhu.dashboard'),
+            'barangay' => redirect()->route('bhc.dashboard'),
+            'health-worker' => redirect()->route('health-worker.dashboard'),
+            default => redirect()->route('login'),
+        };
+    })->name('home');
+
+    // ============================================
+    // BHC (Barangay Health Center) ROUTES
+    // ============================================
+    Route::middleware('role:barangay,bhc')->prefix('bhc')->name('bhc.')->group(function () {
+        
+        // Dashboard
+        Route::get('/dashboard', [App\Http\Controllers\BHC\DashboardController::class, 'index'])->name('dashboard');
+        
+        // Reports (BHC-specific)
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [App\Http\Controllers\BHC\ReportsController::class, 'index'])->name('index');
+            Route::get('/verify', [App\Http\Controllers\BHC\ReportsController::class, 'verify'])->name('verify');
+            Route::get('/rejected', [App\Http\Controllers\BHC\ReportsController::class, 'rejected'])->name('rejected');
+            Route::post('/{id}/approve', [App\Http\Controllers\BHC\ReportsController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [App\Http\Controllers\BHC\ReportsController::class, 'reject'])->name('reject');
+        });
+        
+        // Inventory (BHC-specific)
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            Route::get('/', [App\Http\Controllers\BHC\InventoryController::class, 'index'])->name('index');
+            Route::get('/{id}', [App\Http\Controllers\BHC\InventoryController::class, 'show'])->name('show');
+            // ... more inventory routes
+        });
+        
+        // Personnel, Services, Schedules, etc.
+        // ... other BHC-specific routes
+    });
+
+    // ============================================
+    // RHU (Rural Health Unit) ROUTES
+    // ============================================
+    Route::middleware('role:rhu')->prefix('rhu')->name('rhu.')->group(function () {
+        
+        // Dashboard
+        Route::get('/dashboard', [App\Http\Controllers\RHU\DashboardController::class, 'index'])->name('dashboard');
+        
+        // Schedules (RHU-specific)
+        Route::prefix('schedules')->name('schedules.')->group(function () {
+            Route::get('/', [App\Http\Controllers\RHU\ScheduleController::class, 'index'])->name('index');
+            Route::post('/', [App\Http\Controllers\RHU\ScheduleController::class, 'store'])->name('store');
+            Route::put('/{id}', [App\Http\Controllers\RHU\ScheduleController::class, 'update'])->name('update');
+            Route::delete('/{id}', [App\Http\Controllers\RHU\ScheduleController::class, 'destroy'])->name('destroy');
+        });
+        
+        // BHC Management (RHU can manage BHCs)
+        Route::prefix('bhcs')->name('bhcs.')->group(function () {
+            Route::get('/', [App\Http\Controllers\RHU\BHCController::class, 'index'])->name('index');
+            Route::get('/{id}', [App\Http\Controllers\RHU\BHCController::class, 'show'])->name('show');
+            // ... more BHC management routes
+        });
+        
+        // Reports (RHU can view aggregated reports from BHCs)
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [App\Http\Controllers\RHU\ReportsController::class, 'index'])->name('index');
+            // ... more report routes
+        });
+        
+        // ... other RHU-specific routes
+    });
+
+    // ============================================
+    // HEALTH WORKER ROUTES
+    // ============================================
+    Route::middleware('role:health-worker,hw,bhw')->prefix('health-worker')->name('health-worker.')->group(function () {
+        
+        // Dashboard
+        Route::get('/dashboard', [App\Http\Controllers\HealthWorker\DashboardController::class, 'index'])->name('dashboard');
+        
+        // Reports (Health Workers submit reports)
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [App\Http\Controllers\HealthWorker\ReportsController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\HealthWorker\ReportsController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\HealthWorker\ReportsController::class, 'store'])->name('store');
+            Route::get('/{id}', [App\Http\Controllers\HealthWorker\ReportsController::class, 'show'])->name('show');
+        });
+        
+        // ... other Health Worker routes
+    });
+
+    // ============================================
+    // ADMIN ROUTES
+    // ============================================
+    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        
+        // RHU Management
+        Route::prefix('rhus')->name('rhus.')->group(function () {
+            Route::get('/', [AdminController::class, 'index'])->name('index');
+            Route::get('/approvals', [AdminController::class, 'indexApprovals'])->name('approvals');
+            Route::get('/create', [AdminController::class, 'create'])->name('create');
+            Route::post('/', [AdminController::class, 'store'])->name('store');
+            Route::get('/{id}', [AdminController::class, 'show'])->name('show');
+            Route::get('/{id}/edit', [AdminController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [AdminController::class, 'update'])->name('update');
+            Route::delete('/{id}', [AdminController::class, 'destroy'])->name('destroy');
+        });
+        
+        // ... other admin routes
+    });
+
+    // ============================================
+    // SHARED ROUTES (Multiple roles can access)
+    // ============================================
+    Route::middleware('role:barangay,rhu,health-worker')->group(function () {
+        // Routes that both BHC and RHU can access
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+    });
+});
+
