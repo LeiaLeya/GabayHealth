@@ -22,7 +22,95 @@ class EventController extends Controller
         $this->storage = $firebase->getStorage();
     }
 
-    // ✅ GET: Show list of events
+    /**
+     * Get all barangays that belong to the same RHU as the authenticated user.
+     */
+    private function getBarangaysWithinSameRhu(array $user): array
+    {
+        $barangays = [];
+
+        try {
+            $rhuId = null;
+
+            if (($user['role'] ?? null) === 'barangay') {
+                $barangayDoc = $this->firestore
+                    ->collection('barangay')
+                    ->document($user['id'])
+                    ->snapshot();
+
+                if ($barangayDoc->exists()) {
+                    $barangayData = $barangayDoc->data();
+                    $rhuId = $barangayData['rhuId'] ?? null;
+                }
+            } elseif (($user['role'] ?? null) === 'rhu') {
+                $rhuId = $user['id'];
+            }
+
+            if ($rhuId) {
+                $barangayDocs = $this->firestore
+                    ->collection('barangay')
+                    ->where('rhuId', '=', $rhuId)
+                    ->documents();
+
+                foreach ($barangayDocs as $doc) {
+                    if ($doc->exists()) {
+                        $data = $doc->data();
+
+                        if (($data['status'] ?? 'approved') !== 'approved') {
+                            continue;
+                        }
+
+                        if (($user['role'] ?? null) === 'barangay' && $doc->id() === ($user['id'] ?? null)) {
+                            continue;
+                        }
+
+                        $barangays[] = [
+                            'id' => $doc->id(),
+                            'name' => $data['healthCenterName']
+                                ?? $data['barangay_name']
+                                ?? $data['barangayName']
+                                ?? $data['name']
+                                ?? 'Barangay',
+                        ];
+                    }
+                }
+            }
+        } catch (\Throwable $th) {
+            \Log::error('Failed to fetch barangays within RHU: ' . $th->getMessage());
+        }
+
+        return $barangays;
+    }
+
+    /**
+     * Compute event status from date and time.
+     * Respects manual "Cancelled" status if already set.
+     */
+    private function computeStatus(?string $date, ?string $startTime, ?string $endTime, ?string $existingStatus = null): string
+    {
+        if ($existingStatus === 'Cancelled') {
+            return 'Cancelled';
+        }
+
+        if (!$date || !$startTime || !$endTime) {
+            return 'Upcoming';
+        }
+
+        $startDateTime = Carbon::parse($date . ' ' . $startTime);
+        $endDateTime = Carbon::parse($date . ' ' . $endTime);
+        $now = Carbon::now();
+
+        if ($now->lt($startDateTime)) {
+            return 'Upcoming';
+        }
+
+        if ($now->between($startDateTime, $endDateTime)) {
+            return 'Ongoing';
+        }
+
+        return 'Done';
+    }
+
     public function index()
     {
         // Set timeout to prevent execution timeout
@@ -36,6 +124,7 @@ class EventController extends Controller
         
         // Initialize events as empty array
         $events = [];
+        $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
         
         try {
             \Log::info('EventController - Fetching events for user: ' . $user['id'] . ' with role: ' . $user['role']);
@@ -51,21 +140,34 @@ class EventController extends Controller
             $count = 0;
             foreach ($eventsQuery as $doc) {
                 if ($doc->exists()) {
-                    $events[] = array_merge($doc->data(), ['id' => $doc->id()]);
+                    $data = $doc->data();
+                    // Compute status dynamically unless cancelled
+                    $data['status'] = $this->computeStatus(
+                        $data['date'] ?? null,
+                        $data['start_time'] ?? null,
+                        $data['end_time'] ?? null,
+                        $data['status'] ?? null
+                    );
+                    $events[] = array_merge($data, ['id' => $doc->id()]);
                     $count++;
                 }
             }
             
             \Log::info('EventController - Found ' . $count . ' events');
 
-            return view('pages.events.index', compact('events'));
+            return view('pages.events.index', [
+                'events' => $events,
+                'barangaysWithinRhu' => $barangaysWithinRhu,
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching events: ' . $e->getMessage());
-            return view('pages.events.index', compact('events'))->with('error', 'Error loading events data. Please try again.');
+            return view('pages.events.index', [
+                'events' => $events,
+                'barangaysWithinRhu' => $barangaysWithinRhu,
+            ])->with('error', 'Error loading events data. Please try again.');
         }
     }
 
-    // ✅ GET: Show event details and attendees
     public function show($id)
     {
         $user = session('user');
@@ -74,6 +176,9 @@ class EventController extends Controller
         if (!$barangayId) {
             return redirect()->route('events.index')->with('error', 'Barangay ID not found.');
         }
+
+        $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
+        $barangayNameMap = collect($barangaysWithinRhu)->pluck('name', 'id')->toArray();
 
         $eventDoc = $this->firestore
             ->collection("barangay/{$barangayId}/events")
@@ -85,6 +190,15 @@ class EventController extends Controller
         }
 
         $event = array_merge($eventDoc->data(), ['id' => $id]);
+        $allowedBarangayNames = $event['allowed_barangay_names'] ?? [];
+
+        if (empty($allowedBarangayNames) && !empty($event['allowed_barangays'] ?? [])) {
+            $allowedBarangayNames = collect($event['allowed_barangays'])
+                ->filter(fn ($barangayId) => isset($barangayNameMap[$barangayId]))
+                ->map(fn ($barangayId) => $barangayNameMap[$barangayId])
+                ->values()
+                ->all();
+        }
 
         $attendeesQuery = $this->firestore
             ->collection("barangay/{$barangayId}/events/{$id}/attendees")
@@ -125,7 +239,7 @@ class EventController extends Controller
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        return view('pages.events.show', compact('event', 'attendees', 'paginatedAttendees'));
+        return view('pages.events.show', compact('event', 'attendees', 'paginatedAttendees', 'allowedBarangayNames'));
     }
     
     public function create()
@@ -151,17 +265,22 @@ class EventController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'date' => 'required|date',
+            'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|string',
             'end_time' => 'required|string|after:start_time',
             'location' => 'required|string',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'nullable|string',
             'isOpenToAll' => 'nullable|boolean',
             'targetAttendees' => 'nullable|string|max:255',
             'in_charge' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
+            'allowed_barangays' => 'nullable|array',
+            'allowed_barangays.*' => 'string',
         ], [
             'end_time.after' => 'End time must be after start time.',
+            'date.after_or_equal' => 'Event date cannot be in the past.',
         ]);
 
         $imageUrl = null;
@@ -177,6 +296,20 @@ class EventController extends Controller
             $imageUrl = "https://firebasestorage.googleapis.com/v0/b/{$projectId}.appspot.com/o/" . rawurlencode($fileName) . "?alt=media";
         }
 
+        $computedStatus = $this->computeStatus($request->date, $request->start_time, $request->end_time, $request->status);
+
+        $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
+        $barangayMap = collect($barangaysWithinRhu)->pluck('name', 'id')->toArray();
+
+        $allowedBarangays = $request->boolean('isOpenToAll')
+            ? []
+            : array_values(array_filter(
+                array_unique($request->input('allowed_barangays', [])),
+                fn ($barangayId) => isset($barangayMap[$barangayId])
+            ));
+
+        $allowedBarangayNames = array_map(fn ($id) => $barangayMap[$id], $allowedBarangays);
+
         $this->firestore
             ->collection("barangay/{$this->barangayId}/events")
             ->add([
@@ -187,11 +320,15 @@ class EventController extends Controller
                 'end_time' => $request->end_time,
                 'time' => Carbon::parse($request->start_time)->format('h:iA') . ' - ' . Carbon::parse($request->end_time)->format('h:iA'),
                 'location' => $request->location,
-                'status' => $request->status ?? 'Upcoming',
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'status' => $computedStatus,
                 'isOpenToAll' => $request->boolean('isOpenToAll'),
                 'targetAttendees' => $request->targetAttendees,
                 'in_charge' => $request->in_charge,
                 'image_url' => $imageUrl,
+                'allowed_barangays' => $allowedBarangays,
+                'allowed_barangay_names' => $allowedBarangayNames,
                 'created_at' => now()->toDateTimeString(),
             ]);
 
@@ -246,18 +383,57 @@ class EventController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'date' => 'required|date',
+            'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|string',
             'end_time' => 'required|string|after:start_time',
             'location' => 'required|string',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'nullable|string',
             'isOpenToAll' => 'nullable|boolean',
             'targetAttendees' => 'nullable|string|max:255',
             'in_charge' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
+            'allowed_barangays' => 'nullable|array',
+            'allowed_barangays.*' => 'string',
         ], [
             'end_time.after' => 'End time must be after start time.',
+            'date.after_or_equal' => 'Event date cannot be in the past.',
         ]);
+
+        $computedStatus = $this->computeStatus($request->date, $request->start_time, $request->end_time, $request->status);
+
+        $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
+        $barangayMap = collect($barangaysWithinRhu)->pluck('name', 'id')->toArray();
+
+        $allowedBarangays = $request->boolean('isOpenToAll')
+            ? []
+            : array_values(array_filter(
+                array_unique($request->input('allowed_barangays', [])),
+                fn ($barangayId) => isset($barangayMap[$barangayId])
+            ));
+
+        $allowedBarangayNames = array_map(fn ($id) => $barangayMap[$id], $allowedBarangays);
+
+        // Get existing event data to check if date/time changed (rescheduling)
+        $existingEventDoc = $this->firestore
+            ->collection("barangay/{$this->barangayId}/events")
+            ->document($id)
+            ->snapshot();
+
+        $existingEvent = $existingEventDoc->exists() ? $existingEventDoc->data() : [];
+        $existingDate = $existingEvent['date'] ?? null;
+        $existingStartTime = $existingEvent['start_time'] ?? null;
+        $existingEndTime = $existingEvent['end_time'] ?? null;
+        $existingTime = $existingEvent['time'] ?? null;
+
+        // Check if event is being rescheduled (date or time changed)
+        $isRescheduled = false;
+        if ($existingDate && $existingStartTime && $existingEndTime) {
+            $dateChanged = $existingDate !== $request->date;
+            $timeChanged = ($existingStartTime !== $request->start_time) || ($existingEndTime !== $request->end_time);
+            $isRescheduled = $dateChanged || $timeChanged;
+        }
 
         $eventData = [
             'title' => $request->title,
@@ -267,12 +443,25 @@ class EventController extends Controller
             'end_time' => $request->end_time,
             'time' => Carbon::parse($request->start_time)->format('h:iA') . ' - ' . Carbon::parse($request->end_time)->format('h:iA'),
             'location' => $request->location,
-            'status' => $request->status ?? 'Upcoming',
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'status' => $computedStatus,
             'isOpenToAll' => $request->boolean('isOpenToAll'),
             'targetAttendees' => $request->targetAttendees,
             'in_charge' => $request->in_charge,
+            'allowed_barangays' => $allowedBarangays,
+            'allowed_barangay_names' => $allowedBarangayNames,
             'updated_at' => now()->toDateTimeString(),
         ];
+
+        // Add reschedule tracking if event was rescheduled
+        if ($isRescheduled) {
+            $currentRescheduleVersion = ($existingEvent['reschedule_version'] ?? 0) + 1;
+            $eventData['rescheduled_at'] = now()->toDateTimeString();
+            $eventData['reschedule_version'] = $currentRescheduleVersion;
+            $eventData['previous_date'] = $existingDate;
+            $eventData['previous_time'] = $existingTime;
+        }
 
         if ($request->hasFile('image')) {
             $bucket = $this->storage->getBucket();
@@ -292,7 +481,43 @@ class EventController extends Controller
             ->document($id)
             ->set($eventData, ['merge' => true]);
 
-        return redirect()->route('events.index')->with('success', 'Event updated successfully!');
+        $successMessage = $isRescheduled 
+            ? 'Event rescheduled successfully! Pre-registered attendees will be notified.' 
+            : 'Event updated successfully!';
+
+        return redirect()->route('events.index')->with('success', $successMessage);
+    }
+
+
+    // POST: Cancel event with reason
+    public function cancel(Request $request, $id)
+    {
+        $user = session('user');
+        
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to perform this action.');
+        }
+        
+        $this->barangayId = $user['barangayId'] ?? null;
+        if (!$this->barangayId) {
+            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        }
+
+        $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $this->firestore
+            ->collection("barangay/{$this->barangayId}/events")
+            ->document($id)
+            ->set([
+                'status' => 'Cancelled',
+                'cancellation_reason' => $request->reason,
+                'cancelled_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
+            ], ['merge' => true]);
+
+        return redirect()->route('events.index')->with('success', 'Event has been cancelled.');
     }
 
 

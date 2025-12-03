@@ -1101,23 +1101,23 @@
         },
         {
             "name": "google/cloud-firestore",
-            "version": "v1.51.0",
+            "version": "v1.53.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/googleapis/google-cloud-php-firestore.git",
-                "reference": "24b74741ce3e645f2b8ac33f26fa3e762ae2b64e"
+                "reference": "95913f975adc402867aeadce9756a3e32b888bb4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/googleapis/google-cloud-php-firestore/zipball/24b74741ce3e645f2b8ac33f26fa3e762ae2b64e",
-                "reference": "24b74741ce3e645f2b8ac33f26fa3e762ae2b64e",
+                "url": "https://api.github.com/repos/googleapis/google-cloud-php-firestore/zipball/95913f975adc402867aeadce9756a3e32b888bb4",
+                "reference": "95913f975adc402867aeadce9756a3e32b888bb4",
                 "shasum": ""
             },
             "require": {
                 "ext-grpc": "*",
                 "google/cloud-core": "^1.57",
                 "google/gax": "^1.36.0",
-                "php": "^8.0",
+                "php": "^8.1",
                 "ramsey/uuid": "^3.0|^4.0"
             },
             "require-dev": {
@@ -1152,9 +1152,9 @@
             ],
             "description": "Cloud Firestore Client for PHP",
             "support": {
-                "source": "https://github.com/googleapis/google-cloud-php-firestore/tree/v1.51.0"
+                "source": "https://github.com/googleapis/google-cloud-php-firestore/tree/v1.53.1"
             },
-            "time": "2025-06-18T20:58:13+00:00"
+            "time": "2025-09-05T22:58:48+00:00"
         },
         {
             "name": "google/cloud-storage",
@@ -9671,5 +9671,5 @@
         "php": "^8.2"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
