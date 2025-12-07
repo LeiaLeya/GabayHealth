@@ -16,6 +16,30 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 
+// BHC Controllers
+use App\Http\Controllers\BHC\ReportsController as BHCReportsController;
+use App\Http\Controllers\BHC\InventoryController as BHCInventoryController;
+use App\Http\Controllers\BHC\ScheduleController as BHCScheduleController;
+use App\Http\Controllers\BHC\ServicesController as BHCServicesController;
+use App\Http\Controllers\BHC\PersonnelController as BHCPersonnelController;
+use App\Http\Controllers\BHC\EventController as BHCEventController;
+use App\Http\Controllers\BHC\CalendarController as BHCCalendarController;
+use App\Http\Controllers\BHC\UserRequestController as BHCUserRequestController;
+use App\Http\Controllers\BHC\AccountController as BHCAccountController;
+use App\Http\Controllers\BHC\NotificationController as BHCNotificationController;
+
+// RHU Controllers
+use App\Http\Controllers\RHU\ReportsController as RHUReportsController;
+use App\Http\Controllers\RHU\InventoryController as RHUInventoryController;
+use App\Http\Controllers\RHU\ScheduleController as RHUScheduleController;
+use App\Http\Controllers\RHU\ServicesController as RHUServicesController;
+use App\Http\Controllers\RHU\PersonnelController as RHUPersonnelController;
+use App\Http\Controllers\RHU\EventController as RHUEventController;
+use App\Http\Controllers\RHU\CalendarController as RHUCalendarController;
+use App\Http\Controllers\RHU\UserRequestController as RHUUserRequestController;
+use App\Http\Controllers\RHU\AccountController as RHUAccountController;
+use App\Http\Controllers\RHU\NotificationController as RHUNotificationController;
+
 // Home route - redirects to appropriate dashboard
 Route::get('/', function() {
     if (session('user')) {
@@ -23,9 +47,9 @@ Route::get('/', function() {
         if ($role === 'admin') {
             return redirect()->route('admin.rhus.index');
         } elseif ($role === 'rhu') {
-            return redirect()->route('schedules.index');
+            return redirect()->route('rhu.reports.index');
         } elseif ($role === 'barangay') {
-            return redirect()->route('reports.index');
+            return redirect()->route('bhc.reports.index');
         }
     }
     return redirect()->route('login');
@@ -271,4 +295,194 @@ Route::middleware('auth.check')->group(function () {
             'results' => $results
         ]);
     })->name('test.subcollections');
+
+    // ============================================
+    // BHC (Barangay Health Center) Routes
+    // ============================================
+    Route::middleware(['auth.check', 'role:barangay'])->prefix('bhc')->name('bhc.')->group(function () {
+        // Reports routes
+        Route::get('/reports', [BHCReportsController::class, 'index'])->name('reports.index');
+        Route::get('/reports/verify', [BHCReportsController::class, 'verify'])->name('reports.verify');
+        Route::get('/reports/rejected', [BHCReportsController::class, 'rejected'])->name('reports.rejected');
+        Route::post('/reports/{id}/approve', [BHCReportsController::class, 'approve'])->name('reports.approve');
+        Route::post('/reports/{id}/reject', [BHCReportsController::class, 'reject'])->name('reports.reject');
+
+        // Inventory routes
+        Route::get('/inventory', [BHCInventoryController::class, 'index'])->name('inventory.index');
+        Route::get('/inventory/add-batch', [BHCInventoryController::class, 'showAddBatch'])->name('inventory.add-batch');
+        Route::get('/inventory/{id}/sort', [BHCInventoryController::class, 'showSorted'])->name('inventory.show.sorted');
+        Route::get('/inventory/residents/search', [BHCInventoryController::class, 'searchResidents'])->name('inventory.residents.search');
+        Route::post('/inventory/residents', [BHCInventoryController::class, 'storeResident'])->name('inventory.residents.store');
+        Route::get('/inventory/personnel/search', [BHCInventoryController::class, 'searchPersonnel'])->name('inventory.personnel.search');
+        Route::get('/inventory/{id}/release-history', [BHCInventoryController::class, 'showReleaseHistory'])->name('inventory.release-history');
+        Route::get('/inventory/{id}', [BHCInventoryController::class, 'show'])->name('inventory.show');
+        Route::get('/inventory/{parentId}/batches/{batchId}/history', [BHCInventoryController::class, 'showDistributionHistory'])->name('inventory.batches.history');
+        Route::post('/inventory', [BHCInventoryController::class, 'store'])->name('inventory.store');
+        Route::post('/inventory/batches', [BHCInventoryController::class, 'storeBatch'])->name('inventory.batches.store');
+        Route::put('/inventory/{id}', [BHCInventoryController::class, 'update'])->name('inventory.update');
+        Route::put('/inventory/{parentId}/batches/{batchId}/distribute', [BHCInventoryController::class, 'distributeBatch'])->name('inventory.batches.distribute');
+        Route::put('/inventory/{parentId}/batches/{batchId}', [BHCInventoryController::class, 'updateBatch'])->name('inventory.batches.update');
+        Route::put('/inventory/{parentId}/release', [BHCInventoryController::class, 'releaseMedicine'])->name('inventory.release');
+        Route::delete('/inventory/{id}', [BHCInventoryController::class, 'destroy'])->name('inventory.destroy');
+        Route::delete('/inventory/{parentId}/batches/{batchId}', [BHCInventoryController::class, 'destroyBatch'])->name('inventory.batches.destroy');
+
+        // Personnel routes
+        Route::get('/personnel', [BHCPersonnelController::class, 'index'])->name('personnel.index');
+        Route::post('/personnel', [BHCPersonnelController::class, 'store'])->name('personnel.store');
+        Route::put('/personnel/{id}', [BHCPersonnelController::class, 'update'])->name('personnel.update');
+        Route::delete('/personnel/{id}', [BHCPersonnelController::class, 'destroy'])->name('personnel.destroy');
+
+        // Schedules routes
+        Route::prefix('schedules')->name('schedules.')->group(function () {
+            Route::get('/', [BHCScheduleController::class, 'index'])->name('index');
+            Route::post('/', [BHCScheduleController::class, 'store'])->name('store');
+            Route::put('/{id}', [BHCScheduleController::class, 'update'])->name('update');
+            Route::delete('/{id}', [BHCScheduleController::class, 'destroy'])->name('destroy');
+            Route::get('/assigned-doctors', [BHCScheduleController::class, 'getAssignedDoctors'])->name('assigned-doctors');
+        });
+
+        // Events routes
+        Route::get('/events', [BHCEventController::class, 'index'])->name('events.index');
+        Route::get('/events/create', [BHCEventController::class, 'create'])->name('events.create');
+        Route::post('/events/store', [BHCEventController::class, 'store'])->name('events.store');
+        Route::get('/events/{id}', [BHCEventController::class, 'show'])->name('events.show');
+        Route::get('/events/{id}/edit', [BHCEventController::class, 'edit'])->name('events.edit');
+        Route::put('/events/{id}', [BHCEventController::class, 'update'])->name('events.update');
+        Route::post('/events/{id}/cancel', [BHCEventController::class, 'cancel'])->name('events.cancel');
+        Route::get('/events/{id}/export-pdf', [BHCEventController::class, 'exportPdf'])->name('events.exportPdf');
+
+        // Calendar routes
+        Route::get('/calendars', [BHCCalendarController::class, 'index'])->name('calendars.index');
+        Route::get('/calendars/data', [BHCCalendarController::class, 'getCalendarData'])->name('calendars.data');
+
+        // Services routes
+        Route::prefix('services')->name('services.')->group(function () {
+            Route::get('/', [BHCServicesController::class, 'index'])->name('index');
+            Route::post('/', [BHCServicesController::class, 'store'])->name('store');
+            Route::put('/{id}', [BHCServicesController::class, 'update'])->name('update');
+            Route::patch('/{id}/toggle-status', [BHCServicesController::class, 'toggleStatus'])->name('toggle-status');
+            Route::delete('/{id}', [BHCServicesController::class, 'destroy'])->name('destroy');
+        });
+
+        // User Requests routes
+        Route::prefix('user-requests')->name('user-requests.')->group(function () {
+            Route::get('/', [BHCUserRequestController::class, 'index'])->name('index');
+            Route::get('/{id}', [BHCUserRequestController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [BHCUserRequestController::class, 'approve'])->name('approve');
+            Route::post('/{id}/decline', [BHCUserRequestController::class, 'decline'])->name('decline');
+        });
+
+        // Account routes
+        Route::prefix('accounts')->name('accounts.')->group(function () {
+            Route::get('/', [BHCAccountController::class, 'index'])->name('index');
+            Route::get('/profile', [BHCAccountController::class, 'editProfile'])->name('profile.edit');
+            Route::put('/profile', [BHCAccountController::class, 'updateProfile'])->name('profile.update');
+            Route::put('/password', [BHCAccountController::class, 'changePassword'])->name('password.update');
+            Route::get('/staff/create', [BHCAccountController::class, 'createStaff'])->name('staff.create');
+            Route::post('/staff', [BHCAccountController::class, 'storeStaff'])->name('staff.store');
+            Route::get('/staff/{id}/edit', [BHCAccountController::class, 'editStaff'])->name('staff.edit');
+            Route::put('/staff/{id}', [BHCAccountController::class, 'updateStaff'])->name('staff.update');
+            Route::delete('/staff/{id}', [BHCAccountController::class, 'destroyStaff'])->name('staff.destroy');
+        });
+
+        // Notifications routes
+        Route::get('/notifications', [BHCNotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications', [BHCNotificationController::class, 'store'])->name('notifications.store');
+        Route::delete('/notifications/{id}', [BHCNotificationController::class, 'destroy'])->name('notifications.destroy');
+    });
+
+    // ============================================
+    // RHU (Rural Health Unit) Routes
+    // ============================================
+    Route::middleware(['auth.check', 'role:rhu'])->prefix('rhu')->name('rhu.')->group(function () {
+        // Reports routes
+        Route::get('/reports', [RHUReportsController::class, 'index'])->name('reports.index');
+        Route::get('/reports/verify', [RHUReportsController::class, 'verify'])->name('reports.verify');
+        Route::get('/reports/rejected', [RHUReportsController::class, 'rejected'])->name('reports.rejected');
+        Route::post('/reports/{id}/approve', [RHUReportsController::class, 'approve'])->name('reports.approve');
+        Route::post('/reports/{id}/reject', [RHUReportsController::class, 'reject'])->name('reports.reject');
+
+        // Inventory routes
+        Route::get('/inventory', [RHUInventoryController::class, 'index'])->name('inventory.index');
+        Route::get('/inventory/add-batch', [RHUInventoryController::class, 'showAddBatch'])->name('inventory.add-batch');
+        Route::get('/inventory/{id}/sort', [RHUInventoryController::class, 'showSorted'])->name('inventory.show.sorted');
+        Route::get('/inventory/residents/search', [RHUInventoryController::class, 'searchResidents'])->name('inventory.residents.search');
+        Route::post('/inventory/residents', [RHUInventoryController::class, 'storeResident'])->name('inventory.residents.store');
+        Route::get('/inventory/personnel/search', [RHUInventoryController::class, 'searchPersonnel'])->name('inventory.personnel.search');
+        Route::get('/inventory/{id}/release-history', [RHUInventoryController::class, 'showReleaseHistory'])->name('inventory.release-history');
+        Route::get('/inventory/{id}', [RHUInventoryController::class, 'show'])->name('inventory.show');
+        Route::get('/inventory/{parentId}/batches/{batchId}/history', [RHUInventoryController::class, 'showDistributionHistory'])->name('inventory.batches.history');
+        Route::post('/inventory', [RHUInventoryController::class, 'store'])->name('inventory.store');
+        Route::post('/inventory/batches', [RHUInventoryController::class, 'storeBatch'])->name('inventory.batches.store');
+        Route::put('/inventory/{id}', [RHUInventoryController::class, 'update'])->name('inventory.update');
+        Route::put('/inventory/{parentId}/batches/{batchId}/distribute', [RHUInventoryController::class, 'distributeBatch'])->name('inventory.batches.distribute');
+        Route::put('/inventory/{parentId}/batches/{batchId}', [RHUInventoryController::class, 'updateBatch'])->name('inventory.batches.update');
+        Route::put('/inventory/{parentId}/release', [RHUInventoryController::class, 'releaseMedicine'])->name('inventory.release');
+        Route::delete('/inventory/{id}', [RHUInventoryController::class, 'destroy'])->name('inventory.destroy');
+        Route::delete('/inventory/{parentId}/batches/{batchId}', [RHUInventoryController::class, 'destroyBatch'])->name('inventory.batches.destroy');
+
+        // Personnel routes
+        Route::get('/personnel', [RHUPersonnelController::class, 'index'])->name('personnel.index');
+        Route::post('/personnel', [RHUPersonnelController::class, 'store'])->name('personnel.store');
+        Route::put('/personnel/{id}', [RHUPersonnelController::class, 'update'])->name('personnel.update');
+        Route::delete('/personnel/{id}', [RHUPersonnelController::class, 'destroy'])->name('personnel.destroy');
+
+        // Schedules routes
+        Route::prefix('schedules')->name('schedules.')->group(function () {
+            Route::get('/', [RHUScheduleController::class, 'index'])->name('index');
+            Route::post('/', [RHUScheduleController::class, 'store'])->name('store');
+            Route::put('/{id}', [RHUScheduleController::class, 'update'])->name('update');
+            Route::delete('/{id}', [RHUScheduleController::class, 'destroy'])->name('destroy');
+            Route::get('/assigned-doctors', [RHUScheduleController::class, 'getAssignedDoctors'])->name('assigned-doctors');
+        });
+
+        // Events routes
+        Route::get('/events', [RHUEventController::class, 'index'])->name('events.index');
+        Route::get('/events/create', [RHUEventController::class, 'create'])->name('events.create');
+        Route::post('/events/store', [RHUEventController::class, 'store'])->name('events.store');
+        Route::get('/events/{id}', [RHUEventController::class, 'show'])->name('events.show');
+        Route::get('/events/{id}/edit', [RHUEventController::class, 'edit'])->name('events.edit');
+        Route::put('/events/{id}', [RHUEventController::class, 'update'])->name('events.update');
+        Route::post('/events/{id}/cancel', [RHUEventController::class, 'cancel'])->name('events.cancel');
+        Route::get('/events/{id}/export-pdf', [RHUEventController::class, 'exportPdf'])->name('events.exportPdf');
+
+        // Calendar routes
+        Route::get('/calendars', [RHUCalendarController::class, 'index'])->name('calendars.index');
+        Route::get('/calendars/data', [RHUCalendarController::class, 'getCalendarData'])->name('calendars.data');
+
+        // Services routes
+        Route::prefix('services')->name('services.')->group(function () {
+            Route::get('/', [RHUServicesController::class, 'index'])->name('index');
+            Route::post('/', [RHUServicesController::class, 'store'])->name('store');
+            Route::put('/{id}', [RHUServicesController::class, 'update'])->name('update');
+            Route::patch('/{id}/toggle-status', [RHUServicesController::class, 'toggleStatus'])->name('toggle-status');
+            Route::delete('/{id}', [RHUServicesController::class, 'destroy'])->name('destroy');
+        });
+
+        // User Requests routes
+        Route::prefix('user-requests')->name('user-requests.')->group(function () {
+            Route::get('/', [RHUUserRequestController::class, 'index'])->name('index');
+            Route::get('/{id}', [RHUUserRequestController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [RHUUserRequestController::class, 'approve'])->name('approve');
+            Route::post('/{id}/decline', [RHUUserRequestController::class, 'decline'])->name('decline');
+        });
+
+        // Account routes
+        Route::prefix('accounts')->name('accounts.')->group(function () {
+            Route::get('/', [RHUAccountController::class, 'index'])->name('index');
+            Route::get('/profile', [RHUAccountController::class, 'editProfile'])->name('profile.edit');
+            Route::put('/profile', [RHUAccountController::class, 'updateProfile'])->name('profile.update');
+            Route::put('/password', [RHUAccountController::class, 'changePassword'])->name('password.update');
+            Route::get('/staff/create', [RHUAccountController::class, 'createStaff'])->name('staff.create');
+            Route::post('/staff', [RHUAccountController::class, 'storeStaff'])->name('staff.store');
+            Route::get('/staff/{id}/edit', [RHUAccountController::class, 'editStaff'])->name('staff.edit');
+            Route::put('/staff/{id}', [RHUAccountController::class, 'updateStaff'])->name('staff.update');
+            Route::delete('/staff/{id}', [RHUAccountController::class, 'destroyStaff'])->name('staff.destroy');
+        });
+
+        // Notifications routes
+        Route::get('/notifications', [RHUNotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications', [RHUNotificationController::class, 'store'])->name('notifications.store');
+        Route::delete('/notifications/{id}', [RHUNotificationController::class, 'destroy'])->name('notifications.destroy');
+    });
 });
