@@ -15,6 +15,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\AuthController;
 
 // BHC Controllers
 use App\Http\Controllers\BHC\ReportsController as BHCReportsController;
@@ -66,6 +67,12 @@ Route::get('/register/bhw', [RegisterController::class, 'showBhwForm'])->name('r
 Route::post('/register/bhw', [RegisterController::class, 'registerBhw'])->name('register.bhw.submit');
 Route::get('/register/rhu', [RegisterController::class, 'showRhuForm'])->name('register.rhu');
 Route::post('/register/rhu', [RegisterController::class, 'registerRhu'])->name('register.rhu.submit');
+
+// Google OAuth routes
+Route::get('/auth/google', [RegisterController::class, 'redirectToGoogle'])->name('google.redirect');
+Route::get('/auth/google/callback', [RegisterController::class, 'handleGoogleCallback'])->name('google.callback');
+Route::get('/register/rhu/google', [RegisterController::class, 'showGoogleForm'])->name('register.rhu.google');
+Route::post('/register/rhu/google', [RegisterController::class, 'registerRhuGoogle'])->name('register.rhu.google.submit');
 
 // Debug session route (public)
 Route::get('/debug-session', function() {
@@ -485,4 +492,15 @@ Route::middleware('auth.check')->group(function () {
         Route::post('/notifications', [RHUNotificationController::class, 'store'])->name('notifications.store');
         Route::delete('/notifications/{id}', [RHUNotificationController::class, 'destroy'])->name('notifications.destroy');
     });
+
+    // Dashboard route (protected by auth)
+    Route::get('/dashboard', function () {
+        $role = session('user.role');
+        return match($role) {
+            'rhu' => redirect()->route('rhu.reports.index'),
+            'barangay' => redirect()->route('bhc.reports.index'),
+            'admin' => redirect()->route('admin.rhus.index'),
+            default => redirect()->route('login'),
+        };
+    })->name('dashboard');
 });
