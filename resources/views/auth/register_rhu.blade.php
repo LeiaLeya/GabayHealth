@@ -17,8 +17,8 @@
     .container-fluid {
         min-height: 100vh;
         width: 100%;
-        padding: 0;
-        margin: 0;
+        padding: 0 !important;
+        margin: 0 !important;
         overflow: hidden !important;
         display: flex;
     }
@@ -46,46 +46,105 @@
         justify-content: center;
         position: relative;
         overflow: hidden;
+        height: 100vh;
+        width: 100%;
+        padding: 0;
+        margin: 0;
     }
     .left-panel::before {
         content: '';
         position: absolute;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
         border-radius: 50%;
-        top: -100px;
-        right: -100px;
+        top: -150px;
+        right: -150px;
+        animation: float 6s ease-in-out infinite;
     }
     .left-panel::after {
         content: '';
         position: absolute;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
         border-radius: 50%;
-        bottom: -50px;
-        left: -50px;
+        bottom: -100px;
+        left: -100px;
+        animation: float 8s ease-in-out infinite reverse;
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(30px); }
     }
     .left-content {
         position: relative;
         z-index: 1;
         text-align: center;
-        max-width: 400px;
+        max-width: 450px;
         padding: 40px;
     }
     .left-content h1 {
         color: #fff;
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-        line-height: 1.2;
+        font-size: 3rem;
+        font-weight: 900;
+        margin-bottom: 1.5rem;
+        line-height: 1.1;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     .left-content p {
         color: #cbd5e1;
-        font-size: 1rem;
+        font-size: 1.1rem;
+        margin-bottom: 2.5rem;
+        line-height: 1.7;
+        font-weight: 400;
+    }
+    .logo-section {
         margin-bottom: 2rem;
-        line-height: 1.6;
+    }
+    .logo-section img {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 30px rgba(37, 99, 235, 0.2));
+        animation: pulse-glow 3s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+        0%, 100% { filter: drop-shadow(0 10px 30px rgba(37, 99, 235, 0.2)); }
+        50% { filter: drop-shadow(0 15px 40px rgba(37, 99, 235, 0.4)); }
+    }
+    .feature-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 2rem;
+        text-align: left;
+    }
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: #cbd5e1;
+        font-size: 0.95rem;
+    }
+    .feature-item::before {
+        content: '✓';
+        width: 24px;
+        height: 24px;
+        background: rgba(37, 99, 235, 0.3);
+        border: 1px solid rgba(37, 99, 235, 0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #60a5fa;
+        font-weight: bold;
+        font-size: 0.85rem;
+        flex-shrink: 0;
     }
     .right-panel {
         flex: 1;
@@ -212,13 +271,17 @@
     <!-- Left Panel: Branding -->
     <div class="left-panel">
         <div class="left-content">
-            <h1>GabayHealth</h1>
-            <p>Register your Rural Health Unit to manage inventory and health records efficiently.</p>
-            <div id="logoUploadArea" style="width: 120px; height: 120px; border: 2px dashed #cbd5e1; border-radius: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: rgba(37, 99, 235, 0.1); margin: 0 auto; transition: all 0.3s ease;">
-                <img id="logoPreview" src='{{ asset('images/gabayhealth_logo.png') }}' alt='RHU Logo' style='width: 70px; height: 70px; object-fit: contain;'>
-                <input type="file" id="logoUpload" name="logo" accept="image/*" style="display: none;" onchange="previewLogo(event)">
+            <div class="logo-section">
+                <img src='{{ asset('images/gabayhealth_logo.png') }}' alt='GabayHealth Logo'>
             </div>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 1rem;">Upload your RHU logo</p>
+            <h1>GabayHealth</h1>
+            <p>Streamline your rural health unit operations</p>
+            
+            <div class="feature-list">
+                <div class="feature-item">Manage inventory efficiently</div>
+                <div class="feature-item">Track health records securely</div>
+                <div class="feature-item">Improve patient care quality</div>
+            </div>
         </div>
     </div>
 

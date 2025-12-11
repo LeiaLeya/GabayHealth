@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use Laravel\Socialite\Facades\Socialite;
+use Exception;
 
 class LoginController extends Controller
 {
@@ -22,7 +24,6 @@ class LoginController extends Controller
 
         $firebaseService = app(FirebaseService::class);
         $firestore = $firebaseService->getFirestore();
-        $auth = $firebaseService->getAuth();
 
         try {
             // Search for user by username in all collections (rhu, barangay)
@@ -89,9 +90,97 @@ class LoginController extends Controller
         }
     }
 
+    // Google OAuth redirect for login
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    // Google OAuth callback for login
+    public function handleGoogleCallback()
+    {
+        try {
+            $googleUser = Socialite::driver('google')->user();
+            
+            $firebaseService = app(FirebaseService::class);
+            $firestore = $firebaseService->getFirestore();
+
+            // Search in RHU collection by email
+            $rhuDocs = $firestore->collection('rhu')
+                ->where('email', '=', $googleUser->email)
+                ->documents();
+
+            $user = null;
+            $userRole = null;
+            $userId = null;
+
+            foreach ($rhuDocs as $doc) {
+                if ($doc->exists()) {
+                    $user = $doc->data();
+                    $userId = $doc->id();
+                    $userRole = 'rhu';
+                    break;
+                }
+            }
+
+            // If not found in RHU, search in barangay
+            if (!$user) {
+                $barangayDocs = $firestore->collection('barangay')
+                    ->where('email', '=', $googleUser->email)
+                    ->documents();
+
+                foreach ($barangayDocs as $doc) {
+                    if ($doc->exists()) {
+                        $user = $doc->data();
+                        $userId = $doc->id();
+                        $userRole = 'barangay';
+                        break;
+                    }
+                }
+            }
+
+            // User not found in database
+            if (!$user) {
+                return redirect()->route('login')->with('error', 'No account found with this email. Please register first.');
+            }
+
+            // Check if account is approved
+            if (($user['status'] ?? 'pending') !== 'approved') {
+                return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
+            }
+
+            // Login successful - store in session
+            session([
+                'user' => [
+                    'id' => $userId,
+                    'uid' => $userId,
+                    'username' => $user['username'] ?? $googleUser->name,
+                    'email' => $googleUser->email,
+                    'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
+                    'role' => $userRole,
+                    'status' => $user['status'] ?? 'active',
+                ]
+            ]);
+
+            return redirect()->route('dashboard')->with('success', 'Login successful!');
+
+        } catch (Exception $e) {
+            \Log::error('Google Login error: ' . $e->getMessage());
+            return redirect()->route('login')->with('error', 'Google sign-in failed. Please try again.');
+        }
+    }
+
     public function logout()
     {
+        // Clear all session data
         session()->flush();
+        
+        // Invalidate the session
+        session()->invalidate();
+        
+        // Regenerate session token
+        session()->regenerateToken();
+        
         return redirect()->route('login')->with('success', 'You have been logged out.');
     }
 }

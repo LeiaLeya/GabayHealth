@@ -61,6 +61,10 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
+// Google OAuth routes for LOGIN (not registration)
+Route::get('/auth/google/login', [LoginController::class, 'redirectToGoogle'])->name('google.login.redirect');
+Route::get('/auth/google/login/callback', [LoginController::class, 'handleGoogleCallback'])->name('google.login.callback');
+
 // Registration landing and role-specific forms
 Route::get('/register', [RegisterController::class, 'landing'])->name('register.landing');
 Route::get('/register/bhw', [RegisterController::class, 'showBhwForm'])->name('register.bhw');
