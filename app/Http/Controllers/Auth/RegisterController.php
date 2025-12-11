@@ -150,6 +150,7 @@ class RegisterController extends Controller
                 'uid' => $uid, // Store Firebase UID
                 'password' => bcrypt($request->password), // Keep for backward compatibility
                 'name' => $request->rhuName,
+                'healthCenterName' => $request->rhuName, // Store as healthCenterName for LoginController compatibility
                 'fullAddress' => $request->fullAddress,
                 'region' => $request->region,
                 'province' => $request->province,

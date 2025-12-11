@@ -27,6 +27,7 @@ trait HasRoleContext
     /**
      * Get the barangay ID based on role
      * For barangay users, it's their own ID
+     * For RHU users, it's their own ID (RHUs serve multiple barangays)
      * For other roles, it's stored in barangayId
      */
     protected function getBarangayId(): ?string
@@ -34,7 +35,7 @@ trait HasRoleContext
         $user = session('user');
         $role = $user['role'] ?? null;
         
-        if ($role === 'barangay') {
+        if ($role === 'barangay' || $role === 'rhu') {
             return $user['id'] ?? null;
         }
         
