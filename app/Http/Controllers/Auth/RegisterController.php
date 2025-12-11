@@ -116,8 +116,9 @@ class RegisterController extends Controller
     public function registerRhu(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
             'password' => 'required|string|min:6|confirmed',
+            'username' => 'required|string|max:255',
             'rhuName' => 'required|string|max:255',
             'fullAddress' => 'required|string|max:255',
             'region' => 'required|string',
@@ -130,8 +131,8 @@ class RegisterController extends Controller
         $auth = $firebaseService->getAuth();
 
         try {
-            // Generate email from username for Firebase Auth
-            $email = strtolower($request->username) . '@gabay-health.local';
+            // Use the email provided by the user
+            $email = $request->email;
             
             // Create Firebase Auth user
             $authUser = $auth->createUser([
@@ -166,7 +167,7 @@ class RegisterController extends Controller
             return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
-            return back()->withErrors(['username' => 'This username is already registered.'])->withInput();
+            return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
         } catch (\Exception $e) {
             \Log::error('Error during RHU registration: ' . $e->getMessage());
             return back()->withErrors(['registration' => 'Registration failed. Please try again.'])->withInput();
