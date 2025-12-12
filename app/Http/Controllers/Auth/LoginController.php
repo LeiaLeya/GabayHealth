@@ -139,9 +139,17 @@ class LoginController extends Controller
                 }
             }
 
-            // User not found in database
+            // User not found - redirect to registration instead of showing error
             if (!$user) {
-                return redirect()->route('login')->with('error', 'No account found with this email. Please register first.');
+                // Store Google data in session for registration
+                session([
+                    'google_email' => $googleUser->email,
+                    'google_name' => $googleUser->name,
+                    'google_id' => $googleUser->id,
+                    'google_avatar' => $googleUser->avatar,
+                ]);
+                
+                return redirect()->route('register.rhu.google')->with('info', 'Please complete your registration details.');
             }
 
             // Check if account is approved
