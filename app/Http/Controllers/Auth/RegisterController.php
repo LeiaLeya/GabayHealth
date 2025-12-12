@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Laravel\Socialite\Facades\Socialite;
+use Cloudinary\Uploader;
 use Exception;
 
 class RegisterController extends Controller
@@ -126,6 +127,8 @@ class RegisterController extends Controller
             'region' => 'required|string',
             'province' => 'required|string',
             'city' => 'required|string',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'terms' => 'required|accepted',
         ]);
 
         $firebaseService = app(FirebaseService::class);
@@ -133,7 +136,6 @@ class RegisterController extends Controller
         $auth = $firebaseService->getAuth();
 
         try {
-            // Check if username already exists
             $existingUsername = $firestore->collection('rhu')
                 ->where('username', '=', $request->username)
                 ->documents();
@@ -155,6 +157,20 @@ class RegisterController extends Controller
 
             $uid = $authUser->uid;
 
+            // UPLOAD TO CLOUDINARY
+            $logoUrl = null;
+            if ($request->hasFile('logo')) {
+                try {
+                    $result = Uploader::upload($request->file('logo')->getRealPath(), [
+                        'folder' => "gabayhealth/rhu/{$uid}",
+                        'resource_type' => 'auto',
+                    ]);
+                    $logoUrl = $result['secure_url'];
+                } catch (\Exception $e) {
+                    \Log::error('Cloudinary upload error: ' . $e->getMessage());
+                }
+            }
+
             $firestore->collection('rhu')->document($uid)->set([
                 'username' => $request->username,
                 'email' => $email,
@@ -168,6 +184,7 @@ class RegisterController extends Controller
                 'city' => $request->city,
                 'role' => 'rhu',
                 'status' => 'pending',
+                'logo_url' => $logoUrl,
                 'created_at' => now()->toDateTimeString(),
             ]);
 
@@ -243,6 +260,7 @@ class RegisterController extends Controller
             'region' => 'required|string',
             'province' => 'required|string',
             'city' => 'required|string',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
         $firebaseService = app(FirebaseService::class);
@@ -250,7 +268,6 @@ class RegisterController extends Controller
         $auth = $firebaseService->getAuth();
 
         try {
-            // Check if username already exists in Firestore
             $existingUsername = $firestore->collection('rhu')
                 ->where('username', '=', $request->username)
                 ->documents();
@@ -270,6 +287,20 @@ class RegisterController extends Controller
 
             $uid = $authUser->uid;
 
+            // UPLOAD TO CLOUDINARY
+            $logoUrl = null;
+            if ($request->hasFile('logo')) {
+                try {
+                    $result = Uploader::upload($request->file('logo')->getRealPath(), [
+                        'folder' => "gabayhealth/rhu/{$uid}",
+                        'resource_type' => 'auto',
+                    ]);
+                    $logoUrl = $result['secure_url'];
+                } catch (\Exception $e) {
+                    \Log::error('Cloudinary upload error: ' . $e->getMessage());
+                }
+            }
+
             $firestore->collection('rhu')->document($uid)->set([
                 'username' => $request->username,
                 'email' => session('google_email'),
@@ -281,11 +312,11 @@ class RegisterController extends Controller
                 'city' => $request->city,
                 'role' => 'rhu',
                 'status' => 'pending',
+                'logo_url' => $logoUrl,
                 'google_id' => session('google_id'),
                 'created_at' => now()->toDateTimeString(),
             ]);
 
-            // Clear session
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar']);
 
             return redirect()->route('dashboard')->with('success', 'Registration submitted! Waiting for admin approval.');

@@ -5,7 +5,14 @@
 <div class="sidebar">
     <!-- Logo and App Title -->
     <div class="logo-section">
-        <img src="{{ asset('images/gabayhealth_logo.png') }}" class="logo" alt="GabayHealth Logo">
+        @if(session('user.logo_url'))
+            <img src="{{ session('user.logo_url') }}" 
+                 class="logo" 
+                 alt="User Logo"
+                 onerror="this.src='{{ asset('images/gabayhealth_logo.png') }}'">
+        @else
+            <img src="{{ asset('images/gabayhealth_logo.png') }}" class="logo" alt="GabayHealth Logo">
+        @endif
         <span class="title">GabayHealth</span>
     </div>
 

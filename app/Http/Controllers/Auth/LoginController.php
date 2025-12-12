@@ -80,6 +80,7 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $user['name'],
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
+                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
                 ]
             ]);
 
@@ -167,6 +168,7 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
+                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
                 ]
             ]);
 
