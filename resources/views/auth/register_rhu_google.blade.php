@@ -2,262 +2,402 @@
 @section('content')
 @php($hideSidebar = true)
 <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
     html, body {
         height: 100%;
         width: 100%;
-        margin: 0;
-        padding: 0;
-        background: #fff !important;
-        overflow: hidden !important;
-        box-sizing: border-box;
+        background: #f8fafc;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
+    
     #app {
-        height: 100vh;
-    }
-    .container-fluid {
         min-height: 100vh;
-        width: 100%;
-        padding: 0;
-        margin: 0;
-        overflow: hidden !important;
         display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
     }
-    .form-control, .form-select {
-        min-height: 40px;
-        font-size: 14px;
-        border-radius: 0.5rem;
-        padding: 0.5rem 0.75rem;
+    
+    .registration-wrapper {
         width: 100%;
-        border: 1px solid #d1d5db;
-        background-color: #f9fafb;
+        max-width: 500px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.08);
+        padding: 40px;
     }
+    
+    .registration-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .registration-header img {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 15px;
+    }
+    
+    .registration-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 8px;
+    }
+    
+    .registration-header p {
+        color: #6b7280;
+        font-size: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background-color: #f9fafb;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+    
     .form-control:focus, .form-select:focus {
+        outline: none;
         border-color: #2563eb;
         background-color: #fff;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        outline: none;
     }
-    .left-panel {
-        background: linear-gradient(135deg, #1a202c 0%, #0f172a 100%);
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
+    
+    .form-control:read-only {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
     }
-    .left-panel::before {
-        content: '';
-        position: absolute;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
-        border-radius: 50%;
-        top: -100px;
-        right: -100px;
-    }
-    .left-panel::after {
-        content: '';
-        position: absolute;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
-        border-radius: 50%;
-        bottom: -50px;
-        left: -50px;
-    }
-    .left-content {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        max-width: 400px;
-        padding: 40px;
-    }
-    .left-content h1 {
-        color: #fff;
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-    }
-    .left-content p {
-        color: #cbd5e1;
-        font-size: 1rem;
-        margin-bottom: 2rem;
-        line-height: 1.6;
-    }
-    .right-panel {
-        flex: 1;
-        background: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px;
-        overflow-y: auto;
-    }
-    .form-container {
-        width: 100%;
-        max-width: 400px;
-    }
-    .form-container h2 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 0.5rem;
-    }
-    .form-subtitle {
-        color: #6b7280;
-        font-size: 0.95rem;
-        margin-bottom: 1.5rem;
-    }
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    .form-group label {
+    
+    .form-group small {
         display: block;
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: #374151;
-        margin-bottom: 0.5rem;
+        color: #9ca3af;
+        font-size: 12px;
+        margin-top: 4px;
     }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    
+    .form-row .form-group {
+        margin-bottom: 0;
+    }
+    
     .user-info {
         background: #f3f4f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1.5rem;
+        border: 1px solid #e5e7eb;
+        padding: 12px 14px;
+        border-radius: 6px;
+        margin-bottom: 16px;
     }
+    
     .user-info p {
-        margin: 0.25rem 0;
+        margin: 4px 0;
         color: #374151;
-        font-size: 0.9rem;
+        font-size: 13px;
     }
+    
     .user-info strong {
         color: #1f2937;
+        font-weight: 600;
     }
+    
+    .change-account-link {
+        display: inline-block;
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    
+    .change-account-link:hover {
+        text-decoration: underline;
+    }
+    
     .submit-btn {
         width: 100%;
-        background: #1f2937;
+        background: #2563eb;
         color: #fff;
         border: none;
-        border-radius: 0.5rem;
-        padding: 0.625rem;
+        border-radius: 6px;
+        padding: 10px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 14px;
         cursor: pointer;
-        margin-top: 1rem;
-        transition: background 0.2s;
+        transition: all 0.2s;
+        margin-top: 20px;
     }
+    
     .submit-btn:hover {
-        background: #111827;
+        background: #1d4ed8;
     }
+    
+    .submit-btn:active {
+        transform: scale(0.98);
+    }
+    
     .login-link {
         text-align: center;
-        margin-top: 1rem;
-        font-size: 0.9rem;
+        margin-top: 16px;
+        font-size: 14px;
         color: #6b7280;
     }
+    
     .login-link a {
         color: #2563eb;
         text-decoration: none;
         font-weight: 600;
     }
-    @media (max-width: 768px) {
-        .container-fluid {
-            flex-direction: column;
+    
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+    
+    .alert {
+        padding: 12px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    
+    .alert-danger {
+        background: #fee2e2;
+        color: #7f1d1d;
+        border: 1px solid #fecaca;
+    }
+    
+    .alert-danger ul {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+    
+    .alert-danger li {
+        font-size: 13px;
+    }
+
+    .logo-upload-section {
+        background: #f3f4f6;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 20px;
+    }
+    
+    .logo-upload-section:hover {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+    
+    .logo-upload-section.dragging {
+        border-color: #2563eb;
+        background: #dbeafe;
+    }
+    
+    #logoUploadArea {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    #logoUploadArea svg {
+        color: #9ca3af;
+    }
+    
+    #logoUploadArea p {
+        color: #6b7280;
+        font-size: 13px;
+        margin: 0;
+    }
+    
+    #logoUploadArea p:first-child {
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    #logoPreview {
+        display: none;
+        text-align: center;
+    }
+    
+    #logoPreviewImg {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        margin-bottom: 12px;
+    }
+    
+    .logo-change-btn {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .logo-change-btn:hover {
+        background: #e5e7eb;
+    }
+
+    @media (max-width: 600px) {
+        .registration-wrapper {
+            padding: 24px;
         }
-        .left-panel {
-            min-height: 250px;
+        
+        .registration-header h1 {
+            font-size: 24px;
         }
-        .right-panel {
-            min-height: calc(100vh - 250px);
+        
+        .form-row {
+            grid-template-columns: 1fr;
         }
     }
 </style>
 
-<div class="container-fluid">
-    <!-- Left Panel -->
-    <div class="left-panel">
-        <div class="left-content">
-            <h1>GabayHealth</h1>
-            <p>Complete your registration to start managing your Rural Health Unit.</p>
+<div id="app">
+    <div class="registration-wrapper">
+        <!-- Header -->
+        <div class="registration-header">
+            <img src="{{ asset('images/GabayHealthLight.png') }}" alt="GabayHealth Logo">
+            <h1>Complete Your Profile</h1>
+            <p>Just a few more details to get started</p>
         </div>
-    </div>
 
-    <!-- Right Panel: Simplified Form -->
-    <div class="right-panel">
-        <div class="form-container">
-            <h2>Complete Your Profile</h2>
-            <p class="form-subtitle">Just a few more details to get started.</p>
+        <!-- Alerts -->
+        @if($errors->any())
+            <div class="alert alert-danger">
+                <ul>
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-            @if($errors->any())
-                <div class="alert alert-danger py-2 px-3 mb-3">
-                    <ul style="margin: 0; padding-left: 1.5rem;">
-                        @foreach($errors->all() as $error)
-                            <li style="font-size: 0.9rem;">{{ $error }}</li>
-                        @endforeach
-                    </ul>
+        <!-- User Info Display -->
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" class="form-control" value="{{ session('google_email') }}" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+        </div>
+
+        <a href="{{ route('google.redirect') }}" class="change-account-link">Use a different Google account</a>
+
+        <!-- Form -->
+        <form method="POST" action="{{ route('register.rhu.google.submit') }}" enctype="multipart/form-data">
+            @csrf
+
+            <!-- Logo Upload -->
+            <div class="logo-upload-section" id="logoUploadSection">
+                <div id="logoUploadArea">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p>Upload your RHU logo</p>
+                    <p>PNG or JPG, up to 5MB</p>
                 </div>
-            @endif
-
-            <!-- Display Google Email (Read-only) -->
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" class="form-control" value="{{ session('google_email') }}" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+                <div id="logoPreview">
+                    <img id="logoPreviewImg" src="" alt="Logo Preview">
+                    <button type="button" class="logo-change-btn">Change Logo</button>
+                </div>
             </div>
 
-            <a href="{{ route('google.redirect') }}" style="color: #2563eb; text-decoration: none; font-weight: 600; font-size: 0.9rem;">Use a different Google account</a>
+            <input type="file" id="logoUpload" name="logo" accept="image/*" style="display: none;">
 
-            <form method="POST" action="{{ route('register.rhu.google.submit') }}" style="margin-top: 1.5rem;">
-                @csrf
+            <!-- Username -->
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required value="{{ old('username') }}">
+                @error('username') <small style="color: #dc2626;">{{ $message }}</small> @enderror
+            </div>
 
+            <!-- Password Row -->
+            <div class="form-row">
                 <div class="form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" class="form-control" placeholder="At least 8 characters" required>
-                    <small style="color: #9ca3af;">Must be at least 8 characters</small>
+                    @error('password') <small style="color: #dc2626;">{{ $message }}</small> @enderror
                 </div>
-
                 <div class="form-group">
-                    <label for="password_confirmation">Confirm Password</label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm your password" required>
+                    <label for="password_confirmation">Confirm</label>
+                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
                 </div>
+            </div>
+            <small style="color: #9ca3af;">Must be at least 8 characters with a number and special character</small>
 
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required>
-                </div>
+            <!-- RHU Name -->
+            <div class="form-group">
+                <label for="rhuName">Rural Health Unit</label>
+                <input type="text" id="rhuName" name="rhuName" class="form-control" placeholder="Rural Health Unit" required value="{{ old('rhuName') }}">
+                @error('rhuName') <small style="color: #dc2626;">{{ $message }}</small> @enderror
+            </div>
 
-                <div class="form-group">
-                    <label for="rhuName">Rural Health Unit Name</label>
-                    <input type="text" id="rhuName" name="rhuName" class="form-control" placeholder="Your RHU name" required>
-                </div>
-
+            <!-- Region, Province, City Row -->
+            <div class="form-row">
                 <div class="form-group">
                     <label for="region">Region</label>
                     <select id="region" name="region" class="form-select" required>
-                        <option value="">Select a region</option>
+                        <option value="">Select region</option>
                     </select>
+                    @error('region') <small style="color: #dc2626;">{{ $message }}</small> @enderror
                 </div>
-
                 <div class="form-group">
                     <label for="province">Province</label>
                     <select id="province" name="province" class="form-select" required>
-                        <option value="">Select a province</option>
+                        <option value="">Select province</option>
                     </select>
+                    @error('province') <small style="color: #dc2626;">{{ $message }}</small> @enderror
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="city">City or Municipality</label>
-                    <select id="city" name="city" class="form-select" required>
-                        <option value="">Select city or municipality</option>
-                    </select>
-                </div>
+            <div class="form-group">
+                <label for="city">City/Municipality</label>
+                <select id="city" name="city" class="form-select" required>
+                    <option value="">Select city</option>
+                </select>
+                @error('city') <small style="color: #dc2626;">{{ $message }}</small> @enderror
+            </div>
 
-                <button type="submit" class="submit-btn">Complete Registration</button>
+            <!-- Submit Button -->
+            <button type="submit" class="submit-btn">Complete Registration</button>
 
-                <div class="login-link">
-                    <a href="{{ route('register.rhu') }}">← Back to regular registration</a>
-                </div>
-            </form>
-        </div>
+            <!-- Login Link -->
+            <div class="login-link">
+                <a href="{{ route('register.rhu') }}">← Back to regular registration</a>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -280,8 +420,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     regionSelect.addEventListener('change', function () {
-        resetSelect(provinceSelect, 'Select a province');
-        resetSelect(citySelect, 'Select city/municipality');
+        resetSelect(provinceSelect, 'Select province');
+        resetSelect(citySelect, 'Select city');
         if (!this.value) return;
         fetch(`https://psgc.gitlab.io/api/regions/${this.value}/provinces/`)
             .then(res => res.json())
@@ -293,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     provinceSelect.addEventListener('change', function () {
-        resetSelect(citySelect, 'Select city/municipality');
+        resetSelect(citySelect, 'Select city');
         if (!this.value) return;
         fetch(`https://psgc.gitlab.io/api/provinces/${this.value}/cities-municipalities/`)
             .then(res => res.json())
@@ -302,6 +442,57 @@ document.addEventListener('DOMContentLoaded', function () {
                     citySelect.innerHTML += `<option value="${city.code}">${city.name}</option>`;
                 });
             });
+    });
+
+    // Logo Upload Handlers
+    const logoUploadSection = document.getElementById('logoUploadSection');
+    const logoUploadArea = document.getElementById('logoUploadArea');
+    const logoUpload = document.getElementById('logoUpload');
+    const logoPreview = document.getElementById('logoPreview');
+    const logoPreviewImg = document.getElementById('logoPreviewImg');
+    
+    // Click to upload
+    logoUploadSection.addEventListener('click', () => logoUpload.click());
+
+    // File selected
+    logoUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                logoPreviewImg.src = e.target.result;
+                logoUploadArea.style.display = 'none';
+                logoPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Change logo button
+    document.querySelector('.logo-change-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        logoUpload.value = '';
+        logoUploadArea.style.display = 'flex';
+        logoPreview.style.display = 'none';
+        logoUpload.click();
+    });
+    
+    // Drag and drop
+    logoUploadSection.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        logoUploadSection.classList.add('dragging');
+    });
+    
+    logoUploadSection.addEventListener('dragleave', () => {
+        logoUploadSection.classList.remove('dragging');
+    });
+    
+    logoUploadSection.addEventListener('drop', (e) => {
+        e.preventDefault();
+        logoUploadSection.classList.remove('dragging');
+        logoUpload.files = e.dataTransfer.files;
+        const event = new Event('change', { bubbles: true });
+        logoUpload.dispatchEvent(event);
     });
 });
 </script>
