@@ -50,6 +50,26 @@ class PersonnelController extends Controller
             
             \Log::info('PersonnelController - Found ' . $count . ' personnel');
 
+            // Get staff accounts from account management for dropdown
+            try {
+                $staffAccountsQuery = $this->firestore
+                    ->collection($user['role'])
+                    ->document($user['id'])
+                    ->collection('accounts')
+                    ->documents();
+
+                foreach ($staffAccountsQuery as $doc) {
+                    if ($doc->exists()) {
+                        $data = $doc->data();
+                        $availablePersonnel[] = array_merge(['id' => $doc->id()], $data);
+                    }
+                }
+                
+                \Log::info('PersonnelController - Found ' . count($availablePersonnel) . ' available staff accounts');
+            } catch (\Exception $e) {
+                \Log::error('Error fetching staff accounts: ' . $e->getMessage());
+            }
+
             return view('pages.personnel.index', compact('personnel', 'availablePersonnel'));
         } catch (\Exception $e) {
             \Log::error('Error fetching personnel: ' . $e->getMessage());
@@ -65,7 +85,7 @@ class PersonnelController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
-            'address' => 'nullable|string|max:500',
+            'address' => 'required|string|max:500',
             'image' => 'nullable|image|max:2048',
         ]);
 
@@ -111,7 +131,7 @@ class PersonnelController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
-            'address' => 'nullable|string|max:500',
+            'address' => 'required|string|max:500',
             'image' => 'nullable|image|max:2048',
         ]);
 

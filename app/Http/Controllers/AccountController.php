@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Kreait\Firebase\Auth\Exception\AuthException;
 
 class AccountController extends Controller
 {
@@ -121,9 +122,9 @@ class AccountController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'role' => 'required|in:doctor,midwife,nurse',
+            'role' => 'required|in:doctor,midwife,nurse,bhw',
             'contact_number' => 'required|string|max:20',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:6|confirmed',
             'specialization' => 'nullable|string|max:255',
         ]);
 
@@ -139,21 +140,65 @@ class AccountController extends Controller
             return back()->withErrors(['email' => 'Email already exists.'])->withInput();
         }
 
+        // Check if contact number already exists in the accounts subcollection
+        $existingPhone = $this->firestore->getFirestore()
+            ->collection($user['role'])
+            ->document($user['id'])
+            ->collection('accounts')
+            ->where('contact_number', '=', $validated['contact_number'])
+            ->documents();
+
+        if (iterator_count($existingPhone) > 0) {
+            return back()->withErrors(['contact_number' => 'Contact number already exists.'])->withInput();
+        }
+
+        $uid = null;
+        $auth = $this->firestore->getAuth();
+
         try {
+            $phoneNumber = $validated['contact_number'];
+            if (!empty($phoneNumber) && !str_starts_with($phoneNumber, '+')) {
+                $phoneNumber = preg_replace('/^0/', '', $phoneNumber);
+                if (!str_starts_with($phoneNumber, '+63')) {
+                    $phoneNumber = '+63' . $phoneNumber;
+                }
+            }
+            
+            // Create Firebase Auth user
+            $createUserData = [
+                'email' => $validated['email'],
+                'password' => $validated['password'],
+                'displayName' => $validated['name'],
+                'emailVerified' => false,
+            ];
+            
+            // Only add phoneNumber if it's properly formatted (starts with +)
+            if (!empty($phoneNumber) && str_starts_with($phoneNumber, '+')) {
+                $createUserData['phoneNumber'] = $phoneNumber;
+            }
+            
+            $authUser = $auth->createUser($createUserData);
+
+            $uid = $authUser->uid;
+
+            // Map role for Firebase (bhw -> bhw, nurse -> nurse, doctor -> doctor, midwife -> midwife)
+            $firebaseRole = $validated['role']; // Already in correct format
+
             // Prepare staff data
             $staffData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'role' => $validated['role'],
+                'role' => $firebaseRole,
                 'contact_number' => $validated['contact_number'],
-                'password' => Hash::make($validated['password']),
+                'password' => Hash::make($validated['password']), // Keep for backward compatibility
                 'specialization' => $validated['specialization'] ?? '',
                 'status' => 'active',
+                'uid' => $uid, // Store Firebase UID
                 'created_at' => now()->toDateTimeString(),
                 'updated_at' => now()->toDateTimeString(),
             ];
 
-            // Save as subcollection under the barangay document
+            // Save as subcollection under the health center document
             $documentRef = $this->firestore->getFirestore()
                 ->collection($user['role']) // barangay, rhu, or admin
                 ->document($user['id'])
@@ -161,7 +206,32 @@ class AccountController extends Controller
                 ->add($staffData);
 
             return redirect()->route('accounts.index')->with('success', 'Staff account created successfully!');
+        } catch (\Kreait\Firebase\Auth\Exception\AuthException $e) {
+            // If Firebase Auth creation fails, clean up if UID was created
+            if ($uid) {
+                try {
+                    $auth->deleteUser($uid);
+                } catch (\Exception $cleanupException) {
+                    \Log::warning('Failed to cleanup auth user after error: ' . $cleanupException->getMessage());
+                }
+            }
+
+            $errorMessage = 'Failed to create staff account.';
+            if (str_contains($e->getMessage(), 'EMAIL_EXISTS')) {
+                $errorMessage = 'The email address is already registered in Firebase Auth.';
+            }
+
+            return back()->withErrors(['error' => $errorMessage])->withInput();
         } catch (\Exception $e) {
+            // If Firestore save fails but Auth user was created, try to clean up
+            if ($uid) {
+                try {
+                    $auth->deleteUser($uid);
+                } catch (\Exception $cleanupException) {
+                    \Log::warning('Failed to cleanup auth user after Firestore error: ' . $cleanupException->getMessage());
+                }
+            }
+
             return back()->withErrors(['error' => 'Failed to create staff account: ' . $e->getMessage()])->withInput();
         }
     }
@@ -184,13 +254,36 @@ class AccountController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'role' => 'required|in:doctor,midwife,nurse',
+            'role' => 'required|in:doctor,midwife,nurse,bhw',
             'contact_number' => 'required|string|max:20',
             'specialization' => 'nullable|string|max:255',
             'status' => 'required|in:active,inactive',
         ]);
 
         $user = session('user');
+        
+        // Get existing staff to check for UID
+        $staff = $this->getStaffAccount($id);
+        $uid = $staff['uid'] ?? null;
+        
+        // Check if contact number already exists (excluding current staff)
+        if (($staff['contact_number'] ?? '') !== $validated['contact_number']) {
+            $existingPhone = $this->firestore->getFirestore()
+                ->collection($user['role'])
+                ->document($user['id'])
+                ->collection('accounts')
+                ->where('contact_number', '=', $validated['contact_number'])
+                ->documents();
+
+            if (iterator_count($existingPhone) > 0) {
+                return back()->withErrors(['contact_number' => 'Contact number already exists.'])->withInput();
+            }
+        }
+        
+        // Map role for Firebase
+        $firebaseRole = $validated['role']; // Already in correct format
+        
+        // Update Firestore
         $this->firestore->getFirestore()
             ->collection($user['role'])
             ->document($user['id'])
@@ -199,12 +292,45 @@ class AccountController extends Controller
             ->update([
                 ['path' => 'name', 'value' => $validated['name']],
                 ['path' => 'email', 'value' => $validated['email']],
-                ['path' => 'role', 'value' => $validated['role']],
+                ['path' => 'role', 'value' => $firebaseRole],
                 ['path' => 'contact_number', 'value' => $validated['contact_number']],
                 ['path' => 'specialization', 'value' => $validated['specialization'] ?? ''],
                 ['path' => 'status', 'value' => $validated['status']],
                 ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
             ]);
+
+        // Update Firebase Auth user if UID exists
+        if ($uid) {
+            try {
+                $auth = $this->firestore->getAuth();
+                
+                // Format phone number for Firebase Auth (E.164 format: +country code + number)
+                // If phone doesn't start with +, try to format it (assuming Philippines +63)
+                $phoneNumber = $validated['contact_number'];
+                if (!empty($phoneNumber) && !str_starts_with($phoneNumber, '+')) {
+                    // Remove leading 0 if present and add +63 for Philippines
+                    $phoneNumber = preg_replace('/^0/', '', $phoneNumber);
+                    if (!str_starts_with($phoneNumber, '+63')) {
+                        $phoneNumber = '+63' . $phoneNumber;
+                    }
+                }
+                
+                $updateData = [
+                    'email' => $validated['email'],
+                    'displayName' => $validated['name'],
+                ];
+                
+                // Only add phoneNumber if it's not empty and properly formatted
+                if (!empty($phoneNumber) && str_starts_with($phoneNumber, '+')) {
+                    $updateData['phoneNumber'] = $phoneNumber;
+                }
+                
+                $auth->updateUser($uid, $updateData);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to update Firebase Auth user: ' . $e->getMessage());
+                // Continue even if Auth update fails
+            }
+        }
 
         return redirect()->route('accounts.index')->with('success', 'Staff account updated successfully!');
     }

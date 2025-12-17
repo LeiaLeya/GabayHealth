@@ -40,90 +40,90 @@
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-2">
-            <div class="card bg-primary text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-clipboard-pulse fs-2"></i>
+                            <i class="bi bi-clipboard-pulse fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['total_cases'] }}</h4>
-                            <small>Total Cases</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['total_cases'] }}</h4>
+                            <small class="text-muted">Total Cases</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-warning text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-thermometer-half fs-2"></i>
+                            <i class="bi bi-thermometer-half fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['fever_cases'] }}</h4>
-                            <small>Fever Cases</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['fever_cases'] }}</h4>
+                            <small class="text-muted">Fever Cases</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-danger text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-bug fs-2"></i>
+                            <i class="bi bi-bug fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['dengue_cases'] }}</h4>
-                            <small>Dengue Cases</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['dengue_cases'] }}</h4>
+                            <small class="text-muted">Dengue Cases</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-success text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-activity fs-2"></i>
+                            <i class="bi bi-activity fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['recent_cases'] }}</h4>
-                            <small>Recent (7 days)</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['recent_cases'] }}</h4>
+                            <small class="text-muted">Recent (7 days)</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-info text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-geo-alt fs-2"></i>
+                            <i class="bi bi-geo-alt fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h6 class="mb-0">{{ Str::limit($stats['top_barangay'], 15) }}</h6>
-                            <small>Top Area ({{ $stats['top_cases'] }})</small>
+                            <h6 class="mb-0 text-dark">{{ Str::limit($stats['top_barangay'], 15) }}</h6>
+                            <small class="text-muted">Top Area ({{ $stats['top_cases'] }})</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-secondary text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-graph-up fs-2"></i>
+                            <i class="bi bi-graph-up fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['cough_cases'] + $stats['headache_cases'] }}</h4>
-                            <small>Other Symptoms</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['cough_cases'] + $stats['headache_cases'] }}</h4>
+                            <small class="text-muted">Other Symptoms</small>
                         </div>
                     </div>
                 </div>
@@ -160,7 +160,7 @@
                                     <small class="text-muted">Rash</small>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="badge bg-purple rounded-circle" style="width: 12px; height: 12px;"></div>
+                                    <div class="badge rounded-circle" style="width: 12px; height: 12px; background-color: #1657c1;"></div>
                                     <small class="text-muted">Diarrhea</small>
                                 </div>
                             </div>
@@ -200,7 +200,7 @@
 }
 
 .card-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1657c1 0%, #0d6efd 100%);
     color: white;
     border-bottom: none;
     border-radius: 1rem 1rem 0 0 !important;
@@ -212,8 +212,8 @@
 }
 
 .form-select-sm:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    border-color: #1657c1;
+    box-shadow: 0 0 0 0.2rem rgba(22, 87, 193, 0.25);
 }
 
 .btn {
@@ -222,7 +222,7 @@
 }
 
 .bg-purple {
-    background-color: #6f42c1 !important;
+    background-color: #1657c1 !important;
 }
 
 .heatmap-legend {
@@ -324,7 +324,7 @@ function getConditionColor(condition) {
     const colors = {
         'fever': '#ffc107',      // Bright yellow
         'dengue': '#dc3545',     // Bright red
-        'diarrhea': '#6f42c1',   // Bright purple
+        'diarrhea': '#1657c1',   // Blue (matching sidebar)
         'rash': '#0d6efd',       // Bright blue
         'cough': '#fd7e14',      // Orange
         'headache': '#20c997'    // Teal
@@ -360,7 +360,7 @@ const symptomData = {
         backgroundColor: [
             '#ffc107',
             '#dc3545',
-            '#6f42c1',
+            '#1657c1',
             '#6c757d',
             '#495057'
         ],

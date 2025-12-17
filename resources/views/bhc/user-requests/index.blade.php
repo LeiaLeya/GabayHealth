@@ -26,60 +26,60 @@
     <!-- Stats Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-people fs-2"></i>
+                            <i class="bi bi-people fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ count($requests) }}</h4>
-                            <small>Total Requests</small>
+                            <h4 class="mb-0 text-dark">{{ count($requests) }}</h4>
+                            <small class="text-muted">Total Requests</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-clock fs-2"></i>
+                            <i class="bi bi-clock fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'pending')) }}</h4>
-                            <small>Pending</small>
+                            <h4 class="mb-0 text-dark">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'pending')) }}</h4>
+                            <small class="text-muted">Pending</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-check-circle fs-2"></i>
+                            <i class="bi bi-check-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'approved')) }}</h4>
-                            <small>Approved</small>
+                            <h4 class="mb-0 text-dark">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'approved')) }}</h4>
+                            <small class="text-muted">Approved</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-x-circle fs-2"></i>
+                            <i class="bi bi-x-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'declined')) }}</h4>
-                            <small>Declined</small>
+                            <h4 class="mb-0 text-dark">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'declined')) }}</h4>
+                            <small class="text-muted">Declined</small>
                         </div>
                     </div>
                 </div>

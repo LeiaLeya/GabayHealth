@@ -40,6 +40,22 @@ use App\Http\Controllers\RHU\UserRequestController as RHUUserRequestController;
 use App\Http\Controllers\RHU\AccountController as RHUAccountController;
 use App\Http\Controllers\RHU\NotificationController as RHUNotificationController;
 
+Route::get('/debug-firestore', function () {
+    $firebaseService = app(\App\Services\FirebaseService::class);
+
+    try {
+        $start = microtime(true);
+        $docs = $firebaseService->getFirestore()->collection('barangay')->limit(1)->documents();
+        $duration = microtime(true) - $start;
+
+        \Log::info('Firestore debug: fetched ' . iterator_count($docs) . ' docs in ' . $duration . ' seconds');
+        return 'OK';
+    } catch (\Throwable $e) {
+        \Log::error('Firestore debug error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return 'Error: ' . $e->getMessage();
+    }
+});
+
 // Home route - redirects to appropriate dashboard
 Route::get('/', function() {
     if (session('user')) {

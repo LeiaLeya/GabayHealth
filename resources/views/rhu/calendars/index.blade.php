@@ -28,30 +28,30 @@
     <!-- Quick Stats -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-event fs-2"></i>
+                            <i class="bi bi-calendar-event fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0" id="totalEvents">0</h4>
-                            <small>Total Events</small>
+                            <h4 class="mb-0 text-dark" id="totalEvents">0</h4>
+                            <small class="text-muted">Total Events</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-person-check fs-2"></i>
+                            <i class="bi bi-person-check fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0" id="totalAppointments">0</h4>
-                            <small>Appointments</small>
+                            <h4 class="mb-0 text-dark" id="totalAppointments">0</h4>
+                            <small class="text-muted">Appointments</small>
                         </div>
                     </div>
                 </div>
@@ -59,15 +59,15 @@
         </div>
 
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-week fs-2"></i>
+                            <i class="bi bi-calendar-week fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0" id="thisWeekEvents">0</h4>
-                            <small>This Week</small>
+                            <h4 class="mb-0 text-dark" id="thisWeekEvents">0</h4>
+                            <small class="text-muted">This Week</small>
                         </div>
                     </div>
                 </div>

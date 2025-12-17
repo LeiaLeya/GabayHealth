@@ -46,13 +46,16 @@
     <div class="row mb-4">
         <!-- Total Items -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card shadow h-100">
+            <div class="card border">
                 <div class="card-body">
-                    <div class="text-center">
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
-                            Total Items
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-box-seam fs-2 text-dark"></i>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['total_items'] ?? 0 }}</div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="mb-0 text-dark">{{ $inventorySummary['total_items'] ?? 0 }}</h4>
+                            <small class="text-muted">Total Items</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -60,13 +63,16 @@
 
         <!-- Available Items -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card shadow h-100">
+            <div class="card border">
                 <div class="card-body">
-                    <div class="text-center">
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
-                            Available Items
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-check-circle fs-2 text-dark"></i>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['available'] ?? 0 }}</div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="mb-0 text-dark">{{ $inventorySummary['available'] ?? 0 }}</h4>
+                            <small class="text-muted">Available Items</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -74,13 +80,16 @@
 
         <!-- Low Stock -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card shadow h-100">
+            <div class="card border">
                 <div class="card-body">
-                    <div class="text-center">
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
-                            Low Stock
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-exclamation-triangle fs-2 text-dark"></i>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['low_stock'] ?? 0 }}</div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="mb-0 text-dark">{{ $inventorySummary['low_stock'] ?? 0 }}</h4>
+                            <small class="text-muted">Low Stock</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -88,13 +97,16 @@
 
         <!-- Out of Stock -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card shadow h-100">
+            <div class="card border">
                 <div class="card-body">
-                    <div class="text-center">
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">
-                            Out of Stock
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-x-circle fs-2 text-dark"></i>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-dark">{{ $inventorySummary['out_of_stock'] ?? 0 }}</div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="mb-0 text-dark">{{ $inventorySummary['out_of_stock'] ?? 0 }}</h4>
+                            <small class="text-muted">Out of Stock</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -834,11 +846,13 @@
 }
 
 .card {
-    border-radius: 0.75rem;
-    overflow: hidden;
-    border: 2px solid #1657c1 !important;
+    border-radius: 1rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
 }
 
 .badge {
@@ -846,40 +860,9 @@
     padding: 0.375rem 0.75rem;
 }
 
-/* Summary Cards Styling */
-.text-xs {
-    font-size: 0.7rem;
-}
-
-.text-dark {
-    color: #212529 !important;
-}
-
-.text-muted {
-    color: #6c757d !important;
-}
-
-/* Summary Cards Hover Effects */
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    transition: all 0.2s ease;
-}
-
 /* Card Body Enhancements */
 .card-body {
     padding: 1.25rem;
-}
-
-/* Text Enhancements */
-.text-uppercase {
-    letter-spacing: 0.5px;
-    font-weight: 600;
-}
-
-.h5 {
-    font-size: 1.75rem;
-    font-weight: 700;
 }
 
 /* Search Bar Styling */

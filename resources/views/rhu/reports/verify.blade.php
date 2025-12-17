@@ -9,7 +9,7 @@
             <p class="text-muted mb-0">Review and approve resident health reports</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('reports.rejected') }}" class="btn btn-danger">
+            <a href="{{ route('reports.rejected') }}" class="btn btn-outline-dark">
                 <i class="bi bi-x-circle me-2"></i>Rejected Reports
             </a>
             <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary">
@@ -35,60 +35,60 @@
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-warning text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-clock-history fs-2"></i>
+                            <i class="bi bi-clock-history fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['pending'] }}</h4>
-                            <small>Pending Reports</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['pending'] }}</h4>
+                            <small class="text-muted">Pending Reports</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-check-circle fs-2"></i>
+                            <i class="bi bi-check-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['verified_today'] }}</h4>
-                            <small>Approved Today</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['verified_today'] }}</h4>
+                            <small class="text-muted">Approved Today</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-x-circle fs-2"></i>
+                            <i class="bi bi-x-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['rejected_today'] }}</h4>
-                            <small>Rejected Today</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['rejected_today'] }}</h4>
+                            <small class="text-muted">Rejected Today</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-check fs-2"></i>
+                            <i class="bi bi-calendar-check fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['total_this_month'] }}</h4>
-                            <small>This Month</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['total_this_month'] }}</h4>
+                            <small class="text-muted">This Month</small>
                         </div>
                     </div>
                 </div>
@@ -160,18 +160,7 @@
                                             <td>
                                                 @if(isset($report['symptoms']) && is_array($report['symptoms']))
                                                     @foreach($report['symptoms'] as $symptom)
-                                                        @php
-                                                            $symptomColors = [
-                                                                'fever' => 'warning',
-                                                                'dengue' => 'danger',
-                                                                'diarrhea' => 'purple',
-                                                                'rash' => 'info',
-                                                                'cough' => 'secondary',
-                                                                'headache' => 'dark'
-                                                            ];
-                                                            $color = $symptomColors[strtolower($symptom)] ?? 'secondary';
-                                                        @endphp
-                                                        <span class="badge bg-{{ $color }} me-1">{{ ucfirst($symptom) }}</span>
+                                                        <span class="badge bg-dark text-white me-1">{{ ucfirst($symptom) }}</span>
                                                     @endforeach
                                                 @else
                                                     <span class="text-muted">No symptoms listed</span>
@@ -206,17 +195,17 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex gap-2">
-                                                    <button class="btn btn-sm btn-success" 
+                                                    <button class="btn btn-sm btn-outline-dark" 
                                                             onclick="approveReport('{{ $report['id'] }}')"
                                                             title="Approve Report">
                                                         <i class="bi bi-check-circle"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-danger" 
+                                                    <button class="btn btn-sm btn-outline-dark" 
                                                             onclick="rejectReport('{{ $report['id'] }}')"
                                                             title="Reject Report">
                                                         <i class="bi bi-x-circle"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-info" 
+                                                    <button class="btn btn-sm btn-outline-secondary" 
                                                             onclick="viewReportDetails('{{ $report['id'] }}')"
                                                             title="View Details">
                                                         <i class="bi bi-eye"></i>
@@ -287,8 +276,8 @@
                         </div>
                     @else
                         <div class="text-center py-5">
-                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
-                            <h5 class="mt-3 text-muted">No Pending Reports</h5>
+                            <i class="bi bi-check-circle text-dark" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-dark">No Pending Reports</h5>
                             <p class="text-muted">All reports have been verified!</p>
                         </div>
                     @endif
@@ -327,16 +316,16 @@
 <div class="modal fade" id="confirmApproveModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
+            <div class="modal-header border-bottom">
                 <h5 class="modal-title">Approve Report</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to approve this report? It will be added to the heatmap.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmApproveBtn">Approve Report</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-dark" id="confirmApproveBtn">Approve Report</button>
             </div>
         </div>
     </div>
@@ -346,15 +335,15 @@
 <div class="modal fade" id="rejectReportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
+            <div class="modal-header border-bottom">
                 <h5 class="modal-title">Reject Report</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <p class="mb-3">Please provide a reason for rejecting this report. This will help the submitter understand why the report was rejected.</p>
                 <form id="rejectReasonForm">
                     <div class="mb-3">
-                        <label for="rejection_reason" class="form-label fw-semibold">Rejection Reason <span class="text-danger">*</span></label>
+                        <label for="rejection_reason" class="form-label fw-semibold">Rejection Reason <span class="text-dark">*</span></label>
                         <textarea class="form-control" 
                                   id="rejection_reason" 
                                   name="rejection_reason" 
@@ -367,8 +356,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmRejectBtn">Reject Report</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-dark" id="confirmRejectBtn">Reject Report</button>
             </div>
         </div>
     </div>
@@ -376,31 +365,29 @@
 
 <style>
 .card {
-    border-radius: 1rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: transform 0.2s ease-in-out;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #dee2e6;
+    transition: box-shadow 0.2s ease-in-out;
 }
 
 .card:hover {
-    transform: translateY(-2px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-color: #212529;
     color: white;
-    border-bottom: none;
-    border-radius: 1rem 1rem 0 0 !important;
-}
-
-.bg-purple {
-    background-color: #6f42c1 !important;
+    border-bottom: 1px solid #212529;
+    border-radius: 0.5rem 0.5rem 0 0 !important;
 }
 
 .table th {
     border-top: none;
     font-weight: 600;
-    color: #495057;
+    color: #212529;
     background-color: #f8f9fa;
+    border-bottom: 2px solid #212529;
 }
 
 .btn-sm {
@@ -410,10 +397,11 @@
 
 .badge {
     font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(102, 126, 234, 0.05);
+    background-color: #f8f9fa;
 }
 
 .collapse tr {
@@ -433,8 +421,8 @@
 }
 
 .alert {
-    border-radius: 0.75rem;
-    border: none;
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
 }
 </style>
 
@@ -509,9 +497,7 @@ function viewReportDetails(reportId) {
     const symptoms = Array.isArray(r.symptoms) ? r.symptoms : [];
     const symptomsHtml = symptoms.length
         ? symptoms.map(s => {
-            const colors = { fever:'warning', dengue:'danger', diarrhea:'purple', rash:'info', cough:'secondary', headache:'dark' };
-            const color = colors[String(s).toLowerCase()] || 'secondary';
-            return `<span class="badge bg-${color} me-1">${String(s).charAt(0).toUpperCase()+String(s).slice(1)}</span>`;
+            return `<span class="badge bg-dark text-white me-1">${String(s).charAt(0).toUpperCase()+String(s).slice(1)}</span>`;
           }).join('')
         : '<span class="text-muted">No symptoms listed</span>';
 
@@ -519,32 +505,32 @@ function viewReportDetails(reportId) {
         <div class="row g-3">
             <div class="col-md-6">
                 <div class="p-3 rounded border bg-light">
-                    <div class="d-flex align-items-center mb-2"><i class="bi bi-person text-primary me-2"></i><strong>Affected Person</strong></div>
+                    <div class="d-flex align-items-center mb-2"><i class="bi bi-person text-dark me-2"></i><strong>Affected Person</strong></div>
                     <div>${(r.affectedPerson ? String(r.affectedPerson).charAt(0).toUpperCase()+String(r.affectedPerson).slice(1) : '—')}</div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="p-3 rounded border">
-                    <div class="d-flex align-items-center mb-2"><i class="bi bi-virus text-danger me-2"></i><strong>Symptoms</strong></div>
+                    <div class="d-flex align-items-center mb-2"><i class="bi bi-virus text-dark me-2"></i><strong>Symptoms</strong></div>
                     <div>${symptomsHtml}</div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="p-3 rounded border">
-                    <div class="d-flex align-items-center mb-2"><i class="bi bi-clock-history text-primary me-2"></i><strong>Reported At</strong></div>
+                    <div class="d-flex align-items-center mb-2"><i class="bi bi-clock-history text-dark me-2"></i><strong>Reported At</strong></div>
                     <div>${formatDate(r.createdAt)}</div>
                 </div>
             </div>
             <div class="col-12">
                 <div class="p-3 rounded border">
-                    <div class="d-flex align-items-center mb-2"><i class="bi bi-card-text text-primary me-2"></i><strong>Additional Info</strong></div>
+                    <div class="d-flex align-items-center mb-2"><i class="bi bi-card-text text-dark me-2"></i><strong>Additional Info</strong></div>
                     <div>${r.additionalInfo ? String(r.additionalInfo) : '<span class="text-muted">None</span>'}</div>
                 </div>
             </div>
         </div>
         <div class="mt-3 d-flex justify-content-center gap-2">
-            <button class="btn btn-danger px-4" onclick="rejectReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-x-circle me-1"></i>Reject</button>
-            <button class="btn btn-success px-4" onclick="approveReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-check-circle me-1"></i>Approve</button>
+            <button class="btn btn-outline-dark px-4" onclick="rejectReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-x-circle me-1"></i>Reject</button>
+            <button class="btn btn-dark px-4" onclick="approveReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-check-circle me-1"></i>Approve</button>
         </div>
     `;
 
