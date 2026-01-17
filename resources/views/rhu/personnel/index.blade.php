@@ -76,7 +76,7 @@
                             <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#viewPersonnelModal{{ $person['id'] }}">
                                 <i class="bi bi-eye me-1"></i>View Details
                             </button>
-                            <form action="{{ route('personnel.destroy', $person['id']) }}" method="POST" class="d-inline">
+                            <form action="{{ route('rhu.personnel.destroy', $person['id']) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this personnel?')" title="Delete Personnel">
@@ -90,7 +90,7 @@
                 <!-- Edit Personnel Modal -->
                 <div class="modal fade" id="editPersonnelModal{{ $person['id'] }}" tabindex="-1" aria-labelledby="editPersonnelModalLabel{{ $person['id'] }}" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
-                        <form method="POST" action="{{ route('personnel.update', $person['id']) }}" class="modal-content" enctype="multipart/form-data">
+                        <form method="POST" action="{{ route('rhu.personnel.update', $person['id']) }}" class="modal-content" enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
                             <div class="modal-header">
@@ -217,7 +217,7 @@
 <!-- Add Personnel Modal -->
 <div class="modal fade" id="addPersonnelModal" tabindex="-1" aria-labelledby="addPersonnelModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <form method="POST" action="{{ route('personnel.store') }}" class="modal-content" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('rhu.personnel.store') }}" class="modal-content" enctype="multipart/form-data">
             @csrf
             <div class="modal-header">
                 <h5 class="modal-title" id="addPersonnelModalLabel">

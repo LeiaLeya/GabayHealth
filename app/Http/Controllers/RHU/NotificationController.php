@@ -29,17 +29,17 @@ class NotificationController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access notifications.');
         }
         
-        $barangayId = $this->getBarangayId();
+        $rhuId = $this->getBarangayId();
         
-        if (!$barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $notifications = [];
         
         try {
             $notificationsQuery = $this->firestore
-                ->collection("barangay/{$barangayId}/notifications")
+                ->collection("rhu/{$rhuId}/notifications")
                 ->orderBy('createdAt', 'DESC')
                 ->limit(100)
                 ->documents();
@@ -64,10 +64,10 @@ class NotificationController extends Controller
             return redirect()->route('login')->with('error', 'Please login to create notifications.');
         }
         
-        $barangayId = $this->getBarangayId();
+        $rhuId = $this->getBarangayId();
         
-        if (!$barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $request->validate([
@@ -119,7 +119,7 @@ class NotificationController extends Controller
             }
 
             $this->firestore
-                ->collection("barangay/{$barangayId}/notifications")
+                ->collection("rhu/{$rhuId}/notifications")
                 ->add($notificationData);
 
             $successMessage = $isScheduled 
@@ -141,15 +141,15 @@ class NotificationController extends Controller
             return redirect()->route('login')->with('error', 'Please login to delete notifications.');
         }
         
-        $barangayId = $this->getBarangayId();
+        $rhuId = $this->getBarangayId();
         
-        if (!$barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         try {
             $this->firestore
-                ->collection("barangay/{$barangayId}/notifications")
+                ->collection("rhu/{$rhuId}/notifications")
                 ->document($id)
                 ->delete();
 

@@ -68,10 +68,9 @@ class PersonnelController extends Controller
         ]);
 
         $user = session('user');
-        $barangayId = $this->getBarangayId();
 
-        if (!$barangayId) {
-            return redirect()->route('rhu.personnel.index')->with('error', 'Barangay ID not found.');
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to access personnel management.');
         }
 
         $personnelData = [
@@ -96,7 +95,9 @@ class PersonnelController extends Controller
         }
 
         $this->firestore
-            ->collection("barangay/{$barangayId}/personnel")
+            ->collection($user['role'])
+            ->document($user['id'])
+            ->collection('personnel')
             ->add($personnelData);
 
         return redirect()->route('rhu.personnel.index')->with('success', 'Personnel added successfully!');
@@ -112,10 +113,9 @@ class PersonnelController extends Controller
         ]);
 
         $user = session('user');
-        $barangayId = $this->getBarangayId();
 
-        if (!$barangayId) {
-            return redirect()->route('rhu.personnel.index')->with('error', 'Barangay ID not found.');
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to access personnel management.');
         }
 
         $personnelData = [
@@ -139,7 +139,9 @@ class PersonnelController extends Controller
         }
 
         $this->firestore
-            ->collection("barangay/{$barangayId}/personnel")
+            ->collection($user['role'])
+            ->document($user['id'])
+            ->collection('personnel')
             ->document($id)
             ->set($personnelData, ['merge' => true]);
 
@@ -149,14 +151,15 @@ class PersonnelController extends Controller
     public function destroy($id)
     {
         $user = session('user');
-        $barangayId = $this->getBarangayId();
 
-        if (!$barangayId) {
-            return redirect()->route('rhu.personnel.index')->with('error', 'Barangay ID not found.');
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to access personnel management.');
         }
 
         $this->firestore
-            ->collection("barangay/{$barangayId}/personnel")
+            ->collection($user['role'])
+            ->document($user['id'])
+            ->collection('personnel')
             ->document($id)
             ->delete();
 

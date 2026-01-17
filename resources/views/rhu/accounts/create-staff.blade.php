@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Add New Staff Member</h4>
-                    <a href="{{ route('accounts.index') }}" class="btn btn-secondary btn-sm">
+                    <a href="{{ route('rhu.accounts.index') }}" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left me-2"></i>Back to Account Management
                     </a>
                 </div>
@@ -22,7 +22,7 @@
                         </div>
                     @endif
                     
-                    <form action="{{ route('accounts.staff.store') }}" method="POST">
+                    <form action="{{ route('rhu.accounts.staff.store') }}" method="POST">
                         @csrf
                         
                         <div class="row">

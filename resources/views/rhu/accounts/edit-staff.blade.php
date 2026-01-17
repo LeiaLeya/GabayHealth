@@ -9,7 +9,7 @@
                     <h4 class="card-title">Edit Staff Member</h4>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('accounts.staff.update', $staff['id']) }}" method="POST">
+                    <form action="{{ route('rhu.accounts.staff.update', $staff['id']) }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -86,7 +86,7 @@
 
                         
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('accounts.index') }}" class="btn btn-secondary">
+                            <a href="{{ route('rhu.accounts.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left me-2"></i>Back to Account Management
                             </a>
                             <button type="submit" class="btn btn-primary">

@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Edit Health Center Profile</h4>
-                    <a href="{{ route('accounts.index') }}" class="btn btn-secondary btn-sm">
+                    <a href="{{ route('rhu.accounts.index') }}" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left me-2"></i>Back to Account Management
                     </a>
                 </div>
@@ -22,7 +22,7 @@
                         </div>
                     @endif
                     
-                    <form action="{{ route('accounts.profile.update') }}" method="POST">
+                    <form action="{{ route('rhu.accounts.profile.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -137,7 +137,7 @@
                     <h5 class="card-title">Change Password</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('accounts.password.update') }}" method="POST">
+                    <form action="{{ route('rhu.accounts.password.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         <div class="row">

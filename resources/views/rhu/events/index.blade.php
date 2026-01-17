@@ -113,7 +113,7 @@
                             </div>
                         @endif
                         <div class="mt-auto d-flex gap-2">
-                            <a href="{{ route('events.show', $event['id']) }}" class="btn btn-outline-secondary btn-sm">View Details</a>
+                            <a href="{{ route('rhu.events.show', $event['id']) }}" class="btn btn-outline-secondary btn-sm">View Details</a>
                             @if(($event['status'] ?? '') !== 'Cancelled' && ($event['status'] ?? '') !== 'Done')
                                 <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#cancelEventModal{{ $event['id'] }}">Cancel</button>
                             @endif
@@ -125,7 +125,7 @@
             <!-- Edit Event Modal -->
             <div class="modal fade" id="editEventModal{{ $event['id'] }}" tabindex="-1" aria-labelledby="editEventModalLabel{{ $event['id'] }}" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
-                    <form method="POST" action="{{ route('events.update', $event['id']) }}" class="modal-content" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('rhu.events.update', $event['id']) }}" class="modal-content" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         <div class="modal-header">
@@ -247,7 +247,7 @@
             <!-- Cancel Event Modal -->
             <div class="modal fade" id="cancelEventModal{{ $event['id'] }}" tabindex="-1" aria-labelledby="cancelEventLabel{{ $event['id'] }}" aria-hidden="true">
                 <div class="modal-dialog">
-                    <form method="POST" action="{{ route('events.cancel', $event['id']) }}" class="modal-content">
+                    <form method="POST" action="{{ route('rhu.events.cancel', $event['id']) }}" class="modal-content">
                         @csrf
                         <div class="modal-header">
                             <h5 class="modal-title" id="cancelEventLabel{{ $event['id'] }}"><i class="bi bi-exclamation-octagon me-2"></i>Cancel Event</h5>
@@ -282,7 +282,7 @@
 <!-- Add Event Modal -->
 <div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <form method="POST" action="{{ route('events.store') }}" class="modal-content" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('rhu.events.store') }}" class="modal-content" enctype="multipart/form-data">
             @csrf
             <div class="modal-header">
                 <h5 class="modal-title" id="addEventModalLabel"><i class="bi bi-calendar-plus me-2"></i>Add New Event</h5>
@@ -314,7 +314,7 @@
                 </div>
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label fw-semibold mb-0">Location <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold mb-0">Location</label>
                         <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="toggleLocationMode" onclick="toggleLocationInput('add')">
                             <small class="text-primary">Enter manually</small>
                         </button>

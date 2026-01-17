@@ -206,10 +206,21 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('schedules.store') }}" method="POST">
+            <form action="{{ route('rhu.schedules.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Location</label>
+                            <select class="form-select" name="barangay_id" id="barangaySelect" required>
+                                <option value="">Select Location</option>
+                                @foreach($barangayOptions as $option)
+                                    <option value="{{ $option['id'] }}" @if($option['id'] == $selectedBarangayId) selected @endif>
+                                        {{ $option['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Schedule Type</label>
                             <select class="form-select" name="type" id="scheduleType" required>
@@ -218,6 +229,8 @@
                                 <option value="doctor">Doctor</option>
                             </select>
                         </div>
+                    </div>
+                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Personnel</label>
                             <select class="form-select" name="personnel_id" id="personnelSelect" required>
@@ -225,8 +238,6 @@
                             </select>
                             <input type="hidden" name="personnel_name" id="personnelName">
                         </div>
-                    </div>
-                    
                     <div class="row mb-3">
                         <div class="col-12">
                             <label class="form-label">Week Period</label>
@@ -299,6 +310,17 @@
                 @method('PUT')
                 <div class="modal-body">
                     <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Location</label>
+                            <select class="form-select" name="barangay_id" id="editBarangaySelect" required>
+                                <option value="">Select Location</option>
+                                @foreach($barangayOptions as $option)
+                                    <option value="{{ $option['id'] }}" @if($option['id'] == $selectedBarangayId) selected @endif>
+                                        {{ $option['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Personnel</label>
                             <input type="text" class="form-control" id="editPersonnelName" readonly>
@@ -842,7 +864,7 @@ function deleteSchedule(scheduleId, personnelName) {
         // Create a form to submit the delete request
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/schedules/${scheduleId}`;
+        form.action = `/rhu/schedules/${scheduleId}`;
         
         // Add CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -851,6 +873,13 @@ function deleteSchedule(scheduleId, personnelName) {
         csrfInput.name = '_token';
         csrfInput.value = csrfToken;
         form.appendChild(csrfInput);
+        
+        // Add barangay_id (from hidden input or selected value)
+        const barangayInput = document.createElement('input');
+        barangayInput.type = 'hidden';
+        barangayInput.name = 'barangay_id';
+        barangayInput.value = document.getElementById('barangaySelect').value;
+        form.appendChild(barangayInput);
         
         // Add method override for DELETE
         const methodInput = document.createElement('input');
@@ -870,7 +899,7 @@ function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
     console.log('Editing schedule:', scheduleId, personnelName, schedule);
     
     document.getElementById('editPersonnelName').value = personnelName;
-    document.getElementById('editScheduleForm').action = `/schedules/${scheduleId}`;
+    document.getElementById('editScheduleForm').action = `/rhu/schedules/${scheduleId}`;
     
     // Set week dates if provided
     if (weekStart && weekEnd) {
@@ -963,7 +992,14 @@ function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
 // Delete schedule function
 function deleteSchedule(scheduleId, personnelName) {
     document.getElementById('deleteScheduleName').textContent = personnelName;
-    document.getElementById('deleteScheduleForm').action = `/schedules/${scheduleId}`;
+    document.getElementById('deleteScheduleForm').action = `/rhu/schedules/${scheduleId}`;
+    
+    // Set barangay_id in hidden input for the delete form
+    const barangayIdInput = document.createElement('input');
+    barangayIdInput.type = 'hidden';
+    barangayIdInput.name = 'barangay_id';
+    barangayIdInput.value = document.getElementById('barangaySelect').value;
+    document.getElementById('deleteScheduleForm').appendChild(barangayIdInput);
     
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteScheduleModal'));
     deleteModal.show();

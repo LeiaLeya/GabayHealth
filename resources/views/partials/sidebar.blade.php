@@ -38,17 +38,17 @@
                 ];
             } else {
                 $navItems = [
-                    ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                    ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
-                    ['route' => 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
-                    ['route' => 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
-                    ['route' => 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
-                    ['route' => 'notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
-                    ['route' => 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
-                    ['route' => 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                    ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
-                    ['route' => 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
-                    ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'rhu.reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => 'rhu.reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'rhu.schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                    ['route' => 'rhu.calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
+                    ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'Events.png'],
+                    ['route' => 'rhu.notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
+                    ['route' => 'rhu.inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                    ['route' => 'rhu.services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
+                    ['route' => 'rhu.personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                    ['route' => 'rhu.user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
+                    ['route' => 'rhu.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             }

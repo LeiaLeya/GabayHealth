@@ -66,7 +66,7 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Health Center Profile</h4>
-                    <a href="{{ route('accounts.profile.edit') }}" class="btn btn-primary btn-sm">
+                    <a href="{{ route('rhu.accounts.profile.edit') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-edit me-2"></i>Edit Profile
                     </a>
                 </div>
@@ -132,7 +132,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Staff Accounts Management</h4>
-                    <a href="{{ route('accounts.staff.create') }}" class="btn btn-success btn-sm">
+                    <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-success btn-sm">
                         <i class="fas fa-plus me-2"></i>Add Staff
                     </a>
                 </div>
@@ -172,7 +172,7 @@
                                         <td>{{ \Carbon\Carbon::parse($staff['created_at'])->format('M d, Y') }}</td>
                                         <td class="text-center">
                                             <div class="action-buttons">
-                                                <a href="{{ route('accounts.staff.edit', $staff['id']) }}" 
+                                                <a href="{{ route('rhu.accounts.staff.edit', $staff['id']) }}" 
                                                    class="action-btn edit-btn" 
                                                    title="Edit">
                                                     <i class="bi bi-pencil"></i>
@@ -195,7 +195,7 @@
                             <i class="fas fa-users fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No Staff Accounts Found</h5>
                             <p class="text-muted">Start by adding staff members to your health center.</p>
-                            <a href="{{ route('accounts.staff.create') }}" class="btn btn-primary">
+                            <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary">
                                 <i class="fas fa-plus me-2"></i>Add First Staff Member
                             </a>
                         </div>
