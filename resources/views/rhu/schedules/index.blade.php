@@ -238,6 +238,7 @@
                             </select>
                             <input type="hidden" name="personnel_name" id="personnelName">
                         </div>
+                    </div>
                     <div class="row mb-3">
                         <div class="col-12">
                             <label class="form-label">Week Period</label>
@@ -858,42 +859,6 @@ function cleanupModals() {
     });
 }
 
-// Delete schedule function
-function deleteSchedule(scheduleId, personnelName) {
-    if (confirm(`Are you sure you want to delete the schedule for ${personnelName}?`)) {
-        // Create a form to submit the delete request
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/rhu/schedules/${scheduleId}`;
-        
-        // Add CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = csrfToken;
-        form.appendChild(csrfInput);
-        
-        // Add barangay_id (from hidden input or selected value)
-        const barangayInput = document.createElement('input');
-        barangayInput.type = 'hidden';
-        barangayInput.name = 'barangay_id';
-        barangayInput.value = document.getElementById('barangaySelect').value;
-        form.appendChild(barangayInput);
-        
-        // Add method override for DELETE
-        const methodInput = document.createElement('input');
-        methodInput.type = 'hidden';
-        methodInput.name = '_method';
-        methodInput.value = 'DELETE';
-        form.appendChild(methodInput);
-        
-        // Submit the form
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
 // Edit schedule function
 function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
     console.log('Editing schedule:', scheduleId, personnelName, schedule);
@@ -991,18 +956,33 @@ function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
 
 // Delete schedule function
 function deleteSchedule(scheduleId, personnelName) {
-    document.getElementById('deleteScheduleName').textContent = personnelName;
-    document.getElementById('deleteScheduleForm').action = `/rhu/schedules/${scheduleId}`;
-    
-    // Set barangay_id in hidden input for the delete form
-    const barangayIdInput = document.createElement('input');
-    barangayIdInput.type = 'hidden';
-    barangayIdInput.name = 'barangay_id';
-    barangayIdInput.value = document.getElementById('barangaySelect').value;
-    document.getElementById('deleteScheduleForm').appendChild(barangayIdInput);
-    
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteScheduleModal'));
-    deleteModal.show();
+    if (confirm(`Are you sure you want to delete the schedule for ${personnelName}?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/rhu/schedules/${scheduleId}`;
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        const barangayInput = document.createElement('input');
+        barangayInput.type = 'hidden';
+        barangayInput.name = 'barangay_id';
+        barangayInput.value = document.getElementById('barangaySelect').value;
+        form.appendChild(barangayInput);
+        
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        form.appendChild(methodInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 @endsection 
