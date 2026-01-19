@@ -5,19 +5,19 @@
 <div class="sidebar">
     <!-- Logo and App Title -->
     <div class="logo-section">
-        @if(session('user.logo_url'))
-            <img src="{{ session('user.logo_url') }}" 
-                 class="logo" 
-                 alt="User Logo"
-                 onerror="this.src='{{ asset('images/gabayhealth_logo.png') }}'">
-        @else
-            <img src="{{ asset('images/gabayhealth_logo.png') }}" class="logo" alt="GabayHealth Logo">
-        @endif
+        <img src="{{ asset('images/gabayhealth_logo.png') }}" class="logo" alt="GabayHealth Logo">
         <span class="title">GabayHealth</span>
     </div>
 
     <div class="seal-section">
-        <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
+        @if(session('user.logo_url'))
+            <img src="{{ session('user.logo_url') }}" 
+                 class="seal" 
+                 alt="RHU Logo"
+                 onerror="this.src='{{ asset('images/seal.png') }}'">
+        @else
+            <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
+        @endif
         <div class="center-name">
             {{ session('user.name', 'Health Center') }}
         </div>
@@ -114,10 +114,23 @@
     .seal-section {
         text-align: center;
         padding: 8px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rhu-logo {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        margin-top: 8px;
     }
 
     .seal {
         width: 80px;
+        border-radius: 50%;
+        object-fit: cover;
     }
 
     .center-name {

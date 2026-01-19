@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Laravel\Socialite\Facades\Socialite;
+use Cloudinary\Cloudinary;
 use Cloudinary\Uploader;
 use Exception;
 
@@ -161,7 +162,14 @@ class RegisterController extends Controller
             $logoUrl = null;
             if ($request->hasFile('logo')) {
                 try {
-                    $result = Uploader::upload($request->file('logo')->getRealPath(), [
+                    $cloudinary = new Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                            'api_key' => env('CLOUDINARY_API_KEY'),
+                            'api_secret' => env('CLOUDINARY_API_SECRET'),
+                        ]
+                    ]);
+                    $result = $cloudinary->uploadApi()->upload($request->file('logo')->getRealPath(), [
                         'folder' => "gabayhealth/rhu/{$uid}",
                         'resource_type' => 'auto',
                     ]);
@@ -291,7 +299,14 @@ class RegisterController extends Controller
             $logoUrl = null;
             if ($request->hasFile('logo')) {
                 try {
-                    $result = Uploader::upload($request->file('logo')->getRealPath(), [
+                    $cloudinary = new Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                            'api_key' => env('CLOUDINARY_API_KEY'),
+                            'api_secret' => env('CLOUDINARY_API_SECRET'),
+                        ]
+                    ]);
+                    $result = $cloudinary->uploadApi()->upload($request->file('logo')->getRealPath(), [
                         'folder' => "gabayhealth/rhu/{$uid}",
                         'resource_type' => 'auto',
                     ]);
