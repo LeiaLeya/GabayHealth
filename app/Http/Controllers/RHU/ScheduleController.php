@@ -226,15 +226,19 @@ class ScheduleController extends Controller
             }
 
             $scheduleData = [];
-            foreach ($request->schedule as $day => $timeSlots) {
-                $formattedSlots = [];
-                foreach ($timeSlots as $slot) {
-                    if (!empty($slot)) {
-                        $formattedSlots[] = $slot;
+            if (!empty($request->schedule) && is_array($request->schedule)) {
+                foreach ($request->schedule as $day => $timeSlots) {
+                    $formattedSlots = [];
+                    if (is_array($timeSlots)) {
+                        foreach ($timeSlots as $slot) {
+                            if (!empty($slot)) {
+                                $formattedSlots[] = $slot;
+                            }
+                        }
                     }
-                }
-                if (!empty($formattedSlots)) {
-                    $scheduleData[$day] = $formattedSlots;
+                    if (!empty($formattedSlots)) {
+                        $scheduleData[$day] = $formattedSlots;
+                    }
                 }
             }
 
@@ -309,15 +313,19 @@ class ScheduleController extends Controller
             }
 
             $scheduleData = [];
-            foreach ($request->schedule as $day => $timeSlots) {
-                $formattedSlots = [];
-                foreach ($timeSlots as $slot) {
-                    if (!empty($slot)) {
-                        $formattedSlots[] = $slot;
+            if (!empty($request->schedule) && is_array($request->schedule)) {
+                foreach ($request->schedule as $day => $timeSlots) {
+                    $formattedSlots = [];
+                    if (is_array($timeSlots)) {
+                        foreach ($timeSlots as $slot) {
+                            if (!empty($slot)) {
+                                $formattedSlots[] = $slot;
+                            }
+                        }
                     }
-                }
-                if (!empty($formattedSlots)) {
-                    $scheduleData[$day] = $formattedSlots;
+                    if (!empty($formattedSlots)) {
+                        $scheduleData[$day] = $formattedSlots;
+                    }
                 }
             }
 
