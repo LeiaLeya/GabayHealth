@@ -16,6 +16,8 @@
     },
     "dependencies": {
         "bootstrap": "^5.3.7",
-        "firebase": "^11.10.0"
+        "firebase": "^11.10.0",
+        "@mapbox/mapbox-gl-geocoder": "^5.0.1",
+        "mapbox-gl": "^3.0.1"
     }
 }

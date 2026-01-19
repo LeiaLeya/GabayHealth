@@ -299,6 +299,86 @@
         accent-color: #2563eb;
     }
 
+    /* Mapbox Geocoder Styles */
+    .location-search-container {
+        position: relative;
+        z-index: 10;
+    }
+
+    .suggestions-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        display: none;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .suggestions-list.show {
+        display: block;
+    }
+
+    .suggestion-item {
+        padding: 12px 12px;
+        font-size: 13px;
+        color: #1f2937;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+        background-color: #f3f4f6;
+        color: #2563eb;
+    }
+
+    .suggestion-item .suggestion-title {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .suggestion-item .suggestion-subtitle {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .location-coordinates {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 8px;
+        padding: 8px 0;
+    }
+
+    #addressSearch {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background-color: #f9fafb;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    #addressSearch:focus {
+        outline: none;
+        border-color: #2563eb;
+        background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
     @media (max-width: 600px) {
         .registration-wrapper {
             padding: 24px;
@@ -404,8 +484,17 @@
 
             <!-- Address -->
             <div class="form-group">
-                <label for="fullAddress">Address</label>
-                <input type="text" id="fullAddress" name="fullAddress" class="form-control" placeholder="Street address" required value="{{ old('fullAddress') }}">
+                <label for="addressSearch">Address</label>
+                <div class="location-search-container">
+                    <input type="text" id="addressSearch" class="form-control" placeholder="Search for an address..." autocomplete="off">
+                    <div id="suggestionsList" class="suggestions-list"></div>
+                    <input type="hidden" id="fullAddress" name="fullAddress" value="{{ old('fullAddress') }}">
+                    <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude') }}">
+                    <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude') }}">
+                    <div class="location-coordinates">
+                        <span id="coordsDisplay"></span>
+                    </div>
+                </div>
                 @error('fullAddress') <small style="color: #dc2626;">{{ $message }}</small> @enderror
             </div>
 
@@ -546,6 +635,118 @@ document.addEventListener('DOMContentLoaded', function () {
                     citySelect.innerHTML += `<option value="${city.code}">${city.name}</option>`;
                 });
             });
+    });
+});
+</script>
+
+<!-- Mapbox Geocoding API -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const mapboxAccessToken = @json(env('VITE_MAPBOX_ACCESS_TOKEN'));
+    
+    if (!mapboxAccessToken || mapboxAccessToken === 'your_mapbox_access_token_here') {
+        console.error('Mapbox token not configured');
+        return;
+    }
+
+    const searchInput = document.getElementById('addressSearch');
+    const suggestionsList = document.getElementById('suggestionsList');
+    const fullAddressInput = document.getElementById('fullAddress');
+    const latitudeInput = document.getElementById('latitude');
+    const longitudeInput = document.getElementById('longitude');
+    const coordsDisplay = document.getElementById('coordsDisplay');
+
+    let searchTimeout;
+
+    // Search as user types
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            suggestionsList.innerHTML = '';
+            suggestionsList.classList.remove('show');
+            return;
+        }
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchMapbox(query);
+        }, 300);
+    });
+
+    function searchMapbox(query) {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+            `access_token=${mapboxAccessToken}` +
+            `&country=PH` +
+            `&proximity=120.7,15.5` +
+            `&limit=5`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                displaySuggestions(data.features);
+            })
+            .catch(error => console.error('Geocoding error:', error));
+    }
+
+    function displaySuggestions(features) {
+        suggestionsList.innerHTML = '';
+
+        if (features.length === 0) {
+            suggestionsList.innerHTML = '<div style="padding: 12px; color: #9ca3af;">No results found</div>';
+            suggestionsList.classList.add('show');
+            return;
+        }
+
+        features.forEach((feature, index) => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            
+            const title = feature.place_name.split(',')[0];
+            const subtitle = feature.place_name.split(',').slice(1).join(',').trim();
+
+            item.innerHTML = `
+                <div class="suggestion-title">${title}</div>
+                <div class="suggestion-subtitle">${subtitle}</div>
+            `;
+
+            item.addEventListener('click', () => {
+                selectAddress(feature);
+            });
+
+            suggestionsList.appendChild(item);
+        });
+
+        suggestionsList.classList.add('show');
+    }
+
+    function selectAddress(feature) {
+        const [longitude, latitude] = feature.geometry.coordinates;
+
+        searchInput.value = feature.place_name;
+        fullAddressInput.value = feature.place_name;
+        latitudeInput.value = latitude;
+        longitudeInput.value = longitude;
+        coordsDisplay.textContent = `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+        suggestionsList.innerHTML = '';
+        suggestionsList.classList.remove('show');
+    }
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchInput) {
+            suggestionsList.classList.remove('show');
+        }
+    });
+
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (!fullAddressInput.value) {
+            e.preventDefault();
+            alert('Please select an address from the search results');
+            searchInput.focus();
+        }
     });
 });
 </script>
