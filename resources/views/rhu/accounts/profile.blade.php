@@ -35,12 +35,24 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Health Center Information</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">Edit Health Center Profile</h4>
+                    <a href="{{ route('rhu.accounts.index') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Account Management
+                    </a>
                 </div>
                 <div class="card-body">
+                    @if($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                     
-                    <form action="{{ route('accounts.profile.update') }}" method="POST">
+                    <form action="{{ route('rhu.accounts.profile.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -156,7 +168,7 @@
                     <h5 class="card-title mb-0">Change Password</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('accounts.password.update') }}" method="POST">
+                    <form action="{{ route('rhu.accounts.password.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         <div class="row">

@@ -32,7 +32,7 @@
                     <h5 class="card-title mb-0">Staff Information</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('accounts.staff.update', $staff['id']) }}" method="POST">
+                    <form action="{{ route('rhu.accounts.staff.update', $staff['id']) }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -108,10 +108,12 @@
                         
 
                         
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle"></i>
-                                Update Staff Member
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ route('rhu.accounts.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Account Management
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Staff Member
                             </button>
                         </div>
                     </form>

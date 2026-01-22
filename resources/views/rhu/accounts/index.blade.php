@@ -87,9 +87,8 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Health Center Profile</h4>
-                    <a href="{{ route('accounts.profile.edit') }}" class="btn btn-primary d-flex align-items-center gap-2">
-                        <i class="bi bi-pencil"></i>
-                        Edit Profile
+                    <a href="{{ route('rhu.accounts.profile.edit') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit me-2"></i>Edit Profile
                     </a>
                 </div>
                 <div class="card-body">
@@ -154,9 +153,8 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Staff Accounts Management</h4>
-                    <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
-                        <i class="bi bi-plus-circle"></i>
-                        Add Staff
+                    <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus me-2"></i>Add Staff
                     </a>
                 </div>
                 <div class="card-body">
@@ -208,7 +206,7 @@
                                         <td>{{ \Carbon\Carbon::parse($staff['created_at'])->format('M d, Y') }}</td>
                                         <td class="text-center">
                                             <div class="action-buttons">
-                                                <a href="{{ route('accounts.staff.edit', $staff['id']) }}" 
+                                                <a href="{{ route('rhu.accounts.staff.edit', $staff['id']) }}" 
                                                    class="action-btn edit-btn" 
                                                    title="Edit">
                                                     <i class="bi bi-pencil"></i>
@@ -230,10 +228,9 @@
                         <div class="text-center py-5">
                             <i class="bi bi-people display-4 text-muted d-block mb-3"></i>
                             <h5 class="text-muted">No Staff Accounts Found</h5>
-                            <p class="text-muted mb-0">Start by adding staff members to your health center.</p>
-                            <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary mt-3 d-flex align-items-center gap-2 mx-auto" style="width: fit-content;">
-                                <i class="bi bi-plus-circle"></i>
-                                Add First Staff Member
+                            <p class="text-muted">Start by adding staff members to your health center.</p>
+                            <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add First Staff Member
                             </a>
                         </div>
                     @endif

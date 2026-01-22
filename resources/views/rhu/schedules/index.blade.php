@@ -206,10 +206,21 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('schedules.store') }}" method="POST">
+            <form action="{{ route('rhu.schedules.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Location</label>
+                            <select class="form-select" name="barangay_id" id="barangaySelect" required>
+                                <option value="">Select Location</option>
+                                @foreach($barangayOptions as $option)
+                                    <option value="{{ $option['id'] }}" @if($option['id'] == $selectedBarangayId) selected @endif>
+                                        {{ $option['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Schedule Type</label>
                             <select class="form-select" name="type" id="scheduleType" required>
@@ -218,6 +229,8 @@
                                 <option value="doctor">Doctor</option>
                             </select>
                         </div>
+                    </div>
+                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Personnel</label>
                             <select class="form-select" name="personnel_id" id="personnelSelect" required>
@@ -226,7 +239,6 @@
                             <input type="hidden" name="personnel_name" id="personnelName">
                         </div>
                     </div>
-                    
                     <div class="row mb-3">
                         <div class="col-12">
                             <label class="form-label">Week Period</label>
@@ -299,6 +311,17 @@
                 @method('PUT')
                 <div class="modal-body">
                     <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Location</label>
+                            <select class="form-select" name="barangay_id" id="editBarangaySelect" required>
+                                <option value="">Select Location</option>
+                                @foreach($barangayOptions as $option)
+                                    <option value="{{ $option['id'] }}" @if($option['id'] == $selectedBarangayId) selected @endif>
+                                        {{ $option['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Personnel</label>
                             <input type="text" class="form-control" id="editPersonnelName" readonly>
@@ -836,41 +859,12 @@ function cleanupModals() {
     });
 }
 
-// Delete schedule function
-function deleteSchedule(scheduleId, personnelName) {
-    if (confirm(`Are you sure you want to delete the schedule for ${personnelName}?`)) {
-        // Create a form to submit the delete request
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/schedules/${scheduleId}`;
-        
-        // Add CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = csrfToken;
-        form.appendChild(csrfInput);
-        
-        // Add method override for DELETE
-        const methodInput = document.createElement('input');
-        methodInput.type = 'hidden';
-        methodInput.name = '_method';
-        methodInput.value = 'DELETE';
-        form.appendChild(methodInput);
-        
-        // Submit the form
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
 // Edit schedule function
 function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
     console.log('Editing schedule:', scheduleId, personnelName, schedule);
     
     document.getElementById('editPersonnelName').value = personnelName;
-    document.getElementById('editScheduleForm').action = `/schedules/${scheduleId}`;
+    document.getElementById('editScheduleForm').action = `/rhu/schedules/${scheduleId}`;
     
     // Set week dates if provided
     if (weekStart && weekEnd) {
@@ -962,11 +956,33 @@ function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
 
 // Delete schedule function
 function deleteSchedule(scheduleId, personnelName) {
-    document.getElementById('deleteScheduleName').textContent = personnelName;
-    document.getElementById('deleteScheduleForm').action = `/schedules/${scheduleId}`;
-    
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteScheduleModal'));
-    deleteModal.show();
+    if (confirm(`Are you sure you want to delete the schedule for ${personnelName}?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/rhu/schedules/${scheduleId}`;
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        const barangayInput = document.createElement('input');
+        barangayInput.type = 'hidden';
+        barangayInput.name = 'barangay_id';
+        barangayInput.value = document.getElementById('barangaySelect').value;
+        form.appendChild(barangayInput);
+        
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        form.appendChild(methodInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 @endsection 

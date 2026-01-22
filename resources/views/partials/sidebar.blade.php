@@ -10,7 +10,14 @@
     </div>
 
     <div class="seal-section">
-        <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
+        @if(session('user.logo_url'))
+            <img src="{{ session('user.logo_url') }}" 
+                 class="seal" 
+                 alt="RHU Logo"
+                 onerror="this.src='{{ asset('images/seal.png') }}'">
+        @else
+            <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
+        @endif
         <div class="center-name">
             {{ session('user.name', 'Health Center') }}
         </div>
@@ -34,17 +41,17 @@
                 $routePrefix = ($userRole === 'rhu') ? 'rhu.' : 'bhc.';
                 
                 $navItems = [
-                    ['route' => $routePrefix . 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                    ['route' => $routePrefix . 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
-                    ['route' => $routePrefix . 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
-                    ['route' => $routePrefix . 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
-                    ['route' => $routePrefix . 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
-                    ['route' => $routePrefix . 'notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
-                    ['route' => $routePrefix . 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
-                    ['route' => $routePrefix . 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                    ['route' => $routePrefix . 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
-                    ['route' => $routePrefix . 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
-                    ['route' => $routePrefix . 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'rhu.reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => 'rhu.reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'rhu.schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                    ['route' => 'rhu.calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
+                    ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'Events.png'],
+                    ['route' => 'rhu.notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
+                    ['route' => 'rhu.inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                    ['route' => 'rhu.services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
+                    ['route' => 'rhu.personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                    ['route' => 'rhu.user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
+                    ['route' => 'rhu.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             }
@@ -110,10 +117,23 @@
     .seal-section {
         text-align: center;
         padding: 8px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rhu-logo {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        margin-top: 8px;
     }
 
     .seal {
         width: 80px;
+        border-radius: 50%;
+        object-fit: cover;
     }
 
     .center-name {

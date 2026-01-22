@@ -126,18 +126,23 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
+        // Get RHU ID
+        $rhuId = $this->getBarangayId();
+        
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
+        }
+        
         // Initialize events as empty array
         $events = [];
         $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
         
         try {
-            \Log::info('EventController - Fetching events for user: ' . $user['id'] . ' with role: ' . $user['role']);
+            \Log::info('EventController - Fetching events for RHU: ' . $rhuId);
             
-            // Get events from user's sub-collection
+            // Get events from RHU collection
             $eventsQuery = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
-                ->collection('events')
+                ->collection("rhu/{$rhuId}/events")
                 ->limit(50) // Limit results to prevent timeout
                 ->documents();
 
@@ -175,17 +180,17 @@ class EventController extends Controller
     public function show($id)
     {
         $user = session('user');
-        $barangayId = $user['barangayId'] ?? null;
+        $rhuId = $this->getBarangayId();
 
-        if (!$barangayId) {
-            return redirect()->route('rhu.events.index')->with('error', 'Barangay ID not found.');
+        if (!$rhuId) {
+            return redirect()->route('rhu.events.index')->with('error', 'RHU ID not found.');
         }
 
         $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
         $barangayNameMap = collect($barangaysWithinRhu)->pluck('name', 'id')->toArray();
 
         $eventDoc = $this->firestore
-            ->collection("barangay/{$barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->document($id)
             ->snapshot();
 
@@ -205,7 +210,7 @@ class EventController extends Controller
         }
 
         $attendeesQuery = $this->firestore
-            ->collection("barangay/{$barangayId}/events/{$id}/attendees")
+            ->collection("rhu/{$rhuId}/events/{$id}/attendees")
             ->documents();
 
         $attendees = [];
@@ -259,11 +264,11 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Get RHU ID from session
+        $rhuId = $this->getBarangayId();
         
-        if (!$this->barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $request->validate([
@@ -272,7 +277,7 @@ class EventController extends Controller
             'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|string',
             'end_time' => 'required|string|after:start_time',
-            'location' => 'required|string',
+            'location' => 'nullable|string',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'nullable|string',
@@ -315,7 +320,7 @@ class EventController extends Controller
         $allowedBarangayNames = array_map(fn ($id) => $barangayMap[$id], $allowedBarangays);
 
         $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->add([
                 'title' => $request->title,
                 'description' => $request->description,
@@ -348,15 +353,15 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Get RHU ID from session
+        $rhuId = $this->getBarangayId();
         
-        if (!$this->barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $eventDoc = $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->document($id)
             ->snapshot();
 
@@ -377,11 +382,11 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Get RHU ID from session
+        $rhuId = $this->getBarangayId();
         
-        if (!$this->barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $request->validate([
@@ -421,7 +426,7 @@ class EventController extends Controller
 
         // Get existing event data to check if date/time changed (rescheduling)
         $existingEventDoc = $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->document($id)
             ->snapshot();
 
@@ -481,7 +486,7 @@ class EventController extends Controller
         }
 
         $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->document($id)
             ->set($eventData, ['merge' => true]);
 
@@ -502,9 +507,9 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to perform this action.');
         }
         
-        $this->barangayId = $user['barangayId'] ?? null;
-        if (!$this->barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $request->validate([
@@ -512,7 +517,7 @@ class EventController extends Controller
         ]);
 
         $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->document($id)
             ->set([
                 'status' => 'Cancelled',
@@ -534,14 +539,14 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        $this->barangayId = $user['barangayId'] ?? null;
+        $rhuId = $this->getBarangayId();
         
-        if (!$this->barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         $eventDoc = $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
+            ->collection("rhu/{$rhuId}/events")
             ->document($id)
             ->snapshot();
 
@@ -552,7 +557,7 @@ class EventController extends Controller
         $event = array_merge($eventDoc->data(), ['id' => $id]);
 
         $attendeesQuery = $this->firestore
-            ->collection("barangay/{$this->barangayId}/events/{$id}/attendees")
+            ->collection("rhu/{$rhuId}/events/{$id}/attendees")
             ->documents();
 
         $attendees = [];

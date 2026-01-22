@@ -20,6 +20,34 @@ class CalendarController extends Controller
         $this->firestore = $firebase->getFirestore();
     }
 
+    /**
+     * Get all barangays that belong to this RHU
+     */
+    private function getBarangaysUnderRhu(string $rhuId): array
+    {
+        $barangays = [];
+        try {
+            $barangayDocs = $this->firestore
+                ->collection('barangay')
+                ->where('rhuId', '=', $rhuId)
+                ->where('status', '=', 'approved')
+                ->documents();
+
+            foreach ($barangayDocs as $doc) {
+                if ($doc->exists()) {
+                    $data = $doc->data();
+                    $barangays[] = [
+                        'id' => $doc->id(),
+                        'name' => $data['healthCenterName'] ?? $data['name'] ?? 'Barangay',
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching barangays under RHU: ' . $e->getMessage());
+        }
+        return $barangays;
+    }
+
     public function index()
     {
         // Set timeout to prevent execution timeout
@@ -31,14 +59,26 @@ class CalendarController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access calendar management.');
         }
         
+        // Get RHU ID
+        $rhuId = $this->getBarangayId();
         // Determine barangayId: barangay users use their own id; others use assigned barangayId
         $this->barangayId = $user['role'] === 'barangay'
             ? ($user['id'] ?? null)
             : ($user['barangayId'] ?? null);
         
-        if (!$this->barangayId) {
-            return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
+        if (!$rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
+        
+        // Get barangays under this RHU
+        $barangays = $this->getBarangaysUnderRhu($rhuId);
+        
+        // Get RHU data to include in barangay options
+        $rhuName = $user['name'] ?? 'RHU';
+        $rhuOption = ['id' => $rhuId, 'name' => $rhuName . ' (RHU Level)'];
+        
+        // Prepend RHU option to barangays list
+        $barangayOptions = array_merge([$rhuOption], $barangays);
         
         // Initialize variables as empty arrays (view expects $calendarEvents, $currentMonth, and $groupedItems)
         $calendarEvents = [];
@@ -97,18 +137,20 @@ class CalendarController extends Controller
                 }
             }
 
-            // Get weekly schedules from barangay schedules collection
-            $schedulesQuery = $this->firestore
-                ->collection("barangay/{$this->barangayId}/schedules")
-                ->limit(30) // Limit results to prevent timeout
-                ->documents();
-
+            // Get weekly schedules from RHU level and all barangays under this RHU
             $schedules = [];
             $scheduleCount = 0;
-            foreach ($schedulesQuery as $doc) {
+            
+            // First, get RHU-level schedules
+            $rhuSchedulesQuery = $this->firestore
+                ->collection("rhu/{$rhuId}/schedules")
+                ->limit(30)
+                ->documents();
+            
+            foreach ($rhuSchedulesQuery as $doc) {
                 if ($doc->exists()) {
                     $data = $doc->data();
-                    \Log::info('Found weekly schedule data:', $data);
+                    \Log::info('Found RHU-level schedule data:', $data);
                     
                     // Check if schedule is for current week
                     $weekStart = Carbon::parse($data['week_start'] ?? '');
@@ -131,7 +173,7 @@ class CalendarController extends Controller
                                     if (!empty($timeSlot)) {
                                         $scheduleData = [
                                             'id' => $doc->id() . '_' . $day . '_' . $timeSlotIndex,
-                                            'title' => $personnelName . ' (' . ucfirst($scheduleType) . ')',
+                                            'title' => $personnelName . ' (' . ucfirst($scheduleType) . ') [RHU]',
                                             'start' => $dayDate . 'T' . $this->extractStartTime($timeSlot),
                                             'end' => $dayDate . 'T' . $this->extractEndTime($timeSlot),
                                             'description' => $timeSlot,
@@ -156,33 +198,116 @@ class CalendarController extends Controller
                     }
                 }
             }
+            
+            // Then, get barangay-level schedules
+            foreach ($barangays as $barangay) {
+                $schedulesQuery = $this->firestore
+                    ->collection("barangay/{$barangay['id']}/schedules")
+                    ->limit(30) // Limit results to prevent timeout
+                    ->documents();
 
-            // Fetch appointments for this barangay (subcollection first, then fallback to legacy top-level)
-            $appointments = [];
-            $appointmentCount = 0;
-            $appointmentsQuery = $this->firestore
-                ->collection("barangay/{$this->barangayId}/appointments")
-                ->limit(100)
-                ->documents();
-
-            $processedAny = false;
-            foreach ($appointmentsQuery as $doc) {
-                if ($doc->exists()) {
-                    $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems, $appointments, $appointmentCount) || $processedAny;
+                foreach ($schedulesQuery as $doc) {
+                    if ($doc->exists()) {
+                        $data = $doc->data();
+                        \Log::info('Found weekly schedule data:', $data);
+                        
+                        // Check if schedule is for current week
+                        $weekStart = Carbon::parse($data['week_start'] ?? '');
+                        $weekEnd = Carbon::parse($data['week_end'] ?? '');
+                        $currentDate = Carbon::now();
+                        
+                        if ($currentDate->between($weekStart, $weekEnd)) {
+                            // Process weekly schedule
+                            $schedule = $data['schedule'] ?? [];
+                            $personnelName = $data['personnel_name'] ?? 'Unknown';
+                            $scheduleType = $data['type'] ?? 'midwife';
+                            
+                            foreach ($schedule as $day => $timeSlots) {
+                                // Convert day name to date for current week
+                                $dayDate = $this->getDayDateForCurrentWeek($day);
+                                
+                                if ($dayDate) {
+                                    $timeSlotIndex = 0;
+                                    foreach ($timeSlots as $timeSlot) {
+                                        if (!empty($timeSlot)) {
+                                            $scheduleData = [
+                                                'id' => $doc->id() . '_' . $day . '_' . $timeSlotIndex,
+                                                'title' => $personnelName . ' (' . ucfirst($scheduleType) . ')',
+                                                'start' => $dayDate . 'T' . $this->extractStartTime($timeSlot),
+                                                'end' => $dayDate . 'T' . $this->extractEndTime($timeSlot),
+                                                'description' => $timeSlot,
+                                                'type' => 'schedule',
+                                                'personnel_name' => $personnelName,
+                                                'schedule_type' => $scheduleType
+                                            ];
+                                            $schedules[] = $scheduleData;
+                                            
+                                            // Group by date for JavaScript
+                                            if (!isset($groupedItems[$dayDate])) {
+                                                $groupedItems[$dayDate] = [];
+                                            }
+                                            $groupedItems[$dayDate][] = $scheduleData;
+                                            
+                                            $scheduleCount++;
+                                            $timeSlotIndex++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // Fallback: check legacy top-level collection if none found
-            if (!$processedAny) {
-                $legacyQuery = $this->firestore
+            // Fetch appointments for RHU's barangays
+            $appointments = [];
+            $appointmentCount = 0;
+            foreach ($barangays as $barangay) {
+                $appointmentsQuery = $this->firestore
                     ->collection('appointments')
-                    ->where('barangayId', '=', $this->barangayId)
+                    ->where('barangayId', '=', $barangay['id'])
                     ->limit(100)
                     ->documents();
 
-                foreach ($legacyQuery as $doc) {
+                foreach ($appointmentsQuery as $doc) {
                     if ($doc->exists()) {
-                        $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems, $appointments, $appointmentCount) || $processedAny;
+                        $data = $doc->data();
+                        \Log::info('Found appointment data:', $data);
+
+                        $parsed = $this->parseAppointmentDate($data['appointmentDate'] ?? '');
+                        $appointmentDate = $parsed['date'] ?? null;
+                        $startTime24 = $parsed['start_time'] ?? null;
+                        $endTime24 = $parsed['end_time'] ?? null;
+
+                        if ($appointmentDate) {
+                            $title = ($data['patient']['name'] ?? 'Patient') . ' - ' . ($data['serviceName'] ?? 'Appointment');
+                            $appointmentData = [
+                                'id' => $doc->id(),
+                                'title' => $title,
+                                'start' => $appointmentDate . 'T' . ($startTime24 ?? '09:00'),
+                                'end' => $appointmentDate . 'T' . ($endTime24 ?? '10:00'),
+                                'description' => $data['serviceName'] ?? 'Appointment',
+                                'type' => 'appointment',
+                                'date' => $appointmentDate,
+                                'start_time' => $startTime24,
+                                'end_time' => $endTime24,
+                                'time' => $data['appointmentDate'] ?? '',
+                                'notes' => $data['notes'] ?? '',
+                                'patient' => [
+                                    'name' => $data['patient']['name'] ?? '',
+                                    'gender' => $data['patient']['gender'] ?? '',
+                                    'age' => isset($data['patient']['birthdate']) ? $this->calculateAge($data['patient']['birthdate']) : null,
+                                ],
+                            ];
+
+                            $appointments[] = $appointmentData;
+
+                            if (!isset($groupedItems[$appointmentDate])) {
+                                $groupedItems[$appointmentDate] = [];
+                            }
+                            $groupedItems[$appointmentDate][] = $appointmentData;
+                            $appointmentCount++;
+                        }
                     }
                 }
             }
@@ -270,10 +395,10 @@ class CalendarController extends Controller
 
             \Log::info('CalendarController - Passing to view - availableMidwives count: ' . count($availableMidwives));
             \Log::info('CalendarController - Passing to view - assignedDoctors count: ' . count($assignedDoctors));
-            return $this->view('calendars.index', compact('calendarEvents', 'currentMonth', 'groupedItems', 'availableMidwives', 'assignedDoctors'));
+            return $this->view('calendars.index', compact('calendarEvents', 'currentMonth', 'groupedItems', 'availableMidwives', 'assignedDoctors', 'barangayOptions'));
         } catch (\Exception $e) {
             \Log::error('Error fetching calendar data: ' . $e->getMessage());
-            return $this->view('calendars.index', compact('calendarEvents', 'currentMonth', 'groupedItems', 'availableMidwives', 'assignedDoctors'))->with('error', 'Error loading calendar data. Please try again.');
+            return $this->view('calendars.index', compact('calendarEvents', 'currentMonth', 'groupedItems', 'availableMidwives', 'assignedDoctors', 'barangayOptions'))->with('error', 'Error loading calendar data. Please try again.');
         }
     }
 
@@ -421,14 +546,19 @@ class CalendarController extends Controller
             return response()->json(['error' => 'User not authenticated'], 401);
         }
         
+        // Get RHU ID
+        $rhuId = $this->getBarangayId();
         // Get barangayId from user session
         $this->barangayId = $user['role'] === 'barangay'
             ? ($user['id'] ?? null)
             : ($user['barangayId'] ?? null);
         
-        if (!$this->barangayId) {
-            return response()->json(['error' => 'Barangay ID not found'], 400);
+        if (!$rhuId) {
+            return response()->json(['error' => 'RHU ID not found'], 400);
         }
+        
+        // Get barangays under this RHU
+        $barangays = $this->getBarangaysUnderRhu($rhuId);
         
         // Initialize groupedItems
         $groupedItems = [];
@@ -470,53 +600,54 @@ class CalendarController extends Controller
                 }
             }
 
-            // Get weekly schedules from barangay schedules collection (same logic as index method)
-            $schedulesQuery = $this->firestore
-                ->collection("barangay/{$this->barangayId}/schedules")
-                ->limit(30)
-                ->documents();
+            // Get weekly schedules from all barangays under this RHU
+            foreach ($barangays as $barangay) {
+                $schedulesQuery = $this->firestore
+                    ->collection("barangay/{$barangay['id']}/schedules")
+                    ->limit(30)
+                    ->documents();
 
-            $schedules = [];
-            foreach ($schedulesQuery as $doc) {
-                if ($doc->exists()) {
-                    $data = $doc->data();
-                    
-                    // Check if schedule is for current week
-                    $weekStart = Carbon::parse($data['week_start'] ?? '');
-                    $weekEnd = Carbon::parse($data['week_end'] ?? '');
-                    $currentDate = Carbon::now();
-                    
-                    if ($currentDate->between($weekStart, $weekEnd)) {
-                        // Process weekly schedule
-                        $schedule = $data['schedule'] ?? [];
-                        $personnelName = $data['personnel_name'] ?? 'Unknown';
-                        $scheduleType = $data['type'] ?? 'midwife';
+                foreach ($schedulesQuery as $doc) {
+                    if ($doc->exists()) {
+                        $data = $doc->data();
                         
-                        foreach ($schedule as $day => $timeSlots) {
-                            // Convert day name to date for current week
-                            $dayDate = $this->getDayDateForCurrentWeek($day);
+                        // Check if schedule is for current week
+                        $weekStart = Carbon::parse($data['week_start'] ?? '');
+                        $weekEnd = Carbon::parse($data['week_end'] ?? '');
+                        $currentDate = Carbon::now();
+                        
+                        if ($currentDate->between($weekStart, $weekEnd)) {
+                            // Process weekly schedule
+                            $schedule = $data['schedule'] ?? [];
+                            $personnelName = $data['personnel_name'] ?? 'Unknown';
+                            $scheduleType = $data['type'] ?? 'midwife';
                             
-                            if ($dayDate) {
-                                $timeSlotIndex = 0;
-                                foreach ($timeSlots as $timeSlot) {
-                                    if (!empty($timeSlot)) {
-                                        $scheduleData = [
-                                            'id' => $doc->id() . '_' . $day . '_' . $timeSlotIndex,
-                                            'title' => $personnelName . ' (' . ucfirst($scheduleType) . ')',
-                                            'start' => $dayDate . 'T' . $this->extractStartTime($timeSlot),
-                                            'end' => $dayDate . 'T' . $this->extractEndTime($timeSlot),
-                                            'description' => $timeSlot,
-                                            'type' => 'schedule',
-                                            'personnel_name' => $personnelName,
-                                            'schedule_type' => $scheduleType
-                                        ];
-                                        
-                                        // Group by date for JavaScript
-                                        if (!isset($groupedItems[$dayDate])) {
-                                            $groupedItems[$dayDate] = [];
+                            foreach ($schedule as $day => $timeSlots) {
+                                // Convert day name to date for current week
+                                $dayDate = $this->getDayDateForCurrentWeek($day);
+                                
+                                if ($dayDate) {
+                                    $timeSlotIndex = 0;
+                                    foreach ($timeSlots as $timeSlot) {
+                                        if (!empty($timeSlot)) {
+                                            $scheduleData = [
+                                                'id' => $doc->id() . '_' . $day . '_' . $timeSlotIndex,
+                                                'title' => $personnelName . ' (' . ucfirst($scheduleType) . ')',
+                                                'start' => $dayDate . 'T' . $this->extractStartTime($timeSlot),
+                                                'end' => $dayDate . 'T' . $this->extractEndTime($timeSlot),
+                                                'description' => $timeSlot,
+                                                'type' => 'schedule',
+                                                'personnel_name' => $personnelName,
+                                                'schedule_type' => $scheduleType
+                                            ];
+                                            
+                                            // Group by date for JavaScript
+                                            if (!isset($groupedItems[$dayDate])) {
+                                                $groupedItems[$dayDate] = [];
+                                            }
+                                            $groupedItems[$dayDate][] = $scheduleData;
+                                            $timeSlotIndex++;
                                         }
-                                        $groupedItems[$dayDate][] = $scheduleData;
-                                        $timeSlotIndex++;
                                     }
                                 }
                             }
@@ -525,30 +656,53 @@ class CalendarController extends Controller
                 }
             }
 
-            // Fetch appointments for this barangay (subcollection first, then fallback to legacy top-level)
-            $appointmentsQuery = $this->firestore
-                ->collection("barangay/{$this->barangayId}/appointments")
-                ->limit(100)
-                ->documents();
-
-            $processedAny = false;
-            foreach ($appointmentsQuery as $doc) {
-                if ($doc->exists()) {
-                    $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems) || $processedAny;
-                }
-            }
-
-            // Fallback: check legacy top-level collection if none found
-            if (!$processedAny) {
-                $legacyQuery = $this->firestore
+            // Fetch appointments for RHU's barangays
+            $appointments = [];
+            $appointmentCount = 0;
+            foreach ($barangays as $barangay) {
+                $appointmentsQuery = $this->firestore
                     ->collection('appointments')
-                    ->where('barangayId', '=', $this->barangayId)
+                    ->where('barangayId', '=', $barangay['id'])
                     ->limit(100)
                     ->documents();
 
-                foreach ($legacyQuery as $doc) {
+                foreach ($appointmentsQuery as $doc) {
                     if ($doc->exists()) {
-                        $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems) || $processedAny;
+                        $data = $doc->data();
+                        $parsed = $this->parseAppointmentDate($data['appointmentDate'] ?? '');
+                        $appointmentDate = $parsed['date'] ?? null;
+                        $startTime24 = $parsed['start_time'] ?? null;
+                        $endTime24 = $parsed['end_time'] ?? null;
+
+                        if ($appointmentDate) {
+                            $title = ($data['patient']['name'] ?? 'Patient') . ' - ' . ($data['serviceName'] ?? 'Appointment');
+                            $appointmentData = [
+                                'id' => $doc->id(),
+                                'title' => $title,
+                                'start' => $appointmentDate . 'T' . ($startTime24 ?? '09:00'),
+                                'end' => $appointmentDate . 'T' . ($endTime24 ?? '10:00'),
+                                'description' => $data['serviceName'] ?? 'Appointment',
+                                'type' => 'appointment',
+                                'date' => $appointmentDate,
+                                'start_time' => $startTime24,
+                                'end_time' => $endTime24,
+                                'time' => $data['appointmentDate'] ?? '',
+                                'notes' => $data['notes'] ?? '',
+                                'patient' => [
+                                    'name' => $data['patient']['name'] ?? '',
+                                    'gender' => $data['patient']['gender'] ?? '',
+                                    'age' => isset($data['patient']['birthdate']) ? $this->calculateAge($data['patient']['birthdate']) : null,
+                                ],
+                            ];
+
+                            $appointments[] = $appointmentData;
+
+                            if (!isset($groupedItems[$appointmentDate])) {
+                                $groupedItems[$appointmentDate] = [];
+                            }
+                            $groupedItems[$appointmentDate][] = $appointmentData;
+                            $appointmentCount++;
+                        }
                     }
                 }
             }

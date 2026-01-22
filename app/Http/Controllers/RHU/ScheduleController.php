@@ -56,13 +56,21 @@ class ScheduleController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access schedule management.');
         }
         
-        // Get barangays under this RHU
-        $barangays = $this->getBarangaysUnderRhu($user['id']);
+        // Get RHU ID
+        $rhuId = $this->getBarangayId();
         
-        // Get selected barangay from request or use first one
+        // Get barangays under this RHU
+        $barangays = $this->getBarangaysUnderRhu($rhuId);
+        
+        // Create barangay options with RHU at the top
+        $rhuName = $user['name'] ?? 'RHU';
+        $rhuOption = ['id' => $rhuId, 'name' => $rhuName . ' (RHU Level)'];
+        $barangayOptions = array_merge([$rhuOption], $barangays);
+        
+        // Get selected barangay from request or use RHU as default
         $selectedBarangayId = $request->get('barangay_id');
-        if (!$selectedBarangayId && !empty($barangays)) {
-            $selectedBarangayId = $barangays[0]['id'];
+        if (!$selectedBarangayId) {
+            $selectedBarangayId = $rhuId; // Default to RHU level
         }
         
         $midwifeSchedules = [];
@@ -73,14 +81,22 @@ class ScheduleController extends Controller
         try {
             \Log::info('RHU ScheduleController - Fetching schedules for user: ' . $user['id'] . ' with role: ' . $user['role'] . ', barangay: ' . $selectedBarangayId);
             
-            // If a barangay is selected, get schedules from that barangay
-            // Otherwise, aggregate schedules from all barangays under this RHU
+            // Check if selected is RHU-level or barangay-level
+            $isRhuLevel = ($selectedBarangayId === $rhuId);
+            
             if ($selectedBarangayId) {
-                // Get schedules from the selected barangay
-                $schedulesQuery = $this->firestore
-                    ->collection("barangay/{$selectedBarangayId}/schedules")
-                    ->limit(50)
-                    ->documents();
+                // Get schedules from the selected location (RHU or barangay)
+                if ($isRhuLevel) {
+                    $schedulesQuery = $this->firestore
+                        ->collection("rhu/{$rhuId}/schedules")
+                        ->limit(50)
+                        ->documents();
+                } else {
+                    $schedulesQuery = $this->firestore
+                        ->collection("barangay/{$selectedBarangayId}/schedules")
+                        ->limit(50)
+                        ->documents();
+                }
 
                 $count = 0;
                 foreach ($schedulesQuery as $doc) {
@@ -166,10 +182,10 @@ class ScheduleController extends Controller
             
             \Log::info('RHU ScheduleController - Found ' . $count . ' schedules, ' . count($availableMidwives) . ' midwives, ' . count($assignedDoctors) . ' doctors');
 
-            return $this->view('schedules.index', compact('midwifeSchedules', 'doctorSchedules', 'availableMidwives', 'assignedDoctors', 'barangays', 'selectedBarangayId'));
+            return $this->view('schedules.index', compact('midwifeSchedules', 'doctorSchedules', 'availableMidwives', 'assignedDoctors', 'barangayOptions', 'selectedBarangayId'));
         } catch (\Exception $e) {
             \Log::error('Error fetching schedules: ' . $e->getMessage());
-            return $this->view('schedules.index', compact('midwifeSchedules', 'doctorSchedules', 'availableMidwives', 'assignedDoctors', 'barangays', 'selectedBarangayId'))->with('error', 'Error loading schedules data. Please try again.');
+            return $this->view('schedules.index', compact('midwifeSchedules', 'doctorSchedules', 'availableMidwives', 'assignedDoctors', 'barangayOptions', 'selectedBarangayId'))->with('error', 'Error loading schedules data. Please try again.');
         }
     }
 
@@ -188,45 +204,74 @@ class ScheduleController extends Controller
                 'personnel_name' => 'required|string',
                 'week_start' => 'required|date',
                 'week_end' => 'required|date|after_or_equal:week_start',
-                'schedule' => 'required|array',
-                'schedule.*' => 'required|array',
+                'schedule' => 'nullable|array',
+                'schedule.*' => 'nullable|array',
                 'schedule.*.*' => 'nullable|string',
-                'barangay_id' => 'required|string', // Required for RHU to specify which barangay
+                'barangay_id' => 'required|string', // Can be RHU ID or barangay ID
             ]);
 
-            // Verify that the barangay belongs to this RHU
-            $barangays = $this->getBarangaysUnderRhu($user['id']);
-            $barangayIds = array_column($barangays, 'id');
-            if (!in_array($request->barangay_id, $barangayIds)) {
-                return redirect()->back()->with('error', 'Invalid barangay selected.');
+            // Get RHU ID
+            $rhuId = $this->getBarangayId();
+            
+            // Check if barangay_id is the RHU ID itself (RHU-level schedule)
+            $isRhuLevelSchedule = ($request->barangay_id === $rhuId);
+            
+            if (!$isRhuLevelSchedule) {
+                // Verify that the barangay belongs to this RHU
+                $barangays = $this->getBarangaysUnderRhu($rhuId);
+                $barangayIds = array_column($barangays, 'id');
+                if (!in_array($request->barangay_id, $barangayIds)) {
+                    return redirect()->back()->with('error', 'Invalid barangay selected.');
+                }
             }
 
             $scheduleData = [];
-            foreach ($request->schedule as $day => $timeSlots) {
-                $formattedSlots = [];
-                foreach ($timeSlots as $slot) {
-                    if (!empty($slot)) {
-                        $formattedSlots[] = $slot;
+            if (!empty($request->schedule) && is_array($request->schedule)) {
+                foreach ($request->schedule as $day => $timeSlots) {
+                    $formattedSlots = [];
+                    if (is_array($timeSlots)) {
+                        foreach ($timeSlots as $slot) {
+                            if (!empty($slot)) {
+                                $formattedSlots[] = $slot;
+                            }
+                        }
                     }
-                }
-                if (!empty($formattedSlots)) {
-                    $scheduleData[$day] = $formattedSlots;
+                    if (!empty($formattedSlots)) {
+                        $scheduleData[$day] = $formattedSlots;
+                    }
                 }
             }
 
-            // Store schedule in the barangay's schedules collection (original structure)
-            $this->firestore
-                ->collection("barangay/{$request->barangay_id}/schedules")
-                ->add([
-                    'type' => $request->type,
-                    'personnel_id' => $request->personnel_id,
-                    'personnel_name' => $request->personnel_name,
-                    'week_start' => $request->week_start,
-                    'week_end' => $request->week_end,
-                    'schedule' => $scheduleData,
-                    'created_at' => now()->toISOString(),
-                    'updated_at' => now()->toISOString()
-                ]);
+            // Store schedule in appropriate location
+            if ($isRhuLevelSchedule) {
+                // Store RHU-level schedule in rhu/{rhuId}/schedules
+                $this->firestore
+                    ->collection("rhu/{$rhuId}/schedules")
+                    ->add([
+                        'type' => $request->type,
+                        'personnel_id' => $request->personnel_id,
+                        'personnel_name' => $request->personnel_name,
+                        'week_start' => $request->week_start,
+                        'week_end' => $request->week_end,
+                        'schedule' => $scheduleData,
+                        'created_at' => now()->toISOString(),
+                        'updated_at' => now()->toISOString()
+                    ]);
+            } else {
+                // Store barangay-level schedule in barangay/{barangayId}/schedules
+                $this->firestore
+                    ->collection("barangay/{$request->barangay_id}/schedules")
+                    ->add([
+                        'type' => $request->type,
+                        'personnel_id' => $request->personnel_id,
+                        'personnel_name' => $request->personnel_name,
+                        'week_start' => $request->week_start,
+                        'week_end' => $request->week_end,
+                        'schedule' => $scheduleData,
+                        'created_at' => now()->toISOString(),
+                        'updated_at' => now()->toISOString()
+                    ]);
+            }
 
             return redirect()->back()->with('success', 'Weekly schedule created successfully!');
         } catch (\Exception $e) {
@@ -246,42 +291,66 @@ class ScheduleController extends Controller
             $request->validate([
                 'week_start' => 'required|date',
                 'week_end' => 'required|date|after_or_equal:week_start',
-                'schedule' => 'required|array',
-                'schedule.*' => 'required|array',
+                'schedule' => 'nullable|array',
+                'schedule.*' => 'nullable|array',
                 'schedule.*.*' => 'nullable|string',
-                'barangay_id' => 'required|string', // Required to know which barangay's schedule to update
+                'barangay_id' => 'required|string', // Can be RHU ID or barangay ID
             ]);
 
-            // Verify that the barangay belongs to this RHU
-            $barangays = $this->getBarangaysUnderRhu($user['id']);
-            $barangayIds = array_column($barangays, 'id');
-            if (!in_array($request->barangay_id, $barangayIds)) {
-                return redirect()->back()->with('error', 'Invalid barangay selected.');
+            // Get RHU ID
+            $rhuId = $this->getBarangayId();
+            
+            // Check if barangay_id is the RHU ID itself (RHU-level schedule)
+            $isRhuLevelSchedule = ($request->barangay_id === $rhuId);
+            
+            if (!$isRhuLevelSchedule) {
+                // Verify that the barangay belongs to this RHU
+                $barangays = $this->getBarangaysUnderRhu($rhuId);
+                $barangayIds = array_column($barangays, 'id');
+                if (!in_array($request->barangay_id, $barangayIds)) {
+                    return redirect()->back()->with('error', 'Invalid barangay selected.');
+                }
             }
 
             $scheduleData = [];
-            foreach ($request->schedule as $day => $timeSlots) {
-                $formattedSlots = [];
-                foreach ($timeSlots as $slot) {
-                    if (!empty($slot)) {
-                        $formattedSlots[] = $slot;
+            if (!empty($request->schedule) && is_array($request->schedule)) {
+                foreach ($request->schedule as $day => $timeSlots) {
+                    $formattedSlots = [];
+                    if (is_array($timeSlots)) {
+                        foreach ($timeSlots as $slot) {
+                            if (!empty($slot)) {
+                                $formattedSlots[] = $slot;
+                            }
+                        }
                     }
-                }
-                if (!empty($formattedSlots)) {
-                    $scheduleData[$day] = $formattedSlots;
+                    if (!empty($formattedSlots)) {
+                        $scheduleData[$day] = $formattedSlots;
+                    }
                 }
             }
 
-            // Update in the barangay's schedules collection (original structure)
-            $this->firestore
-                ->collection("barangay/{$request->barangay_id}/schedules")
-                ->document($id)
-                ->update([
-                    ['path' => 'week_start', 'value' => $request->week_start],
-                    ['path' => 'week_end', 'value' => $request->week_end],
-                    ['path' => 'schedule', 'value' => $scheduleData],
-                    ['path' => 'updated_at', 'value' => now()->toISOString()]
-                ]);
+            // Update in appropriate location
+            if ($isRhuLevelSchedule) {
+                $this->firestore
+                    ->collection("rhu/{$rhuId}/schedules")
+                    ->document($id)
+                    ->update([
+                        ['path' => 'week_start', 'value' => $request->week_start],
+                        ['path' => 'week_end', 'value' => $request->week_end],
+                        ['path' => 'schedule', 'value' => $scheduleData],
+                        ['path' => 'updated_at', 'value' => now()->toISOString()]
+                    ]);
+            } else {
+                $this->firestore
+                    ->collection("barangay/{$request->barangay_id}/schedules")
+                    ->document($id)
+                    ->update([
+                        ['path' => 'week_start', 'value' => $request->week_start],
+                        ['path' => 'week_end', 'value' => $request->week_end],
+                        ['path' => 'schedule', 'value' => $scheduleData],
+                        ['path' => 'updated_at', 'value' => now()->toISOString()]
+                    ]);
+            }
 
             return redirect()->back()->with('success', 'Weekly schedule updated successfully!');
         } catch (\Exception $e) {
@@ -303,18 +372,33 @@ class ScheduleController extends Controller
                 return redirect()->back()->with('error', 'Barangay ID is required.');
             }
 
-            // Verify that the barangay belongs to this RHU
-            $barangays = $this->getBarangaysUnderRhu($user['id']);
-            $barangayIds = array_column($barangays, 'id');
-            if (!in_array($barangayId, $barangayIds)) {
-                return redirect()->back()->with('error', 'Invalid barangay selected.');
+            // Get RHU ID
+            $rhuId = $this->getBarangayId();
+            
+            // Check if barangayId is the RHU ID itself (RHU-level schedule)
+            $isRhuLevelSchedule = ($barangayId === $rhuId);
+            
+            if (!$isRhuLevelSchedule) {
+                // Verify that the barangay belongs to this RHU
+                $barangays = $this->getBarangaysUnderRhu($rhuId);
+                $barangayIds = array_column($barangays, 'id');
+                if (!in_array($barangayId, $barangayIds)) {
+                    return redirect()->back()->with('error', 'Invalid barangay selected.');
+                }
             }
             
-            // Delete from the barangay's schedules collection (original structure)
-            $this->firestore
-                ->collection("barangay/{$barangayId}/schedules")
-                ->document($id)
-                ->delete();
+            // Delete from appropriate location
+            if ($isRhuLevelSchedule) {
+                $this->firestore
+                    ->collection("rhu/{$rhuId}/schedules")
+                    ->document($id)
+                    ->delete();
+            } else {
+                $this->firestore
+                    ->collection("barangay/{$barangayId}/schedules")
+                    ->document($id)
+                    ->delete();
+            }
 
             return redirect()->back()->with('success', 'Schedule deleted successfully!');
         } catch (\Exception $e) {

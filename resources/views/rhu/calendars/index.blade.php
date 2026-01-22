@@ -1176,11 +1176,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('schedules.store') }}" method="POST">
+            <form action="{{ route('rhu.schedules.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="row mb-3">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
+                            <label class="form-label">Location</label>
+                            <select class="form-select" name="barangay_id" id="calendarAddBarangay" required>
+                                <option value="">Select Location</option>
+                                @foreach($barangayOptions as $option)
+                                    <option value="{{ $option['id'] }}">{{ $option['name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Personnel</label>
                             <input type="search" class="form-control" id="personnelSearch" placeholder="Search by staff name" list="personnelOptions" autocomplete="off" required>
                             <datalist id="personnelOptions"></datalist>
@@ -1188,7 +1197,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input type="hidden" name="personnel_name" id="personnelName">
                             <input type="hidden" name="type" id="personnelType">
                         </div>
-                        <div class="col-md-4">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
                             <label class="form-label">Designation</label>
                             <input type="text" class="form-control" id="personnelDesignation" placeholder="Select personnel" readonly>
                         </div>
