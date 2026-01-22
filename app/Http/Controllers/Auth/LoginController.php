@@ -52,14 +52,12 @@ class LoginController extends Controller
                     $data = $doc->data();
                     \Log::info('Found user in ' . $col['name'] . ' with ID: ' . $doc->id());
                     
-                    // Check if user has Firebase Auth (has email/uid)
+                    // If user has Firebase Auth credentials, try signing in there first
                     if (isset($data['email']) || isset($data['uid'])) {
-                        // User has Firebase Auth account
                         $userEmail = $data['email'] ?? (strtolower($request->username) . '@gabay-health.local');
                         $uid = $data['uid'] ?? $doc->id();
                         
                         try {
-                            // Authenticate with Firebase Auth using REST API
                             $apiKey = env('FIREBASE_API_KEY');
                             if (!$apiKey) {
                                 throw new \Exception('FIREBASE_API_KEY not configured');
@@ -78,57 +76,56 @@ class LoginController extends Controller
                                 \Log::info('Firebase Auth successful for UID: ' . $firebaseUid);
                                 
                                 // Use the data we already have from the username lookup
-                                // The document ID should be the Firebase UID (since we use document($uid)->set() in registration)
-                                $userId = $doc->id(); // This should be the Firebase UID
-                                $user = $data; // Use the data we already fetched
+                                $userId = $doc->id();
+                                $user = $data;
                                 $userRole = $col['role'];
                                 $userStatus = $data['status'] ?? 'approved';
+                                
+                                // Store Firebase UID in user data for later use
+                                $user['firebase_uid'] = $firebaseUid;
                                 
                                 \Log::info('User authenticated successfully. Role: ' . $userRole . ', Status: ' . $userStatus . ', UserId: ' . $userId);
                                 break 2;
                             } else {
                                 $errorData = $response->json();
                                 \Log::warning('Firebase Auth failed: ' . ($errorData['error']['message'] ?? 'Unknown error'));
+                                // Fall through to legacy password check below
                             }
                         } catch (\Exception $e) {
                             \Log::error('Firebase Auth error: ' . $e->getMessage());
-                            // Continue to check other collections or fallback
+                            // Fall through to legacy password check below
                         }
-                    } else {
-                        // Fallback: Old accounts without Firebase Auth (backward compatibility)
-                        if (isset($data['password'])) {
-                            $passwordValid = false;
-                            
-                            // For admin accounts, handle both bcrypt and plain text passwords
-                            if ($col['role'] === 'admin') {
-                                // First try bcrypt verification
-                                if (\Hash::check($request->password, $data['password'])) {
-                                    $passwordValid = true;
-                                    \Log::info('Admin password verified with bcrypt (legacy)');
-                                }
-                                // If bcrypt fails, check if it's plain text (for existing accounts)
-                                elseif ($request->password === $data['password']) {
-                                    $passwordValid = true;
-                                    \Log::info('Admin password verified with plain text (legacy)');
-                                    // Update the password to bcrypt format for future logins
-                                    $firestore->collection($col['name'])->document($doc->id())->update([
-                                        'password' => bcrypt($request->password)
-                                    ]);
-                                }
-                            } else {
-                                // For non-admin accounts, only use bcrypt
-                                $passwordValid = \Hash::check($request->password, $data['password']);
-                                \Log::info('Password verified with bcrypt (legacy): ' . ($passwordValid ? 'true' : 'false'));
+                    }
+
+                    // Legacy password fallback (works for accounts with or without Firebase Auth)
+                    if (isset($data['password'])) {
+                        $passwordValid = false;
+                        
+                        if ($col['role'] === 'admin') {
+                            // Admin: support both bcrypt and legacy plain text, and migrate to bcrypt
+                            if (\Hash::check($request->password, $data['password'])) {
+                                $passwordValid = true;
+                                \Log::info('Admin password verified with bcrypt (legacy)');
+                            } elseif ($request->password === $data['password']) {
+                                $passwordValid = true;
+                                \Log::info('Admin password verified with plain text (legacy)');
+                                $firestore->collection($col['name'])->document($doc->id())->update([
+                                    'password' => bcrypt($request->password)
+                                ]);
                             }
-                            
-                            if ($passwordValid) {
-                                $user = $data;
-                                $userId = $doc->id();
-                                $userRole = $col['role'];
-                                $userStatus = $data['status'] ?? 'approved';
-                                \Log::info('Legacy user authenticated. Role: ' . $userRole . ', Status: ' . $userStatus);
-                                break 2;
-                            }
+                        } else {
+                            // Non-admin: bcrypt only
+                            $passwordValid = \Hash::check($request->password, $data['password']);
+                            \Log::info('Password verified with bcrypt (legacy): ' . ($passwordValid ? 'true' : 'false'));
+                        }
+                        
+                        if ($passwordValid) {
+                            $user = $data;
+                            $userId = $doc->id();
+                            $userRole = $col['role'];
+                            $userStatus = $data['status'] ?? 'approved';
+                            \Log::info('Legacy user authenticated. Role: ' . $userRole . ', Status: ' . $userStatus);
+                            break 2;
                         }
                     }
                 }
@@ -146,12 +143,17 @@ class LoginController extends Controller
         }
 
         // Store user info in session
+        // For barangay users, use their own document ID as barangayId by default
         $sessionData = [
             'id' => $userId,
             'role' => $userRole,
             'username' => $user['username'] ?? $request->username,
             'name' => $user['healthCenterName'] ?? $user['name'] ?? 'User',
-            'barangayId' => $userRole === 'barangay' ? $userId : ($user['barangayId'] ?? null),
+            'barangayId' => $userRole === 'barangay'
+                ? $userId
+                : ($user['barangayId'] ?? null),
+            'uid' => $user['firebase_uid'] ?? $user['uid'] ?? null,
+            'email' => $user['email'] ?? null,
         ];
         Session::put('user', $sessionData);
         

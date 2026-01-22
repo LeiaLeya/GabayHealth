@@ -329,7 +329,7 @@ class ReportsController extends Controller
                     $startDate = $endDate->copy()->subMonth();
             }
 
-            // Fetch VERIFIED reports from the main reports collection
+            // Fetch VERIFIED reports from the main reports collection, filtered by barangayId
             $documents = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -378,7 +378,7 @@ class ReportsController extends Controller
             // Debug: Log the barangay ID being used
             \Log::info('ReportsController - Barangay ID: ' . $barangayId);
             
-            // Get all reports from the main reports collection
+            // Get all reports from the main reports collection, filtered by barangayId
             $allDocs = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -399,13 +399,30 @@ class ReportsController extends Controller
             
             \Log::info('Total reports found: ' . count($allReports));
             
-            // Now filter for pending reports
+            // Now filter for pending reports and normalize fields for the verify view
             foreach ($allReports as $report) {
                 $status = $report['status'];
                 \Log::info('Checking report ' . $report['id'] . ' with status: "' . $status . '"');
                 
-                if ($status === 'to be reviewed') {
-                    $pendingReports[] = array_merge($report['data'], ['id' => $report['id']]);
+                if ($status === 'to be reviewed' || $status === 'pending') {
+                    $data = $report['data'];
+
+                    // Normalize to fields expected by the Blade view
+                    $normalized = [
+                        'id' => $report['id'],
+                        'barangayId' => $barangayId,
+                        'symptoms' => isset($data['condition']) ? [(string)$data['condition']] : ($data['symptoms'] ?? []),
+                        'affectedPerson' => $data['reported_by'] ?? ($data['affectedPerson'] ?? 'Unknown'),
+                        'startDate' => $data['date'] ?? ($data['startDate'] ?? null),
+                        'additionalInfo' => $data['description'] ?? ($data['additionalInfo'] ?? null),
+                        'createdAt' => $data['date'] ?? ($data['createdAt'] ?? null),
+                        'location' => $data['location'] ?? null,
+                        'cases' => $data['cases'] ?? null,
+                        'status' => $status,
+                    ];
+
+                    // Merge so original fields are still available if used elsewhere
+                    $pendingReports[] = array_merge($data, $normalized);
                     \Log::info('Added pending report: ' . $report['id']);
                 }
             }
@@ -433,7 +450,7 @@ class ReportsController extends Controller
         }
         
         try {
-            // Get all reports from the main reports collection
+            // Get all reports from the main reports collection, filtered by barangayId
             $allDocs = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -494,7 +511,7 @@ class ReportsController extends Controller
             
             $today = Carbon::today();
             
-            // Get all reports from the main reports collection
+            // Get all reports from the main reports collection, filtered by barangayId
             $allDocs = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -548,7 +565,7 @@ class ReportsController extends Controller
             $today = Carbon::today();
             $startOfMonth = Carbon::now()->startOfMonth();
             
-            // Get all reports from the main reports collection
+            // Get all reports from the main reports collection, filtered by barangayId
             $allDocs = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -561,8 +578,8 @@ class ReportsController extends Controller
                     
                     \Log::info('Stats - Report ' . $doc->id() . ' has status: "' . $status . '"');
                     
-                    // Count pending reports
-                    if ($status === 'to be reviewed') {
+                    // Count pending reports (handle both legacy and new status)
+                    if ($status === 'to be reviewed' || $status === 'pending') {
                         $stats['pending']++;
                         \Log::info('Stats - Found pending report: ' . $doc->id());
                     }
@@ -584,7 +601,7 @@ class ReportsController extends Controller
                     }
 
                     // Count total reports this month
-                    if ($reportData['createdAt'] && Carbon::parse($reportData['createdAt'])->isSameMonth($today)) {
+                    if (!empty($reportData['createdAt']) && Carbon::parse($reportData['createdAt'])->isSameMonth($today)) {
                         $stats['total_this_month']++;
                     }
                 }

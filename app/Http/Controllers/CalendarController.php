@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Carbon\Carbon;
+use App\Http\Controllers\Traits\HasRoleContext;
 
 class CalendarController extends Controller
 {
+    use HasRoleContext;
+
     protected $firestore;
     protected $barangayId;
 
@@ -27,12 +30,15 @@ class CalendarController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access calendar management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Determine barangayId using shared helper (same logic across app)
+        $this->barangayId = $this->getBarangayId();
         
         if (!$this->barangayId) {
             return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
         }
+        
+        \Log::info('Calendar index - user session', ['user' => $user]);
+        \Log::info('Calendar index - resolved barangayId', ['barangayId' => $this->barangayId]);
         
         // Initialize variables as empty arrays (view expects $calendarEvents, $currentMonth, and $groupedItems)
         $calendarEvents = [];
@@ -44,10 +50,13 @@ class CalendarController extends Controller
         try {
             \Log::info('CalendarController - Fetching calendar data for user: ' . $user['id'] . ' with role: ' . $user['role']);
             
-            // Get events from user's sub-collection
+            // Get events; for barangay users, always use the resolved barangayId
+            $eventCollection = $user['role'];
+            $eventDocId = $user['role'] === 'barangay' ? $this->barangayId : $user['id'];
+
             $eventsQuery = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
+                ->collection($eventCollection)
+                ->document($eventDocId)
                 ->collection('events')
                 ->limit(30) // Limit results to prevent timeout
                 ->documents();
@@ -148,53 +157,32 @@ class CalendarController extends Controller
                 }
             }
 
-            // Fetch appointments for this barangay
+            // Fetch appointments for this barangay (subcollection first, then fallback to legacy top-level)
+            $appointments = [];
+            $appointmentCount = 0;
             $appointmentsQuery = $this->firestore
-                ->collection('appointments')
-                ->where('barangayId', '=', $this->barangayId)
+                ->collection("barangay/{$this->barangayId}/appointments")
                 ->limit(100)
                 ->documents();
 
-            $appointments = [];
-            $appointmentCount = 0;
+            $processedAny = false;
             foreach ($appointmentsQuery as $doc) {
                 if ($doc->exists()) {
-                    $data = $doc->data();
-                    \Log::info('Found appointment data:', $data);
+                    $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems, $appointments, $appointmentCount) || $processedAny;
+                }
+            }
 
-                    $parsed = $this->parseAppointmentDate($data['appointmentDate'] ?? '');
-                    $appointmentDate = $parsed['date'] ?? null;
-                    $startTime24 = $parsed['start_time'] ?? null;
-                    $endTime24 = $parsed['end_time'] ?? null;
+            // Fallback: check legacy top-level collection if none found
+            if (!$processedAny) {
+                $legacyQuery = $this->firestore
+                    ->collection('appointments')
+                    ->where('barangayId', '=', $this->barangayId)
+                    ->limit(100)
+                    ->documents();
 
-                    if ($appointmentDate) {
-                        $title = ($data['patient']['name'] ?? 'Patient') . ' - ' . ($data['serviceName'] ?? 'Appointment');
-                        $appointmentData = [
-                            'id' => $doc->id(),
-                            'title' => $title,
-                            'start' => $appointmentDate . 'T' . ($startTime24 ?? '09:00'),
-                            'end' => $appointmentDate . 'T' . ($endTime24 ?? '10:00'),
-                            'description' => $data['serviceName'] ?? 'Appointment',
-                            'type' => 'appointment',
-                            'date' => $appointmentDate,
-                            'start_time' => $startTime24,
-                            'end_time' => $endTime24,
-                            'time' => $data['appointmentDate'] ?? '',
-                            'notes' => $data['notes'] ?? '',
-                            'patient' => [
-                                'name' => $data['patient']['name'] ?? '',
-                                'gender' => $data['patient']['gender'] ?? '',
-                                'age' => isset($data['patient']['birthdate']) ? $this->calculateAge($data['patient']['birthdate']) : null,
-                            ],
-                        ];
-
-                        $appointments[] = $appointmentData;
-
-                        if (!isset($groupedItems[$appointmentDate])) {
-                            $groupedItems[$appointmentDate] = [];
-                        }
-                        $groupedItems[$appointmentDate][] = $appointmentData;
-                        $appointmentCount++;
+                foreach ($legacyQuery as $doc) {
+                    if ($doc->exists()) {
+                        $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems, $appointments, $appointmentCount) || $processedAny;
                     }
                 }
             }
@@ -423,6 +411,55 @@ class CalendarController extends Controller
         }
     }
 
+    /**
+     * Helper to parse and append an appointment document into groupedItems (and optionally counts/arrays)
+     */
+    private function addAppointmentToGroupedItems($doc, &$groupedItems, &$appointments = null, &$appointmentCount = null)
+    {
+        $data = $doc->data();
+        $parsed = $this->parseAppointmentDate($data['appointmentDate'] ?? '');
+        $appointmentDate = $parsed['date'] ?? null;
+        $startTime24 = $parsed['start_time'] ?? null;
+        $endTime24 = $parsed['end_time'] ?? null;
+
+        if (!$appointmentDate) {
+            return false;
+        }
+
+        $title = ($data['patient']['name'] ?? 'Patient') . ' - ' . ($data['serviceName'] ?? 'Appointment');
+        $appointmentData = [
+            'id' => $doc->id(),
+            'title' => $title,
+            'start' => $appointmentDate . 'T' . ($startTime24 ?? '09:00'),
+            'end' => $appointmentDate . 'T' . ($endTime24 ?? '10:00'),
+            'description' => $data['serviceName'] ?? 'Appointment',
+            'type' => 'appointment',
+            'date' => $appointmentDate,
+            'start_time' => $startTime24,
+            'end_time' => $endTime24,
+            'time' => $data['appointmentDate'] ?? '',
+            'notes' => $data['notes'] ?? '',
+            'patient' => [
+                'name' => $data['patient']['name'] ?? '',
+                'gender' => $data['patient']['gender'] ?? '',
+                'age' => isset($data['patient']['birthdate']) ? $this->calculateAge($data['patient']['birthdate']) : null,
+            ],
+        ];
+
+        if (!isset($groupedItems[$appointmentDate])) {
+            $groupedItems[$appointmentDate] = [];
+        }
+        $groupedItems[$appointmentDate][] = $appointmentData;
+
+        if (is_array($appointments)) {
+            $appointments[] = $appointmentData;
+        }
+        if (is_int($appointmentCount)) {
+            $appointmentCount++;
+        }
+        return true;
+    }
+
     public function getCalendarData(Request $request)
     {
         $month = $request->input('month', now()->format('Y-m'));
@@ -433,12 +470,15 @@ class CalendarController extends Controller
             return response()->json(['error' => 'User not authenticated'], 401);
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Determine barangayId using shared helper (same logic across app)
+        $this->barangayId = $this->getBarangayId();
         
         if (!$this->barangayId) {
             return response()->json(['error' => 'Barangay ID not found'], 400);
         }
+        
+        \Log::info('Calendar getCalendarData - user session', ['user' => $user]);
+        \Log::info('Calendar getCalendarData - resolved barangayId', ['barangayId' => $this->barangayId, 'month' => $month]);
         
         // Initialize groupedItems
         $groupedItems = [];
@@ -446,10 +486,13 @@ class CalendarController extends Controller
         try {
             \Log::info('Calendar - AJAX request for month: ' . $month);
             
-            // Get events from user's sub-collection (same logic as index method)
+            // Get events; for barangay users, always use the resolved barangayId (same logic as index method)
+            $eventCollection = $user['role'];
+            $eventDocId = $user['role'] === 'barangay' ? $this->barangayId : $user['id'];
+
             $eventsQuery = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
+                ->collection($eventCollection)
+                ->document($eventDocId)
                 ->collection('events')
                 ->limit(30)
                 ->documents();
@@ -532,46 +575,32 @@ class CalendarController extends Controller
                 }
             }
 
-            // Fetch appointments for this barangay
+            // Fetch appointments for this barangay (subcollection first, then fallback to legacy top-level)
             $appointmentsQuery = $this->firestore
-                ->collection('appointments')
-                ->where('barangayId', '=', $this->barangayId)
+                ->collection("barangay/{$this->barangayId}/appointments")
                 ->limit(100)
                 ->documents();
 
+            $processedAny = false;
             foreach ($appointmentsQuery as $doc) {
                 if ($doc->exists()) {
-                    $data = $doc->data();
-                    $parsed = $this->parseAppointmentDate($data['appointmentDate'] ?? '');
-                    $appointmentDate = $parsed['date'] ?? null;
-                    $startTime24 = $parsed['start_time'] ?? null;
-                    $endTime24 = $parsed['end_time'] ?? null;
+                    \Log::info('Calendar getCalendarData - subcollection appointment doc', ['id' => $doc->id(), 'data' => $doc->data()]);
+                    $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems) || $processedAny;
+                }
+            }
 
-                    if ($appointmentDate) {
-                        $title = ($data['patient']['name'] ?? 'Patient') . ' - ' . ($data['serviceName'] ?? 'Appointment');
-                        $appointmentData = [
-                            'id' => $doc->id(),
-                            'title' => $title,
-                            'start' => $appointmentDate . 'T' . ($startTime24 ?? '09:00'),
-                            'end' => $appointmentDate . 'T' . ($endTime24 ?? '10:00'),
-                            'description' => $data['serviceName'] ?? 'Appointment',
-                            'type' => 'appointment',
-                            'date' => $appointmentDate,
-                            'start_time' => $startTime24,
-                            'end_time' => $endTime24,
-                            'time' => $data['appointmentDate'] ?? '',
-                            'notes' => $data['notes'] ?? '',
-                            'patient' => [
-                                'name' => $data['patient']['name'] ?? '',
-                                'gender' => $data['patient']['gender'] ?? '',
-                                'age' => isset($data['patient']['birthdate']) ? $this->calculateAge($data['patient']['birthdate']) : null,
-                            ],
-                        ];
+            // Fallback: check legacy top-level collection if none found
+            if (!$processedAny) {
+                $legacyQuery = $this->firestore
+                    ->collection('appointments')
+                    ->where('barangayId', '=', $this->barangayId)
+                    ->limit(100)
+                    ->documents();
 
-                        if (!isset($groupedItems[$appointmentDate])) {
-                            $groupedItems[$appointmentDate] = [];
-                        }
-                        $groupedItems[$appointmentDate][] = $appointmentData;
+                foreach ($legacyQuery as $doc) {
+                    if ($doc->exists()) {
+                        \Log::info('Calendar getCalendarData - legacy appointment doc', ['id' => $doc->id(), 'data' => $doc->data()]);
+                        $processedAny = $this->addAppointmentToGroupedItems($doc, $groupedItems) || $processedAny;
                     }
                 }
             }

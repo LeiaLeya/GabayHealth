@@ -30,18 +30,21 @@
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } else {
+                // Determine route prefix based on role
+                $routePrefix = ($userRole === 'rhu') ? 'rhu.' : 'bhc.';
+                
                 $navItems = [
-                    ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                    ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
-                    ['route' => 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
-                    ['route' => 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
-                    ['route' => 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
-                    ['route' => 'notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
-                    ['route' => 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
-                    ['route' => 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                    ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
-                    ['route' => 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
-                    ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => $routePrefix . 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => $routePrefix . 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => $routePrefix . 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                    ['route' => $routePrefix . 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
+                    ['route' => $routePrefix . 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
+                    ['route' => $routePrefix . 'notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
+                    ['route' => $routePrefix . 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                    ['route' => $routePrefix . 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
+                    ['route' => $routePrefix . 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                    ['route' => $routePrefix . 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
+                    ['route' => $routePrefix . 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             }

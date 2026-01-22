@@ -241,6 +241,34 @@
     border: 2px solid white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
+
+.bubble-marker {
+    background: transparent;
+    border: none;
+    text-align: center;
+}
+
+.bubble-content {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 4px solid white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+}
+
+.bubble-content:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
 </style>
 
 <!-- Include Leaflet CSS and JS for map -->
@@ -286,34 +314,45 @@ function initializeMap() {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
     
-    // Add heatmap points with enhanced visibility
+    // Add bubble markers with case numbers
     heatmapData.forEach(point => {
-        const color = getConditionColor(point.condition || 'fever');
-        // Make circles much larger and more visible
-        const radius = Math.max(30, point.weight * 15); // Increased base size and scaling
+        // Calculate bubble size based on case count (minimum 40px, scales with cases)
+        const baseRadius = 40;
+        const maxRadius = 150;
+        const radius = Math.min(maxRadius, Math.max(baseRadius, point.cases * 8));
         
-        const circle = L.circle([point.lat, point.lng], {
-            color: color,
-            fillColor: color,
-            fillOpacity: 0.8, // Increased opacity for better visibility
-            radius: radius,
-            weight: 3, // Thicker border
-            opacity: 0.9 // More visible border
+        // Create a custom div icon with case number
+        const bubbleIcon = L.divIcon({
+            className: 'bubble-marker',
+            html: `<div class="bubble-content">${point.cases}</div>`,
+            iconSize: [radius, radius],
+            iconAnchor: [radius / 2, radius / 2]
+        });
+        
+        // Create marker with custom icon
+        const marker = L.marker([point.lat, point.lng], {
+            icon: bubbleIcon
         }).addTo(map);
         
+        // Get symptoms list for popup
+        const symptoms = point.symptoms || [];
+        const symptomsList = symptoms.length > 0 
+            ? symptoms.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
+            : 'No specific symptoms';
+        
         // Add enhanced popup with better styling
-        circle.bindPopup(`
-            <div style="min-width: 250px; padding: 5px;">
-                <div style="font-size: 16px; font-weight: bold; color: #2563eb; margin-bottom: 8px;">
+        marker.bindPopup(`
+            <div style="min-width: 250px; padding: 10px;">
+                <div style="font-size: 18px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
                     ${point.barangay}
                 </div>
-                <div style="margin-bottom: 5px;">
-                    <span style="font-weight: 600; color: #333;">Cases:</span> 
-                    <span style="color: #dc3545; font-weight: bold; font-size: 18px;">${point.cases}</span>
+                <div style="margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #333;">Total Cases:</span> 
+                    <span style="color: #dc3545; font-weight: bold; font-size: 20px;">${point.cases}</span>
                 </div>
                 <div>
-                    <span style="font-weight: 600; color: #333;">Condition:</span> 
-                    <span style="color: #666;">${point.condition || 'Fever'}</span>
+                    <span style="font-weight: 600; color: #333;">Symptoms:</span> 
+                    <span style="color: #666;">${symptomsList}</span>
                 </div>
             </div>
         `);

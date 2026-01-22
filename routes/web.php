@@ -131,96 +131,480 @@ Route::middleware('auth.check')->group(function () {
     // Add BHUs resource for compatibility (Kim's structure)
     Route::resource('BHUs', RHUController::class);
 
-    Route::get('/events', [EventController::class, 'index'])->name('events.index');
-    Route::get('/events/create', [EventController::class, 'create'])->name('events.create');
-    Route::post('/events/store', [EventController::class, 'store'])->name('events.store');
-    Route::get('/events/{id}', [EventController::class, 'show'])->name('events.show');
-    Route::get('/events/{id}/edit', [EventController::class, 'edit'])->name('events.edit');
-    Route::put('/events/{id}', [EventController::class, 'update'])->name('events.update');
-    Route::post('/events/{id}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
-    Route::get('/events/{id}/export-pdf', [EventController::class, 'exportPdf'])->name('events.exportPdf');
+    // Generic routes - Redirect to role-based routes
+    Route::get('/events', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.events.index');
+        elseif ($role === 'barangay') return redirect()->route('bhc.events.index');
+        return app(EventController::class)->index();
+    })->name('events.index');
+    
+    Route::get('/events/create', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.events.create');
+        elseif ($role === 'barangay') return redirect()->route('bhc.events.create');
+        return app(EventController::class)->create();
+    })->name('events.create');
+    
+    Route::post('/events/store', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUEventController::class)->store(request());
+        elseif ($role === 'barangay') return app(BHCEventController::class)->store(request());
+        return app(EventController::class)->store(request());
+    })->name('events.store');
+    
+    Route::get('/events/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.events.show', $id);
+        elseif ($role === 'barangay') return redirect()->route('bhc.events.show', $id);
+        return app(EventController::class)->show($id);
+    })->name('events.show');
+    
+    Route::get('/events/{id}/edit', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.events.edit', $id);
+        elseif ($role === 'barangay') return redirect()->route('bhc.events.edit', $id);
+        return app(EventController::class)->edit($id);
+    })->name('events.edit');
+    
+    Route::put('/events/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUEventController::class)->update(request(), $id);
+        elseif ($role === 'barangay') return app(BHCEventController::class)->update(request(), $id);
+        return app(EventController::class)->update(request(), $id);
+    })->name('events.update');
+    
+    Route::post('/events/{id}/cancel', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUEventController::class)->cancel($id);
+        elseif ($role === 'barangay') return app(BHCEventController::class)->cancel($id);
+        return app(EventController::class)->cancel($id);
+    })->name('events.cancel');
+    
+    Route::get('/events/{id}/export-pdf', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.events.exportPdf', $id);
+        elseif ($role === 'barangay') return redirect()->route('bhc.events.exportPdf', $id);
+        return app(EventController::class)->exportPdf($id);
+    })->name('events.exportPdf');
 
-    // Inventory routes
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    // Inventory routes - Redirect to role-based routes
+    Route::get('/inventory', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.inventory.index');
+        elseif ($role === 'barangay') return redirect()->route('bhc.inventory.index');
+        return app(InventoryController::class)->index();
+    })->name('inventory.index');
     Route::get('/inventory/add-batch', [InventoryController::class, 'showAddBatch'])->name('inventory.add-batch');
     Route::get('/inventory/{id}/sort', [InventoryController::class, 'showSorted'])->name('inventory.show.sorted');
     Route::get('/inventory/residents/search', [InventoryController::class, 'searchResidents'])->name('inventory.residents.search');
-    Route::post('/inventory/residents', [InventoryController::class, 'storeResident'])->name('inventory.residents.store');
+    Route::post('/inventory/residents', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->storeResident(request());
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->storeResident(request());
+        return app(InventoryController::class)->storeResident(request());
+    })->name('inventory.residents.store');
+    
     Route::get('/inventory/personnel/search', [InventoryController::class, 'searchPersonnel'])->name('inventory.personnel.search');
     Route::get('/inventory/{id}/release-history', [InventoryController::class, 'showReleaseHistory'])->name('inventory.release-history');
     Route::get('/inventory/{id}', [InventoryController::class, 'show'])->name('inventory.show');
     Route::get('/inventory/{parentId}/batches/{batchId}/history', [InventoryController::class, 'showDistributionHistory'])->name('inventory.batches.history');
-    Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
-    Route::post('/inventory/batches', [InventoryController::class, 'storeBatch'])->name('inventory.batches.store');
-    Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
-    Route::put('/inventory/{parentId}/batches/{batchId}/distribute', [InventoryController::class, 'distributeBatch'])->name('inventory.batches.distribute');
-    Route::put('/inventory/{parentId}/batches/{batchId}', [InventoryController::class, 'updateBatch'])->name('inventory.batches.update');
-    Route::put('/inventory/{parentId}/release', [InventoryController::class, 'releaseMedicine'])->name('inventory.release');
-    Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
-    Route::delete('/inventory/{parentId}/batches/{batchId}', [InventoryController::class, 'destroyBatch'])->name('inventory.batches.destroy');
+    
+    Route::post('/inventory', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->store(request());
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->store(request());
+        return app(InventoryController::class)->store(request());
+    })->name('inventory.store');
+    
+    Route::post('/inventory/batches', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->storeBatch(request());
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->storeBatch(request());
+        return app(InventoryController::class)->storeBatch(request());
+    })->name('inventory.batches.store');
+    
+    Route::put('/inventory/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->update(request(), $id);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->update(request(), $id);
+        return app(InventoryController::class)->update(request(), $id);
+    })->name('inventory.update');
+    
+    Route::put('/inventory/{parentId}/batches/{batchId}/distribute', function($parentId, $batchId) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->distributeBatch(request(), $parentId, $batchId);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->distributeBatch(request(), $parentId, $batchId);
+        return app(InventoryController::class)->distributeBatch(request(), $parentId, $batchId);
+    })->name('inventory.batches.distribute');
+    
+    Route::put('/inventory/{parentId}/batches/{batchId}', function($parentId, $batchId) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->updateBatch(request(), $parentId, $batchId);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->updateBatch(request(), $parentId, $batchId);
+        return app(InventoryController::class)->updateBatch(request(), $parentId, $batchId);
+    })->name('inventory.batches.update');
+    
+    Route::put('/inventory/{parentId}/release', function($parentId) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->releaseMedicine(request(), $parentId);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->releaseMedicine(request(), $parentId);
+        return app(InventoryController::class)->releaseMedicine(request(), $parentId);
+    })->name('inventory.release');
+    
+    Route::delete('/inventory/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->destroy($id);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->destroy($id);
+        return app(InventoryController::class)->destroy($id);
+    })->name('inventory.destroy');
+    
+    Route::delete('/inventory/{parentId}/batches/{batchId}', function($parentId, $batchId) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUInventoryController::class)->destroyBatch($parentId, $batchId);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->destroyBatch($parentId, $batchId);
+        return app(InventoryController::class)->destroyBatch($parentId, $batchId);
+    })->name('inventory.batches.destroy');
 
-    // Personnel routes
-    Route::get('/personnel', [PersonnelController::class, 'index'])->name('personnel.index');
-    Route::post('/personnel', [PersonnelController::class, 'store'])->name('personnel.store');
-    Route::put('/personnel/{id}', [PersonnelController::class, 'update'])->name('personnel.update');
-    Route::delete('/personnel/{id}', [PersonnelController::class, 'destroy'])->name('personnel.destroy');
+    // Personnel routes - Redirect to role-based routes
+    Route::get('/personnel', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.personnel.index');
+        elseif ($role === 'barangay') return redirect()->route('bhc.personnel.index');
+        return app(PersonnelController::class)->index();
+    })->name('personnel.index');
+    Route::post('/personnel', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUPersonnelController::class)->store(request());
+        elseif ($role === 'barangay') return app(BHCPersonnelController::class)->store(request());
+        return app(PersonnelController::class)->store(request());
+    })->name('personnel.store');
+    
+    Route::put('/personnel/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUPersonnelController::class)->update(request(), $id);
+        elseif ($role === 'barangay') return app(BHCPersonnelController::class)->update(request(), $id);
+        return app(PersonnelController::class)->update(request(), $id);
+    })->name('personnel.update');
+    
+    Route::delete('/personnel/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUPersonnelController::class)->destroy($id);
+        elseif ($role === 'barangay') return app(BHCPersonnelController::class)->destroy($id);
+        return app(PersonnelController::class)->destroy($id);
+    })->name('personnel.destroy');
 
-    // New feature pages
-    Route::get('/calendars', [CalendarController::class, 'index'])->name('calendars.index');
+    // New feature pages - Redirect to role-based calendar routes
+    Route::get('/calendars', function() {
+        $user = session('user');
+        if (!$user) {
+            return redirect()->route('login');
+        }
+        
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') {
+            return redirect()->route('rhu.calendars.index');
+        } elseif ($role === 'barangay') {
+            return redirect()->route('bhc.calendars.index');
+        }
+        
+        // Fallback to generic calendar (for other roles like admin, health-worker)
+        return app(CalendarController::class)->index();
+    })->name('calendars.index');
+    
     Route::get('/calendars/data', [CalendarController::class, 'getCalendarData'])->name('calendars.data');
 
-    // Reports routes (for health workers)
-    Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
-    Route::get('/reports/verify', [ReportsController::class, 'verify'])->name('reports.verify');
+    // Reports routes - Redirect to role-based routes
+    Route::get('/reports', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.reports.index');
+        elseif ($role === 'barangay') return redirect()->route('bhc.reports.index');
+        return app(ReportsController::class)->index();
+    })->name('reports.index');
+    Route::get('/reports/verify', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.reports.verify');
+        elseif ($role === 'barangay') return redirect()->route('bhc.reports.verify');
+        return app(ReportsController::class)->verify();
+    })->name('reports.verify');
     Route::get('/reports/rejected', [ReportsController::class, 'rejected'])->name('reports.rejected');
-    Route::post('/reports/{id}/approve', [ReportsController::class, 'approve'])->name('reports.approve');
-    Route::post('/reports/{id}/reject', [ReportsController::class, 'reject'])->name('reports.reject');
+    Route::post('/reports/{id}/approve', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUReportsController::class)->approve($id);
+        elseif ($role === 'barangay') return app(BHCReportsController::class)->approve($id);
+        return app(ReportsController::class)->approve($id);
+    })->name('reports.approve');
+    
+    Route::post('/reports/{id}/reject', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUReportsController::class)->reject($id);
+        elseif ($role === 'barangay') return app(BHCReportsController::class)->reject($id);
+        return app(ReportsController::class)->reject($id);
+    })->name('reports.reject');
 
-    // Notifications routes
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
-    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+    // Notifications routes - Redirect to role-based routes
+    Route::get('/notifications', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return redirect()->route('rhu.notifications.index');
+        elseif ($role === 'barangay') return redirect()->route('bhc.notifications.index');
+        return app(NotificationController::class)->index();
+    })->name('notifications.index');
+    Route::post('/notifications', function() {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUNotificationController::class)->store(request());
+        elseif ($role === 'barangay') return app(BHCNotificationController::class)->store(request());
+        return app(NotificationController::class)->store(request());
+    })->name('notifications.store');
+    
+    Route::delete('/notifications/{id}', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUNotificationController::class)->destroy($id);
+        elseif ($role === 'barangay') return app(BHCNotificationController::class)->destroy($id);
+        return app(NotificationController::class)->destroy($id);
+    })->name('notifications.destroy');
 
 
 
-    // Services Management Routes
+    // Services Management Routes - Redirect to role-based routes
     Route::prefix('services')->name('services.')->group(function () {
-        Route::get('/', [App\Http\Controllers\ServicesController::class, 'index'])->name('index');
-        Route::post('/', [App\Http\Controllers\ServicesController::class, 'store'])->name('store');
-        Route::put('/{id}', [App\Http\Controllers\ServicesController::class, 'update'])->name('update');
-        Route::patch('/{id}/toggle-status', [App\Http\Controllers\ServicesController::class, 'toggleStatus'])->name('toggle-status');
-        Route::delete('/{id}', [App\Http\Controllers\ServicesController::class, 'destroy'])->name('destroy');
+        Route::get('/', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return redirect()->route('rhu.services.index');
+            elseif ($role === 'barangay') return redirect()->route('bhc.services.index');
+            return app(ServicesController::class)->index();
+        })->name('index');
+        Route::post('/', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUServicesController::class)->store(request());
+            elseif ($role === 'barangay') return app(BHCServicesController::class)->store(request());
+            return app(ServicesController::class)->store(request());
+        })->name('store');
+        
+        Route::put('/{id}', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUServicesController::class)->update(request(), $id);
+            elseif ($role === 'barangay') return app(BHCServicesController::class)->update(request(), $id);
+            return app(ServicesController::class)->update(request(), $id);
+        })->name('update');
+        
+        Route::patch('/{id}/toggle-status', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUServicesController::class)->toggleStatus($id);
+            elseif ($role === 'barangay') return app(BHCServicesController::class)->toggleStatus($id);
+            return app(ServicesController::class)->toggleStatus($id);
+        })->name('toggle-status');
+        
+        Route::delete('/{id}', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUServicesController::class)->destroy($id);
+            elseif ($role === 'barangay') return app(BHCServicesController::class)->destroy($id);
+            return app(ServicesController::class)->destroy($id);
+        })->name('destroy');
     });
 
-    // User Requests Management Routes
+    // User Requests Management Routes - Redirect to role-based routes
     Route::prefix('user-requests')->name('user-requests.')->group(function () {
-        Route::get('/', [App\Http\Controllers\UserRequestController::class, 'index'])->name('index');
+        Route::get('/', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return redirect()->route('rhu.user-requests.index');
+            elseif ($role === 'barangay') return redirect()->route('bhc.user-requests.index');
+            return app(UserRequestController::class)->index();
+        })->name('index');
         Route::get('/{id}', [App\Http\Controllers\UserRequestController::class, 'show'])->name('show');
-        Route::post('/{id}/approve', [App\Http\Controllers\UserRequestController::class, 'approve'])->name('approve');
-        Route::post('/{id}/decline', [App\Http\Controllers\UserRequestController::class, 'decline'])->name('decline');
+        Route::post('/{id}/approve', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUUserRequestController::class)->approve($id);
+            elseif ($role === 'barangay') return app(BHCUserRequestController::class)->approve($id);
+            return app(UserRequestController::class)->approve($id);
+        })->name('approve');
+        
+        Route::post('/{id}/decline', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUUserRequestController::class)->decline($id);
+            elseif ($role === 'barangay') return app(BHCUserRequestController::class)->decline($id);
+            return app(UserRequestController::class)->decline($id);
+        })->name('decline');
     });
 
-    // Schedules Management Routes
+    // Schedules Management Routes - Redirect to role-based routes
     Route::prefix('schedules')->name('schedules.')->group(function () {
-        Route::get('/', [App\Http\Controllers\ScheduleController::class, 'index'])->name('index');
-        Route::post('/', [App\Http\Controllers\ScheduleController::class, 'store'])->name('store');
-        Route::put('/{id}', [App\Http\Controllers\ScheduleController::class, 'update'])->name('update');
-        Route::delete('/{id}', [App\Http\Controllers\ScheduleController::class, 'destroy'])->name('destroy');
+        Route::get('/', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return redirect()->route('rhu.schedules.index');
+            elseif ($role === 'barangay') return redirect()->route('bhc.schedules.index');
+            return app(ScheduleController::class)->index();
+        })->name('index');
+        Route::post('/', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUScheduleController::class)->store(request());
+            elseif ($role === 'barangay') return app(BHCScheduleController::class)->store(request());
+            return app(ScheduleController::class)->store(request());
+        })->name('store');
+        
+        Route::put('/{id}', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUScheduleController::class)->update(request(), $id);
+            elseif ($role === 'barangay') return app(BHCScheduleController::class)->update(request(), $id);
+            return app(ScheduleController::class)->update(request(), $id);
+        })->name('update');
+        
+        Route::delete('/{id}', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUScheduleController::class)->destroy($id);
+            elseif ($role === 'barangay') return app(BHCScheduleController::class)->destroy($id);
+            return app(ScheduleController::class)->destroy($id);
+        })->name('destroy');
         Route::get('/assigned-doctors', [App\Http\Controllers\ScheduleController::class, 'getAssignedDoctors'])->name('assigned-doctors');
     });
-    // Account Management Routes
+    // Account Management Routes - Redirect to role-based routes
     Route::prefix('accounts')->name('accounts.')->group(function () {
-        Route::get('/', [App\Http\Controllers\AccountController::class, 'index'])->name('index');
+        Route::get('/', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return redirect()->route('rhu.accounts.index');
+            elseif ($role === 'barangay') return redirect()->route('bhc.accounts.index');
+            return app(AccountController::class)->index();
+        })->name('index');
         Route::get('/profile', [App\Http\Controllers\AccountController::class, 'editProfile'])->name('profile.edit');
-        Route::put('/profile', [App\Http\Controllers\AccountController::class, 'updateProfile'])->name('profile.update');
-        Route::put('/password', [App\Http\Controllers\AccountController::class, 'changePassword'])->name('password.update');
+        Route::put('/profile', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUAccountController::class)->updateProfile(request());
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->updateProfile(request());
+            return app(AccountController::class)->updateProfile(request());
+        })->name('profile.update');
+        
+        Route::put('/password', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUAccountController::class)->changePassword(request());
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->changePassword(request());
+            return app(AccountController::class)->changePassword(request());
+        })->name('password.update');
         
         // Staff Management
-        Route::get('/staff/create', [App\Http\Controllers\AccountController::class, 'createStaff'])->name('staff.create');
-        Route::post('/staff', [App\Http\Controllers\AccountController::class, 'storeStaff'])->name('staff.store');
+        Route::get('/staff/create', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUAccountController::class)->createStaff();
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->createStaff();
+            return app(AccountController::class)->createStaff();
+        })->name('staff.create');
+        
+        Route::post('/staff', function() {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUAccountController::class)->storeStaff(request());
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->storeStaff(request());
+            return app(AccountController::class)->storeStaff(request());
+        })->name('staff.store');
+        
         Route::get('/staff/{id}/edit', [App\Http\Controllers\AccountController::class, 'editStaff'])->name('staff.edit');
-        Route::put('/staff/{id}', [App\Http\Controllers\AccountController::class, 'updateStaff'])->name('staff.update');
-        Route::delete('/staff/{id}', [App\Http\Controllers\AccountController::class, 'destroyStaff'])->name('staff.destroy');
+        
+        Route::put('/staff/{id}', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUAccountController::class)->updateStaff(request(), $id);
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->updateStaff(request(), $id);
+            return app(AccountController::class)->updateStaff(request(), $id);
+        })->name('staff.update');
+        
+        Route::delete('/staff/{id}', function($id) {
+            $user = session('user');
+            if (!$user) return redirect()->route('login');
+            $role = $user['role'] ?? null;
+            if ($role === 'rhu') return app(RHUAccountController::class)->destroyStaff($id);
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->destroyStaff($id);
+            return app(AccountController::class)->destroyStaff($id);
+        })->name('staff.destroy');
     });
 
     // Admin RHU management routes
@@ -319,6 +703,7 @@ Route::middleware('auth.check')->group(function () {
         // Reports routes
         Route::get('/reports', [BHCReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/verify', [BHCReportsController::class, 'verify'])->name('reports.verify');
+        Route::get('/reports/verified', [BHCReportsController::class, 'verified'])->name('reports.verified');
         Route::get('/reports/rejected', [BHCReportsController::class, 'rejected'])->name('reports.rejected');
         Route::post('/reports/{id}/approve', [BHCReportsController::class, 'approve'])->name('reports.approve');
         Route::post('/reports/{id}/reject', [BHCReportsController::class, 'reject'])->name('reports.reject');
@@ -414,6 +799,7 @@ Route::middleware('auth.check')->group(function () {
         // Reports routes
         Route::get('/reports', [RHUReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/verify', [RHUReportsController::class, 'verify'])->name('reports.verify');
+        Route::get('/reports/verified', [RHUReportsController::class, 'verified'])->name('reports.verified');
         Route::get('/reports/rejected', [RHUReportsController::class, 'rejected'])->name('reports.rejected');
         Route::post('/reports/{id}/approve', [RHUReportsController::class, 'approve'])->name('reports.approve');
         Route::post('/reports/{id}/reject', [RHUReportsController::class, 'reject'])->name('reports.reject');

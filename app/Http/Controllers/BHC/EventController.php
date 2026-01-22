@@ -133,10 +133,15 @@ class EventController extends Controller
         try {
             \Log::info('EventController - Fetching events for user: ' . $user['id'] . ' with role: ' . $user['role']);
             
-            // Get events from user's sub-collection
+            // Get events; for barangay users, always use barangayId so it matches calendar
+            $eventCollection = $user['role'];
+            $eventDocId = $user['role'] === 'barangay'
+                ? ($user['barangayId'] ?? $user['id'])
+                : $user['id'];
+
             $eventsQuery = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
+                ->collection($eventCollection)
+                ->document($eventDocId)
                 ->collection('events')
                 ->limit(50) // Limit results to prevent timeout
                 ->documents();

@@ -136,19 +136,6 @@
                                         <div class="text-muted small">{{ $group['description'] }}</div>
                                     @endif
                                 </div>
-                                <div class="text-nowrap">
-                                    @if(is_null($expDays))
-                                        <span class="badge bg-secondary">No Expiry</span>
-                                    @elseif($expDays < 0)
-                                        <span class="badge bg-danger">Expired {{ abs($expDays) }}d</span>
-                                    @elseif($expDays === 0)
-                                        <span class="badge bg-danger">Expires Today</span>
-                                    @elseif($expDays <= 30)
-                                        <span class="badge bg-warning text-dark">{{ $expDays }}d left</span>
-                                    @else
-                                        <span class="badge bg-success">{{ $expDays }}d left</span>
-                                    @endif
-                                </div>
                             </div>
                             <div class="collapse mt-3" id="{{ $collapseId }}">
                                 <div class="table-responsive">
@@ -563,7 +550,7 @@
 
 <!-- Add Item Modal -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addItemModalLabel">
@@ -571,61 +558,211 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ route('inventory.store') }}">
+            <form method="POST" action="{{ route('inventory.store') }}" id="addItemForm">
                 @csrf
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="name" class="form-label fw-semibold">Item Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" required placeholder="Enter item name">
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- Core Fields Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h6>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="type" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="type" name="type" required>
-                                <option value="">Select type...</option>
-                                <option value="Medicine">Medicine</option>
-                                <option value="Equipment">Equipment</option>
-                                <option value="Supplies">Supplies</option>
-                                <option value="Vaccine">Vaccine</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row" id="generic_fields_create" style="display:none;">
-                        <div class="col-md-6 mb-3">
-                            <label for="generic_name" class="form-label fw-semibold">Generic Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="generic_name" name="generic_name" placeholder="e.g., Paracetamol">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="generic_description" class="form-label fw-semibold">Generic Description</label>
-                            <input type="text" class="form-control" id="generic_description" name="generic_description" placeholder="e.g., For fever and mild pain">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="milligrams" class="form-label fw-semibold">Dosage (mg) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="milligrams" name="milligrams" placeholder="e.g., 250">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="quantity" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="quantity" name="quantity" min="0" required placeholder="Enter quantity">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="unit_type" class="form-label fw-semibold">Unit Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="unit_type" name="unit_type" required>
-                                <option value="">Select unit type...</option>
-                                <option value="capsules">Capsules</option>
-                                <option value="tablets">Tablets</option>
-                                <option value="pieces">Pieces</option>
-                                <option value="boxes">Boxes</option>
-                                <option value="packs">Packs</option>
-                            </select>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="item_code" class="form-label fw-semibold">Item Code</label>
+                                    <input type="text" class="form-control" id="item_code" name="item_code" readonly placeholder="Auto-generated">
+                                    <small class="text-muted">Automatically generated</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="name" class="form-label fw-semibold">Item Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="name" name="name" required placeholder="e.g., Paracetamol 500 mg Tablet">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="type" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="type" name="type" required>
+                                        <option value="">Select category...</option>
+                                        <option value="Medicine">Medicine</option>
+                                        <option value="Vaccine">Vaccine</option>
+                                        <option value="Medical Supply">Medical Supply</option>
+                                        <option value="Family Planning Supply">Family Planning Supply</option>
+                                        <option value="Equipment">Equipment</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="sub_category" class="form-label fw-semibold">Sub-Category</label>
+                                    <select class="form-select" id="sub_category" name="sub_category">
+                                        <option value="">Select sub-category...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="quantity" class="form-label fw-semibold">Quantity Available <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="quantity" name="quantity" min="0" required placeholder="Enter quantity">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="unit_type" class="form-label fw-semibold">Unit of Issue <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="unit_type" name="unit_type" required>
+                                        <option value="">Select unit...</option>
+                                        <option value="tablets">Tablet</option>
+                                        <option value="capsules">Capsule</option>
+                                        <option value="bottles">Bottle</option>
+                                        <option value="vials">Vial</option>
+                                        <option value="pieces">Pieces</option>
+                                        <option value="boxes">Boxes</option>
+                                        <option value="packs">Packs</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label fw-semibold">Description / Notes</label>
+                                <textarea class="form-control" id="description" name="description" rows="2" placeholder="Enter description or notes..."></textarea>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="description" class="form-label fw-semibold">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter item description..."></textarea>
+                    <!-- Medicine-Specific Fields -->
+                    <div class="card mb-3" id="medicine_fields_create" style="display:none;">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-capsule me-2"></i>Medicine Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="generic_name" class="form-label fw-semibold">Generic Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="generic_name" name="generic_name" placeholder="e.g., Paracetamol">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="dosage_strength" class="form-label fw-semibold">Dosage Strength <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="dosage_strength" name="dosage_strength" placeholder="e.g., 500 mg, 250 mg/5 mL">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="dosage_form" class="form-label fw-semibold">Dosage Form <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="dosage_form" name="dosage_form">
+                                        <option value="">Select dosage form...</option>
+                                        <option value="Tablet">Tablet</option>
+                                        <option value="Capsule">Capsule</option>
+                                        <option value="Syrup">Syrup</option>
+                                        <option value="Drops">Drops</option>
+                                        <option value="Suspension">Suspension</option>
+                                        <option value="Cream">Cream / Ointment</option>
+                                        <option value="Injection">Injection</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="therapeutic_classification" class="form-label fw-semibold">Therapeutic Classification</label>
+                                    <select class="form-select" id="therapeutic_classification" name="therapeutic_classification">
+                                        <option value="">Select classification...</option>
+                                        <option value="Analgesic">Analgesic</option>
+                                        <option value="Antibiotic">Antibiotic</option>
+                                        <option value="Antihypertensive">Antihypertensive</option>
+                                        <option value="Antidiabetic">Antidiabetic</option>
+                                        <option value="Antipyretic">Antipyretic</option>
+                                        <option value="Vitamin / Supplement">Vitamin / Supplement</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="prescription_required" class="form-label fw-semibold">Prescription Required</label>
+                                    <select class="form-select" id="prescription_required" name="prescription_required">
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="restricted_medicine" class="form-label fw-semibold">Restricted Medicine</label>
+                                    <select class="form-select" id="restricted_medicine" name="restricted_medicine">
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="storage_condition" class="form-label fw-semibold">Storage Condition</label>
+                                <select class="form-select" id="storage_condition" name="storage_condition">
+                                    <option value="">Select storage condition...</option>
+                                    <option value="Room Temperature">Room Temperature</option>
+                                    <option value="Refrigerated">Refrigerated (2-8°C)</option>
+                                    <option value="Protect from Light">Protect from Light</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vaccine-Specific Fields -->
+                    <div class="card mb-3" id="vaccine_fields_create" style="display:none;">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Vaccine Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vaccine_type" class="form-label fw-semibold">Vaccine Type</label>
+                                    <input type="text" class="form-control" id="vaccine_type" name="vaccine_type" placeholder="e.g., BCG, Pentavalent, OPV, COVID-19">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="vial_size" class="form-label fw-semibold">Vial Size</label>
+                                    <select class="form-select" id="vial_size" name="vial_size">
+                                        <option value="">Select vial size...</option>
+                                        <option value="Single-dose">Single-dose</option>
+                                        <option value="Multi-dose">Multi-dose</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cold_chain_required" class="form-label fw-semibold">Cold Chain Required</label>
+                                    <select class="form-select" id="cold_chain_required" name="cold_chain_required">
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="temperature_range" class="form-label fw-semibold">Temperature Range</label>
+                                    <input type="text" class="form-control" id="temperature_range" name="temperature_range" value="2-8°C" placeholder="2-8°C">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0"><i class="bi bi-building me-2"></i>Source Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="source_type" class="form-label fw-semibold">Source Type</label>
+                                    <select class="form-select" id="source_type" name="source_type">
+                                        <option value="">Select source...</option>
+                                        <option value="DOH">DOH</option>
+                                        <option value="RHU">RHU</option>
+                                        <option value="LGU">LGU</option>
+                                        <option value="Donation">Donation</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="received_by" class="form-label fw-semibold">Received By</label>
+                                    <select class="form-select" id="received_by" name="received_by">
+                                        <option value="">Select recipient...</option>
+                                        <option value="Midwife">Midwife</option>
+                                        <option value="BHW">BHW</option>
+                                        <option value="Nurse">Nurse</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="delivery_reference_no" class="form-label fw-semibold">Delivery Reference No.</label>
+                                <input type="text" class="form-control" id="delivery_reference_no" name="delivery_reference_no" placeholder="Enter delivery reference number">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1062,23 +1199,117 @@ th button:hover {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const typeSelectCreate = document.getElementById('type');
-    const genericFieldsCreate = document.getElementById('generic_fields_create');
-    function toggleGenericCreate() {
-        if (!typeSelectCreate || !genericFieldsCreate) return;
-        const v = typeSelectCreate.value;
-        genericFieldsCreate.style.display = (v === 'Medicine' || v === 'Vaccine') ? 'flex' : 'none';
-        if (genericFieldsCreate.style.display === 'none') {
-            const g = document.getElementById('generic_name');
-            const d = document.getElementById('generic_description');
-            if (g) g.value = '';
-            if (d) d.value = '';
+    const subCategorySelect = document.getElementById('sub_category');
+    const medicineFieldsCreate = document.getElementById('medicine_fields_create');
+    const vaccineFieldsCreate = document.getElementById('vaccine_fields_create');
+    
+    // Sub-category options based on category
+    const subCategories = {
+        'Medicine': [
+            {value: 'Tablet', text: 'Tablet'},
+            {value: 'Capsule', text: 'Capsule'},
+            {value: 'Syrup', text: 'Syrup'},
+            {value: 'Oral Drops', text: 'Oral Drops'},
+            {value: 'Eye Drops', text: 'Eye Drops'},
+            {value: 'Ear Drops', text: 'Ear Drops'},
+            {value: 'Injection', text: 'Injection'},
+            {value: 'Cream', text: 'Cream'},
+            {value: 'Ointment', text: 'Ointment'}
+        ],
+        'Vaccine': [
+            {value: 'Pediatric Vaccine', text: 'Pediatric Vaccine'},
+            {value: 'Adult Vaccine', text: 'Adult Vaccine'}
+        ],
+        'Medical Supply': [
+            {value: 'Syringes', text: 'Syringes'},
+            {value: 'Gloves', text: 'Gloves'},
+            {value: 'Face Masks', text: 'Face Masks'},
+            {value: 'Alcohol / Antiseptic', text: 'Alcohol / Antiseptic'},
+            {value: 'Bandages', text: 'Bandages'},
+            {value: 'Test Kits', text: 'Test Kits (Pregnancy, Blood Sugar)'}
+        ],
+        'Family Planning Supply': [
+            {value: 'Pills', text: 'Pills'},
+            {value: 'Condoms', text: 'Condoms'},
+            {value: 'Injectables', text: 'Injectables'},
+            {value: 'IUD', text: 'IUD'}
+        ]
+    };
+    
+    function updateSubCategories() {
+        if (!typeSelectCreate || !subCategorySelect) return;
+        const selectedType = typeSelectCreate.value;
+        subCategorySelect.innerHTML = '<option value="">Select sub-category...</option>';
+        
+        if (subCategories[selectedType]) {
+            subCategories[selectedType].forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option.value;
+                opt.textContent = option.text;
+                subCategorySelect.appendChild(opt);
+            });
         }
     }
+    
+    function toggleCategoryFields() {
+        if (!typeSelectCreate) return;
+        const v = typeSelectCreate.value;
+        
+        // Show/hide medicine fields
+        if (medicineFieldsCreate) {
+            medicineFieldsCreate.style.display = (v === 'Medicine') ? 'block' : 'none';
+            if (medicineFieldsCreate.style.display === 'none') {
+                // Clear medicine fields
+                const fields = ['generic_name', 'dosage_strength', 'dosage_form', 'therapeutic_classification', 
+                               'prescription_required', 'restricted_medicine', 'storage_condition'];
+                fields.forEach(field => {
+                    const el = document.getElementById(field);
+                    if (el) el.value = '';
+                });
+            }
+        }
+        
+        // Show/hide vaccine fields
+        if (vaccineFieldsCreate) {
+            vaccineFieldsCreate.style.display = (v === 'Vaccine') ? 'block' : 'none';
+            if (vaccineFieldsCreate.style.display === 'none') {
+                // Clear vaccine fields
+                const fields = ['vaccine_type', 'vial_size', 'cold_chain_required', 'temperature_range'];
+                fields.forEach(field => {
+                    const el = document.getElementById(field);
+                    if (el) el.value = '';
+                });
+            }
+        }
+        
+        // Update sub-categories
+        updateSubCategories();
+    }
+    
     if (typeSelectCreate) {
-        typeSelectCreate.addEventListener('change', toggleGenericCreate);
-        toggleGenericCreate();
+        typeSelectCreate.addEventListener('change', toggleCategoryFields);
+        toggleCategoryFields();
+    }
+    
+    // Generate item code (optional - can be done server-side)
+    function generateItemCode() {
+        const codeInput = document.getElementById('item_code');
+        if (codeInput) {
+            const timestamp = Date.now().toString(36).toUpperCase();
+            const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+            codeInput.value = `ITM-${timestamp}-${random}`;
+        }
+    }
+    
+    // Generate code when modal opens
+    const addModal = document.getElementById('addItemModal');
+    if (addModal) {
+        addModal.addEventListener('show.bs.modal', function() {
+            generateItemCode();
+        });
     }
 
+    // Handle edit modals (keep existing functionality)
     document.querySelectorAll('[id^="edit_type_"]').forEach(function(select) {
         const id = select.id.replace('edit_type_', '');
         const container = document.getElementById('generic_fields_edit_' + id);
@@ -1088,8 +1319,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (container && container.style.display === 'none') {
                 const g = document.getElementById('edit_generic_name_' + id);
                 const d = document.getElementById('edit_generic_description_' + id);
+                const m = document.getElementById('edit_milligrams_' + id);
                 if (g) g.value = '';
                 if (d) d.value = '';
+                if (m) m.value = '';
             }
         }
         select.addEventListener('change', toggleGenericEdit);

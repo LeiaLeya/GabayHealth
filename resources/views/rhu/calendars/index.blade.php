@@ -75,36 +75,6 @@
         </div>
     </div>
 
-    <!-- Legend -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body py-3">
-                    <div class="d-flex align-items-center gap-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="badge bg-primary rounded-circle" style="width: 12px; height: 12px;"></div>
-                            <small class="text-muted">Upcoming Events</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="badge bg-secondary rounded-circle" style="width: 12px; height: 12px;"></div>
-                            <small class="text-muted">Completed Events</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="badge bg-success rounded-circle" style="width: 12px; height: 12px;"></div>
-                            <small class="text-muted">Appointments</small>
-                        </div>
-                        <div class="ms-auto">
-                            <small class="text-muted">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Click on any event to view details
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Calendar Grid -->
     <div class="row">
         <div class="col-12">
@@ -863,7 +833,8 @@ function loadMonthData(month) {
     // Show loading state
     document.getElementById('calendarBody').innerHTML = '<div class="calendar-loading"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
     
-    fetch(`/calendars/data?month=${month}`)
+    // Use relative path so it works under /rhu/calendars
+    fetch(`data?month=${month}`)
         .then(response => {
             console.log('Response status:', response.status);
             if (!response.ok) {
@@ -927,6 +898,11 @@ if (todayBtn) {
         loadMonthData(todayMonth);
     });
 }
+
+// Always refresh data on initial load to ensure latest appointments/events
+document.addEventListener('DOMContentLoaded', () => {
+    loadMonthData(currentMonth);
+});
 
 // Schedule Form Functions
 function formatTime12Hour(time24Hour) {

@@ -1,6 +1,15 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .collapse-detail {
+        transition: height .25s ease, opacity .2s ease;
+    }
+    .details-row > td {
+        padding: 0;
+        border-top: 0;
+    }
+</style>
 <div class="container-fluid">
     <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -116,7 +125,6 @@
                                         <th>Affected Person</th>
                                         <th>Start Date</th>
                                         <th>Additional Info</th>
-                                        <th>Reported Date</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -183,15 +191,19 @@
                                                         $additionalInfo = json_encode($additionalInfo);
                                                     }
                                                     $displayInfo = $additionalInfo ?: 'No additional info';
+
+                                                    $reportedAt = null;
+                                                    if (!empty($report['createdAt'])) {
+                                                        $reportedAt = \Carbon\Carbon::parse($report['createdAt'])
+                                                            ->format('M d, Y H:i');
+                                                    }
                                                 @endphp
-                                                <span class="text-muted">{{ Str::limit($displayInfo, 50) }}</span>
-                                            </td>
-                                            <td>
-                                                @if(isset($report['createdAt']))
-                                                    {{ \Carbon\Carbon::parse($report['createdAt'])->format('M d, Y H:i') }}
-                                                @else
-                                                    <span class="text-muted">Unknown</span>
-                                                @endif
+                                                <span class="text-muted">
+                                                    {{ Str::limit($displayInfo, 50) }}
+                                                    @if($reportedAt)
+                                                        <br><small class="text-muted">Reported: {{ $reportedAt }}</small>
+                                                    @endif
+                                                </span>
                                             </td>
                                             <td>
                                                 <div class="d-flex gap-2">
@@ -213,9 +225,9 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <tr class="collapse" id="{{ $collapseId }}">
-                                            <td colspan="7" class="bg-light">
-                                                <div class="p-3">
+                                        <tr class="details-row">
+                                            <td colspan="7" class="p-0 bg-light border-0">
+                                                <div class="collapse collapse-detail p-3" id="{{ $collapseId }}">
                                                     <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Additional Details</h6>
                                                     <div class="row g-3">
                                                         <div class="col-md-6">

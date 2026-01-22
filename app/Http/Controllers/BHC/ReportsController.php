@@ -72,8 +72,10 @@ class ReportsController extends Controller
         $dateRange = request('date_range', 'month');
         $symptomFilter = request('symptom', 'all');
         
-        $reports = $this->getVerifiedHealthReports($barangayId, $filter, $dateRange, $symptomFilter);
-        $heatmapData = $this->processHeatmapData($reports);
+        // Fetch ALL verified reports from ALL barangays for the heatmap
+        $reports = $this->getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter);
+        $barangays = $this->getAllBarangaysWithCoordinates();
+        $heatmapData = $this->processHeatmapData($reports, $barangays);
         $stats = $this->getStatistics($reports);
         $chartData = $this->getChartData($reports);
         $availableSymptoms = $this->getAvailableSymptoms($barangayId);
@@ -118,8 +120,9 @@ class ReportsController extends Controller
         
         $pendingReports = $this->getPendingReports($barangayId);
         $stats = $this->getVerificationStats($barangayId);
+        $staffAccounts = $this->getStaffAccounts($user['id'], $user['role']);
         
-        return $this->view('reports.verify', compact('pendingReports', 'stats'));
+        return $this->view('reports.verify', compact('pendingReports', 'stats', 'staffAccounts'));
     }
 
     public function rejected()
@@ -154,13 +157,43 @@ class ReportsController extends Controller
         return $this->view('reports.rejected', compact('rejectedReports', 'stats'));
     }
 
-    public function approve($id)
+    public function verified()
+    {
+        set_time_limit(60);
+        
+        $user = session('user');
+        
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to access verified reports.');
+        }
+        
+        $barangayId = $this->getBarangayId();
+        
+        \Log::info('BHC ReportsController verified - BarangayId for filtering: ' . $barangayId);
+        
+        if (!$barangayId) {
+            \Log::error('BHC ReportsController verified - No barangayId available, showing empty reports');
+            return $this->view('reports.verified', [
+                'verifiedReports' => []
+            ])->with('warning', 'Unable to determine barangay. Showing empty reports.');
+        }
+        
+        $verifiedReports = $this->getVerifiedReports($barangayId);
+        
+        return $this->view('reports.verified', compact('verifiedReports'));
+    }
+
+    public function approve(Request $request, $id)
     {
         $user = session('user');
         
         if (!$user) {
-            return redirect()->back()->with('error', 'Please login to approve reports.');
+            return redirect()->back()->with('error', 'Please login to verify reports.');
         }
+        
+        $request->validate([
+            'verified_by' => 'required|string|max:255',
+        ]);
         
         $barangayId = $this->getBarangayId();
         
@@ -169,6 +202,27 @@ class ReportsController extends Controller
         }
         
         try {
+            // Get the verifier's name from the request
+            $verifierName = $request->input('verified_by');
+            
+            if (!$verifierName) {
+                return redirect()->back()->with('error', 'Please select a health worker who verified this report.');
+            }
+            
+            // Verify that the selected staff member exists and belongs to this barangay
+            $staffAccounts = $this->getStaffAccounts($user['id'], $user['role']);
+            $isValidStaff = false;
+            foreach ($staffAccounts as $staff) {
+                if ($staff['name'] === $verifierName) {
+                    $isValidStaff = true;
+                    break;
+                }
+            }
+            
+            if (!$isValidStaff) {
+                return redirect()->back()->with('error', 'Invalid health worker selected. Please select a valid staff member.');
+            }
+            
             $reportDoc = $this->firestore
                 ->collection("reports")
                 ->document($id)
@@ -180,7 +234,7 @@ class ReportsController extends Controller
             
             $reportData = $reportDoc->data();
             if ($reportData['barangayId'] !== $barangayId) {
-                return redirect()->back()->with('error', 'You can only approve reports from your barangay.');
+                return redirect()->back()->with('error', 'You can only verify reports from your barangay.');
             }
             
             $this->firestore
@@ -189,14 +243,106 @@ class ReportsController extends Controller
                 ->update([
                     ['path' => 'status', 'value' => 'verified'],
                     ['path' => 'verified_at', 'value' => now()->toDateTimeString()],
-                    ['path' => 'verified_by', 'value' => session('user.name', 'Health Worker')],
-                    ['path' => 'verified_by_id', 'value' => session('user.id')]
+                    ['path' => 'verified_by', 'value' => $verifierName],
+                    ['path' => 'verified_by_id', 'value' => $user['id']]
                 ]);
 
-            return redirect()->back()->with('success', 'Report approved successfully!');
+            return redirect()->back()->with('success', 'Report verified successfully!');
         } catch (\Exception $e) {
-            \Log::error('Error approving report: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to approve report: ' . $e->getMessage());
+            \Log::error('Error verifying report: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to verify report: ' . $e->getMessage());
+        }
+    }
+    
+    private function getVerifierName($user)
+    {
+        try {
+            $userId = $user['id'] ?? null;
+            $userRole = $user['role'] ?? null;
+            $barangayId = $user['barangayId'] ?? $userId ?? null;
+            
+            if (!$userId || !$userRole) {
+                \Log::error('Missing user ID or role in session');
+                return null;
+            }
+            
+            // First, try to find staff member in accounts subcollection using Firebase UID
+            // Staff accounts have a 'uid' field that matches Firebase Auth UID
+            if ($barangayId && in_array($userRole, ['barangay', 'rhu'])) {
+                // Check if user has a Firebase UID in session (from Firebase Auth)
+                $firebaseUid = $user['uid'] ?? $user['firebase_uid'] ?? null;
+                
+                if ($firebaseUid) {
+                    // Search in the accounts subcollection for staff with this UID
+                    $accounts = $this->firestore
+                        ->collection($userRole)
+                        ->document($barangayId)
+                        ->collection('accounts')
+                        ->where('uid', '=', $firebaseUid)
+                        ->documents();
+                    
+                    foreach ($accounts as $account) {
+                        if ($account->exists()) {
+                            $data = $account->data();
+                            $name = $data['name'] ?? null;
+                            if ($name) {
+                                \Log::info('Found staff member name: ' . $name);
+                                return $name;
+                            }
+                        }
+                    }
+                }
+                
+                // If not found by UID, try searching by email if available
+                $userEmail = $user['email'] ?? null;
+                if ($userEmail) {
+                    $accounts = $this->firestore
+                        ->collection($userRole)
+                        ->document($barangayId)
+                        ->collection('accounts')
+                        ->where('email', '=', $userEmail)
+                        ->documents();
+                    
+                    foreach ($accounts as $account) {
+                        if ($account->exists()) {
+                            $data = $account->data();
+                            $name = $data['name'] ?? null;
+                            if ($name) {
+                                \Log::info('Found staff member name by email: ' . $name);
+                                return $name;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Fallback: For barangay/rhu users, fetch from main collection
+            $userDoc = $this->firestore
+                ->collection($userRole)
+                ->document($userId)
+                ->snapshot();
+            
+            if ($userDoc->exists()) {
+                $data = $userDoc->data();
+                $name = $data['healthCenterName'] ?? $data['name'] ?? $data['barangay'] ?? null;
+                if ($name) {
+                    \Log::info('Found user name from main collection: ' . $name);
+                    return $name;
+                }
+            }
+            
+            // Last resort: use name from session
+            $name = $user['name'] ?? null;
+            if ($name) {
+                \Log::info('Using name from session: ' . $name);
+                return $name;
+            }
+            
+            \Log::warning('Could not find verifier name for user: ' . $userId . ' with role: ' . $userRole);
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Error fetching verifier name: ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -282,6 +428,7 @@ class ReportsController extends Controller
                     $startDate = $endDate->copy()->subMonth();
             }
 
+            // Fetch from main reports collection, filtered by barangayId
             $documents = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -312,6 +459,152 @@ class ReportsController extends Controller
         return $reports;
     }
 
+    private function getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter)
+    {
+        $reports = [];
+        
+        try {
+            \Log::info('BHC ReportsController - Fetching ALL verified reports - Filter: ' . $filter . ', Date Range: ' . $dateRange . ', Symptom: ' . $symptomFilter);
+            
+            $endDate = Carbon::now();
+            switch ($dateRange) {
+                case 'week':
+                    $startDate = $endDate->copy()->subWeek();
+                    break;
+                case 'month':
+                    $startDate = $endDate->copy()->subMonth();
+                    break;
+                case 'quarter':
+                    $startDate = $endDate->copy()->subQuarter();
+                    break;
+                case 'year':
+                    $startDate = $endDate->copy()->subYear();
+                    break;
+                default:
+                    $startDate = $endDate->copy()->subYear(); // Default to 1 year to show more reports
+            }
+
+            // Fetch ALL verified reports from ALL barangays
+            $documents = $this->firestore
+                ->collection("reports")
+                ->where('status', '=', 'verified')
+                ->documents();
+
+            $totalDocs = 0;
+            $filteredByDate = 0;
+            $filteredByCondition = 0;
+            $filteredBySymptom = 0;
+
+            foreach ($documents as $doc) {
+                if ($doc->exists()) {
+                    $totalDocs++;
+                    $reportData = $doc->data();
+                    
+                    // Try to get date from verified_at, startDate, or createdAt
+                    $dateField = $reportData['verified_at'] ?? $reportData['startDate'] ?? $reportData['createdAt'] ?? null;
+                    
+                    if ($dateField) {
+                        try {
+                            $reportDate = Carbon::parse($dateField);
+                            
+                            // Check date range - use verified_at if available, otherwise use startDate/createdAt
+                            if (!$reportDate->between($startDate, $endDate)) {
+                                $filteredByDate++;
+                                continue;
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning('Error parsing date for report ' . $doc->id() . ': ' . $e->getMessage());
+                            // Include report even if date parsing fails
+                        }
+                    } else {
+                        // If no date field, include the report anyway
+                        \Log::warning('Report ' . $doc->id() . ' has no date field');
+                    }
+                    
+                    // Check condition filter
+                    if ($filter !== 'all' && !$this->matchesCondition($reportData, $filter)) {
+                        $filteredByCondition++;
+                        continue;
+                    }
+                    
+                    // Check symptom filter
+                    if ($symptomFilter !== 'all' && !$this->hasSymptom($reportData, $symptomFilter)) {
+                        $filteredBySymptom++;
+                        continue;
+                    }
+                    
+                    $reports[] = array_merge($reportData, ['id' => $doc->id()]);
+                }
+            }
+            
+            \Log::info('BHC ReportsController - Total verified docs: ' . $totalDocs . ', Filtered by date: ' . $filteredByDate . ', Filtered by condition: ' . $filteredByCondition . ', Filtered by symptom: ' . $filteredBySymptom . ', Final reports: ' . count($reports));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error fetching all verified health reports: ' . $e->getMessage());
+        }
+
+        return $reports;
+    }
+
+    private function getAllBarangaysWithCoordinates()
+    {
+        $barangays = [];
+        
+        try {
+            $documents = $this->firestore
+                ->collection("barangay")
+                ->documents();
+
+            $totalBarangays = 0;
+            $withLocation = 0;
+            $withoutLocation = 0;
+
+            foreach ($documents as $doc) {
+                if ($doc->exists()) {
+                    $totalBarangays++;
+                    $data = $doc->data();
+                    $location = $data['location'] ?? null;
+                    
+                    if ($location) {
+                        // Handle GeoPoint object from Firestore
+                        if (is_object($location) && method_exists($location, 'latitude') && method_exists($location, 'longitude')) {
+                            $barangays[$doc->id()] = [
+                                'id' => $doc->id(),
+                                'name' => $data['healthCenterName'] ?? $data['name'] ?? 'Unknown',
+                                'lat' => $location->latitude(),
+                                'lng' => $location->longitude()
+                            ];
+                            $withLocation++;
+                        } 
+                        // Handle array format (fallback)
+                        elseif (is_array($location) && isset($location['latitude']) && isset($location['longitude'])) {
+                            $barangays[$doc->id()] = [
+                                'id' => $doc->id(),
+                                'name' => $data['healthCenterName'] ?? $data['name'] ?? 'Unknown',
+                                'lat' => $location['latitude'],
+                                'lng' => $location['longitude']
+                            ];
+                            $withLocation++;
+                        } else {
+                            $withoutLocation++;
+                            \Log::warning('Barangay ' . $doc->id() . ' has location but format is not recognized. Type: ' . gettype($location));
+                        }
+                    } else {
+                        $withoutLocation++;
+                        \Log::warning('Barangay ' . $doc->id() . ' (' . ($data['healthCenterName'] ?? $data['name'] ?? 'Unknown') . ') has no location field');
+                    }
+                }
+            }
+            
+            \Log::info('BHC ReportsController - Total barangays: ' . $totalBarangays . ', With coordinates: ' . $withLocation . ', Without coordinates: ' . $withoutLocation);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error fetching barangays with coordinates: ' . $e->getMessage());
+        }
+
+        return $barangays;
+    }
+
     private function getPendingReports($barangayId)
     {
         $pendingReports = [];
@@ -324,6 +617,7 @@ class ReportsController extends Controller
         try {
             \Log::info('BHC ReportsController - Barangay ID: ' . $barangayId);
             
+            // Fetch from main reports collection, filtered by barangayId
             $allDocs = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -349,7 +643,22 @@ class ReportsController extends Controller
                 \Log::info('Checking report ' . $report['id'] . ' with status: "' . $status . '"');
                 
                 if ($status === 'to be reviewed') {
-                    $pendingReports[] = array_merge($report['data'], ['id' => $report['id']]);
+                    $data = $report['data'];
+
+                    $normalized = [
+                        'id' => $report['id'],
+                        'barangayId' => $barangayId,
+                        'symptoms' => isset($data['condition']) ? [(string)$data['condition']] : ($data['symptoms'] ?? []),
+                        'affectedPerson' => $data['reported_by'] ?? ($data['affectedPerson'] ?? 'Unknown'),
+                        'startDate' => $data['date'] ?? ($data['startDate'] ?? null),
+                        'additionalInfo' => $data['description'] ?? ($data['additionalInfo'] ?? null),
+                        'createdAt' => $data['date'] ?? ($data['createdAt'] ?? null),
+                        'location' => $data['location'] ?? null,
+                        'cases' => $data['cases'] ?? null,
+                        'status' => $status,
+                    ];
+
+                    $pendingReports[] = array_merge($data, $normalized);
                     \Log::info('Added pending report: ' . $report['id']);
                 }
             }
@@ -364,6 +673,44 @@ class ReportsController extends Controller
         return $pendingReports;
     }
 
+    private function getStaffAccounts($userId, $userRole)
+    {
+        try {
+            $documents = $this->firestore
+                ->collection($userRole)
+                ->document($userId)
+                ->collection('accounts')
+                ->documents();
+
+            $staffAccounts = [];
+            foreach ($documents as $document) {
+                if ($document->exists()) {
+                    $data = $document->data();
+                    $staffRole = $data['role'] ?? '';
+                    // Only include active staff members (nurse, bhw, midwife, doctor)
+                    if (in_array($staffRole, ['nurse', 'bhw', 'midwife', 'doctor']) && 
+                        ($data['status'] ?? 'active') === 'active') {
+                        $staffAccounts[] = [
+                            'id' => $document->id(),
+                            'name' => $data['name'] ?? 'Unknown',
+                            'role' => $staffRole
+                        ];
+                    }
+                }
+            }
+
+            // Sort by name
+            usort($staffAccounts, function($a, $b) {
+                return strcmp($a['name'], $b['name']);
+            });
+
+            return $staffAccounts;
+        } catch (\Exception $e) {
+            \Log::error('Error fetching staff accounts: ' . $e->getMessage());
+            return [];
+        }
+    }
+
     private function getRejectedReports($barangayId)
     {
         $rejectedReports = [];
@@ -374,6 +721,7 @@ class ReportsController extends Controller
         }
         
         try {
+            // Fetch from main reports collection, filtered by barangayId
             $allDocs = $this->firestore
                 ->collection("reports")
                 ->where('barangayId', '=', $barangayId)
@@ -413,6 +761,52 @@ class ReportsController extends Controller
         }
 
         return $rejectedReports;
+    }
+
+    private function getVerifiedReports($barangayId)
+    {
+        $verifiedReports = [];
+        
+        if (!$barangayId) {
+            \Log::error('getVerifiedReports - No barangayId available');
+            return $verifiedReports;
+        }
+        
+        try {
+            \Log::info('BHC ReportsController - Fetching verified reports for Barangay ID: ' . $barangayId);
+            
+            // Fetch from main reports collection, filtered by barangayId and verified status
+            $allDocs = $this->firestore
+                ->collection("reports")
+                ->where('barangayId', '=', $barangayId)
+                ->where('status', '=', 'verified')
+                ->documents();
+            
+            foreach ($allDocs as $doc) {
+                if ($doc->exists()) {
+                    $reportData = $doc->data();
+                    $verifiedReports[] = array_merge($reportData, [
+                        'id' => $doc->id(),
+                        'verified_at' => $reportData['verified_at'] ?? null
+                    ]);
+                }
+            }
+            
+            // Sort by verified_at date (newest first)
+            usort($verifiedReports, function($a, $b) {
+                $dateA = $a['verified_at'] ?? $a['createdAt'] ?? '';
+                $dateB = $b['verified_at'] ?? $b['createdAt'] ?? '';
+                return strtotime($dateB) - strtotime($dateA);
+            });
+            
+            \Log::info('BHC ReportsController - Verified reports found: ' . count($verifiedReports));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error fetching verified reports: ' . $e->getMessage());
+            return [];
+        }
+
+        return $verifiedReports;
     }
 
     private function getRejectedStats($barangayId)
@@ -513,7 +907,7 @@ class ReportsController extends Controller
                         }
                     }
 
-                    if ($reportData['createdAt'] && Carbon::parse($reportData['createdAt'])->isSameMonth($today)) {
+                    if (!empty($reportData['createdAt']) && Carbon::parse($reportData['createdAt'])->isSameMonth($today)) {
                         $stats['total_this_month']++;
                     }
                 }
@@ -590,49 +984,72 @@ class ReportsController extends Controller
         }
     }
 
-    private function processHeatmapData($reports)
+    private function processHeatmapData($reports, $barangays)
     {
         $heatmapData = [];
         
-        $barangayCoordinates = [
-            'Cadulawan' => ['lat' => 10.2456, 'lng' => 123.7890, 'cases' => 0],
-            'Vito' => ['lat' => 10.2567, 'lng' => 123.8001, 'cases' => 0],
-            'Tubod' => ['lat' => 10.2678, 'lng' => 123.8112, 'cases' => 0],
-            'Linao' => ['lat' => 10.2789, 'lng' => 123.8223, 'cases' => 0],
-            'PAKIGNE' => ['lat' => 10.2890, 'lng' => 123.8334, 'cases' => 0],
-            'Manduang' => ['lat' => 10.3001, 'lng' => 123.8445, 'cases' => 0],
-            'Camp 7' => ['lat' => 10.3112, 'lng' => 123.8556, 'cases' => 0],
-            'Cuanos' => ['lat' => 10.3223, 'lng' => 123.8667, 'cases' => 0],
-            'Tunghaan' => ['lat' => 10.3334, 'lng' => 123.8778, 'cases' => 0],
-            'Pob. Ward I' => ['lat' => 10.3445, 'lng' => 123.8889, 'cases' => 0],
-            'Pob. Ward II' => ['lat' => 10.3556, 'lng' => 123.9000, 'cases' => 0],
-            'Calajoan' => ['lat' => 10.3667, 'lng' => 123.9111, 'cases' => 0],
-            'Guindarohan' => ['lat' => 10.3778, 'lng' => 123.9222, 'cases' => 0],
-            'Pob. Ward III' => ['lat' => 10.3889, 'lng' => 123.9333, 'cases' => 0],
-            'Tulay' => ['lat' => 10.4000, 'lng' => 123.9444, 'cases' => 0],
-            'Camp B' => ['lat' => 10.4111, 'lng' => 123.9555, 'cases' => 0],
-            'Pob. Ward IV' => ['lat' => 10.4222, 'lng' => 123.9666, 'cases' => 0],
-            'Tungkap' => ['lat' => 10.4333, 'lng' => 123.9777, 'cases' => 0],
-        ];
-
+        \Log::info('BHC ReportsController - Processing heatmap data. Reports: ' . count($reports) . ', Barangays: ' . count($barangays));
+        
+        // Group reports by barangay ID and count cases/symptoms
+        $barangayStats = [];
+        $reportsWithoutBarangay = 0;
+        $reportsWithUnknownBarangay = 0;
+        
         foreach ($reports as $report) {
-            $barangay = $this->getBarangayNameFromId($report['barangayId'] ?? '') ?? 'Unknown';
-            if (isset($barangayCoordinates[$barangay])) {
-                $barangayCoordinates[$barangay]['cases']++;
+            $barangayId = $report['barangayId'] ?? null;
+            
+            if (!$barangayId) {
+                $reportsWithoutBarangay++;
+                \Log::warning('Report ' . ($report['id'] ?? 'unknown') . ' has no barangayId');
+                continue;
+            }
+            
+            if (!isset($barangays[$barangayId])) {
+                $reportsWithUnknownBarangay++;
+                \Log::warning('Report ' . ($report['id'] ?? 'unknown') . ' has barangayId ' . $barangayId . ' but barangay not found in barangays list');
+                continue;
+            }
+            
+            if (!isset($barangayStats[$barangayId])) {
+                $barangayStats[$barangayId] = [
+                    'cases' => 0,
+                    'symptoms' => []
+                ];
+            }
+            
+            $barangayStats[$barangayId]['cases']++;
+            
+            // Collect symptoms
+            $symptoms = $report['symptoms'] ?? [];
+            if (is_array($symptoms)) {
+                foreach ($symptoms as $symptom) {
+                    $symptom = strtolower(trim($symptom));
+                    if ($symptom && !in_array($symptom, $barangayStats[$barangayId]['symptoms'])) {
+                        $barangayStats[$barangayId]['symptoms'][] = $symptom;
+                    }
+                }
             }
         }
 
-        foreach ($barangayCoordinates as $barangay => $data) {
-            if ($data['cases'] > 0) {
+        \Log::info('BHC ReportsController - Reports without barangayId: ' . $reportsWithoutBarangay . ', Reports with unknown barangay: ' . $reportsWithUnknownBarangay . ', Barangays with stats: ' . count($barangayStats));
+
+        // Create heatmap data for each barangay with verified reports
+        foreach ($barangayStats as $barangayId => $stats) {
+            if (isset($barangays[$barangayId]) && $stats['cases'] > 0) {
+                $barangay = $barangays[$barangayId];
                 $heatmapData[] = [
-                    'lat' => $data['lat'],
-                    'lng' => $data['lng'],
-                    'weight' => $data['cases'],
-                    'barangay' => $barangay,
-                    'cases' => $data['cases']
+                    'lat' => $barangay['lat'],
+                    'lng' => $barangay['lng'],
+                    'weight' => $stats['cases'],
+                    'barangay' => $barangay['name'],
+                    'barangayId' => $barangayId,
+                    'cases' => $stats['cases'],
+                    'symptoms' => $stats['symptoms']
                 ];
             }
         }
+
+        \Log::info('BHC ReportsController - Final heatmap data points: ' . count($heatmapData));
 
         return $heatmapData;
     }

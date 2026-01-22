@@ -1,6 +1,15 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .collapse-detail {
+        transition: height .25s ease, opacity .2s ease;
+    }
+    .details-row > td {
+        padding: 0;
+        border-top: 0;
+    }
+</style>
 <div class="container-fluid">
     <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -9,12 +18,8 @@
             <p class="text-muted mb-0">Review and approve resident health reports</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('reports.rejected') }}" class="btn btn-outline-dark">
-                <i class="bi bi-x-circle me-2"></i>Rejected Reports
-            </a>
-            <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Go to Reports
-            </a>
+            <a href="{{ route('rhu.reports.verified') }}" class="btn btn-outline-dark">Verified Reports</a>
+            <a href="{{ route('rhu.reports.rejected') }}" class="btn btn-outline-dark">Rejected Reports</a>
         </div>
     </div>
 
@@ -116,7 +121,6 @@
                                         <th>Affected Person</th>
                                         <th>Start Date</th>
                                         <th>Additional Info</th>
-                                        <th>Reported Date</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -183,21 +187,25 @@
                                                         $additionalInfo = json_encode($additionalInfo);
                                                     }
                                                     $displayInfo = $additionalInfo ?: 'No additional info';
+
+                                                    $reportedAt = null;
+                                                    if (!empty($report['createdAt'])) {
+                                                        $reportedAt = \Carbon\Carbon::parse($report['createdAt'])
+                                                            ->format('M d, Y H:i');
+                                                    }
                                                 @endphp
-                                                <span class="text-muted">{{ Str::limit($displayInfo, 50) }}</span>
-                                            </td>
-                                            <td>
-                                                @if(isset($report['createdAt']))
-                                                    {{ \Carbon\Carbon::parse($report['createdAt'])->format('M d, Y H:i') }}
-                                                @else
-                                                    <span class="text-muted">Unknown</span>
-                                                @endif
+                                                <span class="text-muted">
+                                                    {{ Str::limit($displayInfo, 50) }}
+                                                    @if($reportedAt)
+                                                        <br><small class="text-muted">Reported: {{ $reportedAt }}</small>
+                                                    @endif
+                                                </span>
                                             </td>
                                             <td>
                                                 <div class="d-flex gap-2">
                                                     <button class="btn btn-sm btn-outline-dark" 
                                                             onclick="approveReport('{{ $report['id'] }}')"
-                                                            title="Approve Report">
+                                                            title="Verify Report">
                                                         <i class="bi bi-check-circle"></i>
                                                     </button>
                                                     <button class="btn btn-sm btn-outline-dark" 
@@ -213,9 +221,9 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <tr class="collapse" id="{{ $collapseId }}">
-                                            <td colspan="7" class="bg-light">
-                                                <div class="p-3">
+                                        <tr class="details-row">
+                                            <td colspan="7" class="p-0 bg-light border-0">
+                                                <div class="collapse collapse-detail p-3" id="{{ $collapseId }}">
                                                     <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Additional Details</h6>
                                                     <div class="row g-3">
                                                         <div class="col-md-6">
@@ -305,6 +313,7 @@
 <!-- Approve/Reject Forms -->
 <form id="approveForm" method="POST" style="display: none;">
     @csrf
+    <input type="hidden" name="verified_by" id="verified_by_input">
 </form>
 
 <form id="rejectForm" method="POST" style="display: none;">
@@ -312,20 +321,39 @@
     <input type="hidden" name="rejection_reason" id="rejection_reason_input">
 </form>
 
-<!-- Confirm Approve Modal -->
+<!-- Confirm Verify Modal -->
 <div class="modal fade" id="confirmApproveModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title">Approve Report</h5>
+                <h5 class="modal-title">Verify Report</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to approve this report? It will be added to the heatmap.</p>
+                <p class="mb-3">Are you sure you want to verify this report? It will be added to the heatmap.</p>
+                <div class="mb-3">
+                    <label for="verified_by_select" class="form-label fw-semibold">Verified By <span class="text-danger">*</span></label>
+                    <select class="form-select" id="verified_by_select" name="verified_by" required>
+                        <option value="">Select health worker...</option>
+                        @foreach($staffAccounts as $staff)
+                            <option value="{{ $staff['name'] }}">
+                                {{ $staff['name'] }} 
+                                @php
+                                    $roleDisplay = match($staff['role']) {
+                                        'bhw' => 'Barangay Health Worker',
+                                        default => ucfirst($staff['role'])
+                                    };
+                                @endphp
+                                ({{ $roleDisplay }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Select the health worker who verified this report</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-dark" id="confirmApproveBtn">Approve Report</button>
+                <button type="button" class="btn btn-dark" id="confirmApproveBtn">Verify Report</button>
             </div>
         </div>
     </div>
@@ -442,9 +470,21 @@ let currentRejectReportId = null;
 
 function approveReport(reportId) {
     const form = document.getElementById('approveForm');
-    form.action = `/reports/${reportId}/approve`;
+    form.action = `/rhu/reports/${reportId}/approve`;
     const btn = document.getElementById('confirmApproveBtn');
+    const verifiedBySelect = document.getElementById('verified_by_select');
+    const verifiedByInput = document.getElementById('verified_by_input');
+    
+    // Reset the select
+    verifiedBySelect.value = '';
+    
     btn.onclick = function() {
+        const selectedVerifier = verifiedBySelect.value;
+        if (!selectedVerifier) {
+            alert('Please select a health worker who verified this report.');
+            return;
+        }
+        verifiedByInput.value = selectedVerifier;
         form.submit();
     };
     new bootstrap.Modal(document.getElementById('confirmApproveModal')).show();
@@ -530,7 +570,7 @@ function viewReportDetails(reportId) {
         </div>
         <div class="mt-3 d-flex justify-content-center gap-2">
             <button class="btn btn-outline-dark px-4" onclick="rejectReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-x-circle me-1"></i>Reject</button>
-            <button class="btn btn-dark px-4" onclick="approveReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-check-circle me-1"></i>Approve</button>
+            <button class="btn btn-dark px-4" onclick="approveReport('${reportId}'); bootstrap.Modal.getInstance(document.getElementById('reportDetailsModal')).hide();"><i class="bi bi-check-circle me-1"></i>Verify</button>
         </div>
     `;
 

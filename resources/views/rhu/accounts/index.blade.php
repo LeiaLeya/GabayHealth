@@ -154,7 +154,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Staff Accounts Management</h4>
-                    <a href="{{ route('accounts.staff.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
+                    <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
                         <i class="bi bi-plus-circle"></i>
                         Add Staff
                     </a>
@@ -231,7 +231,7 @@
                             <i class="bi bi-people display-4 text-muted d-block mb-3"></i>
                             <h5 class="text-muted">No Staff Accounts Found</h5>
                             <p class="text-muted mb-0">Start by adding staff members to your health center.</p>
-                            <a href="{{ route('accounts.staff.create') }}" class="btn btn-primary mt-3 d-flex align-items-center gap-2 mx-auto" style="width: fit-content;">
+                            <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary mt-3 d-flex align-items-center gap-2 mx-auto" style="width: fit-content;">
                                 <i class="bi bi-plus-circle"></i>
                                 Add First Staff Member
                             </a>
