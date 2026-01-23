@@ -10,8 +10,18 @@ class FirestoreService
 
     public function __construct()
     {
+        // Use the same path as FirebaseService
+        $projectRoot = dirname(dirname(dirname(__FILE__)));
+        $credentialsPath = $projectRoot . '/storage/app/firebase/firebase_credentials.json';
+
+        if (!file_exists($credentialsPath)) {
+            throw new \Exception(
+                'Firebase credentials file not found at: ' . $credentialsPath
+            );
+        }
+
         $this->db = new FirestoreClient([
-            'keyFilePath' => base_path(env('FIREBASE_CREDENTIALS', 'firebase_credentials.json')),
+            'keyFilePath' => $credentialsPath,
             'projectId' => env('FIREBASE_PROJECT_ID'),
         ]);
     }
