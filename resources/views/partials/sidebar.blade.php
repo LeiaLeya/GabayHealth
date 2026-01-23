@@ -30,10 +30,6 @@
             if ($userRole === 'admin') {
                 $navItems = [
                     ['route' => 'RHUs.index', 'label' => 'Rural Health Units', 'icon' => 'bi-building'],
-                    ['route' => 'RHUs.approvals', 'label' => 'Pending Approvals', 'icon' => 'bi-clock-history'],
-                    ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                    ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
-                    ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } else {

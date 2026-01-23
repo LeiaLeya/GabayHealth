@@ -46,7 +46,7 @@ Route::get('/', function() {
     if (session('user')) {
         $role = session('user.role');
         if ($role === 'admin') {
-            return redirect()->route('admin.rhus.index');
+            return redirect()->route('admin.system-admin.dashboard');
         } elseif ($role === 'rhu') {
             return redirect()->route('rhu.reports.index');
         } elseif ($role === 'barangay') {
@@ -55,6 +55,21 @@ Route::get('/', function() {
     }
     return redirect()->route('login');
 })->name('home');
+
+// Dashboard route (convenience route)
+Route::get('/dashboard', function() {
+    if (session('user')) {
+        $role = session('user.role');
+        if ($role === 'admin') {
+            return redirect()->route('admin.system-admin.dashboard');
+        } elseif ($role === 'rhu') {
+            return redirect()->route('rhu.reports.index');
+        } elseif ($role === 'barangay') {
+            return redirect()->route('bhc.reports.index');
+        }
+    }
+    return redirect()->route('login');
+})->name('dashboard');
 
 // Public routes (no authentication required)
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -118,6 +133,19 @@ Route::get('/test-login-simulation', function() {
 
 // Protected routes (require authentication)
 Route::middleware('auth.check')->group(function () {
+    
+    // ============================================
+    // SYSTEM ADMIN ROUTES
+    // ============================================
+    Route::middleware('role:admin')->prefix('admin/system-admin')->name('admin.system-admin.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Admin\SystemAdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/all-rhus', [App\Http\Controllers\Admin\SystemAdminController::class, 'allRhus'])->name('all-rhus');
+        Route::get('/approved-rhus', [App\Http\Controllers\Admin\SystemAdminController::class, 'approvedRhus'])->name('approved-rhus');
+        Route::get('/{rhuId}/view', [App\Http\Controllers\Admin\SystemAdminController::class, 'viewApplication'])->name('view-application');
+        Route::post('/{rhuId}/approve', [App\Http\Controllers\Admin\SystemAdminController::class, 'approveAndSendCredentials'])->name('approve');
+        Route::post('/{rhuId}/reject', [App\Http\Controllers\Admin\SystemAdminController::class, 'rejectApplication'])->name('reject');
+        Route::post('/{rhuId}/resend-credentials', [App\Http\Controllers\Admin\SystemAdminController::class, 'resendCredentials'])->name('resend-credentials');
+    });
     
     // Remove the auth middleware group for RHUs
     Route::get('/RHUs/approvals', [AdminController::class, 'indexApprovals'])->name('RHUs.approvals');

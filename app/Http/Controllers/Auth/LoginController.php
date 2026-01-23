@@ -26,21 +26,38 @@ class LoginController extends Controller
         $firestore = $firebaseService->getFirestore();
 
         try {
-            // Search for user by username in all collections (rhu, barangay)
-            $rhuDocs = $firestore->collection('rhu')
-                ->where('username', '=', $request->username)
-                ->documents();
-
+            // Search for user by username in all collections (rhu, barangay, admin)
             $user = null;
             $userRole = null;
 
-            foreach ($rhuDocs as $doc) {
+            // Search in admin collection first
+            $adminDocs = $firestore->collection('admin')
+                ->where('username', '=', $request->username)
+                ->documents();
+
+            foreach ($adminDocs as $doc) {
                 if ($doc->exists()) {
                     $user = $doc->data();
                     $user['id'] = $doc->id();
-                    $user['uid'] = $doc->id();
-                    $userRole = 'rhu';
+                    $userRole = 'admin';
                     break;
+                }
+            }
+
+            // If not found in admin, search in RHU
+            if (!$user) {
+                $rhuDocs = $firestore->collection('rhu')
+                    ->where('username', '=', $request->username)
+                    ->documents();
+
+                foreach ($rhuDocs as $doc) {
+                    if ($doc->exists()) {
+                        $user = $doc->data();
+                        $user['id'] = $doc->id();
+                        $user['uid'] = $doc->id();
+                        $userRole = 'rhu';
+                        break;
+                    }
                 }
             }
 
@@ -80,7 +97,7 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $user['name'],
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
+                    'logo_url' => $user['logo_url'] ?? null,
                 ]
             ]);
 

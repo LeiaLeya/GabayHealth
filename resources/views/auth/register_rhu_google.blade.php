@@ -270,6 +270,86 @@
         background: #e5e7eb;
     }
 
+    /* Mapbox Geocoder Styles */
+    .location-search-container {
+        position: relative;
+        z-index: 10;
+    }
+
+    .suggestions-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        display: none;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .suggestions-list.show {
+        display: block;
+    }
+
+    .suggestion-item {
+        padding: 12px 12px;
+        font-size: 13px;
+        color: #1f2937;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+        background-color: #f3f4f6;
+        color: #2563eb;
+    }
+
+    .suggestion-item .suggestion-title {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .suggestion-item .suggestion-subtitle {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .location-coordinates {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 8px;
+        padding: 8px 0;
+    }
+
+    #addressSearch {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background-color: #f9fafb;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    #addressSearch:focus {
+        outline: none;
+        border-color: #2563eb;
+        background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
     @media (max-width: 600px) {
         .registration-wrapper {
             padding: 24px;
@@ -336,32 +416,27 @@
 
             <input type="file" id="logoUpload" name="logo" accept="image/*" style="display: none;">
 
-            <!-- Username -->
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required value="{{ old('username') }}">
-                @error('username') <small style="color: #dc2626;">{{ $message }}</small> @enderror
-            </div>
-
-            <!-- Password Row -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="At least 8 characters" required>
-                    @error('password') <small style="color: #dc2626;">{{ $message }}</small> @enderror
-                </div>
-                <div class="form-group">
-                    <label for="password_confirmation">Confirm</label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
-                </div>
-            </div>
-            <small style="color: #9ca3af;">Must be at least 8 characters with a number and special character</small>
-
             <!-- RHU Name -->
             <div class="form-group">
                 <label for="rhuName">Rural Health Unit</label>
                 <input type="text" id="rhuName" name="rhuName" class="form-control" placeholder="Rural Health Unit" required value="{{ old('rhuName') }}">
                 @error('rhuName') <small style="color: #dc2626;">{{ $message }}</small> @enderror
+            </div>
+
+            <!-- Address -->
+            <div class="form-group">
+                <label for="addressSearch">Address</label>
+                <div class="location-search-container">
+                    <input type="text" id="addressSearch" class="form-control" placeholder="Search for an address..." autocomplete="off">
+                    <div id="suggestionsList" class="suggestions-list"></div>
+                    <input type="hidden" id="fullAddress" name="fullAddress" value="{{ old('fullAddress') }}">
+                    <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude') }}">
+                    <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude') }}">
+                    <div class="location-coordinates">
+                        <span id="coordsDisplay"></span>
+                    </div>
+                </div>
+                @error('fullAddress') <small style="color: #dc2626;">{{ $message }}</small> @enderror
             </div>
 
             <!-- Region, Province, City Row -->
@@ -403,6 +478,86 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const mapboxAccessToken = @json(env('VITE_MAPBOX_ACCESS_TOKEN'));
+    
+    if (!mapboxAccessToken || mapboxAccessToken === 'your_mapbox_access_token_here') {
+        console.error('Mapbox token not configured');
+        loadLocationDropdowns();
+        return;
+    }
+
+    const searchInput = document.getElementById('addressSearch');
+    const suggestionsList = document.getElementById('suggestionsList');
+    const fullAddressInput = document.getElementById('fullAddress');
+    const latitudeInput = document.getElementById('latitude');
+    const longitudeInput = document.getElementById('longitude');
+    const coordsDisplay = document.getElementById('coordsDisplay');
+
+    let searchTimeout;
+
+    // Search as user types
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            suggestionsList.innerHTML = '';
+            suggestionsList.classList.remove('show');
+            return;
+        }
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => searchMapbox(query), 300);
+    });
+
+    function searchMapbox(query) {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+            `country=PH&` +
+            `limit=8&` +
+            `access_token=${mapboxAccessToken}`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.features && data.features.length > 0) {
+                    suggestionsList.innerHTML = data.features.map((feature, index) => `
+                        <div class="suggestion-item" data-lat="${feature.center[1]}" data-lng="${feature.center[0]}" data-place="${feature.place_name}">
+                            <div class="suggestion-title">${feature.text}</div>
+                            <div class="suggestion-subtitle">${feature.place_name}</div>
+                        </div>
+                    `).join('');
+                    suggestionsList.classList.add('show');
+
+                    document.querySelectorAll('.suggestion-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            const lat = parseFloat(this.dataset.lat);
+                            const lng = parseFloat(this.dataset.lng);
+                            const place = this.dataset.place;
+
+                            searchInput.value = place;
+                            fullAddressInput.value = place;
+                            latitudeInput.value = lat.toFixed(6);
+                            longitudeInput.value = lng.toFixed(6);
+                            coordsDisplay.textContent = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+                            suggestionsList.classList.remove('show');
+                        });
+                    });
+                }
+            })
+            .catch(err => console.error('Mapbox search error:', err));
+    }
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+            suggestionsList.classList.remove('show');
+        }
+    });
+
+    loadLocationDropdowns();
+});
+
+function loadLocationDropdowns() {
     const regionSelect = document.getElementById('region');
     const provinceSelect = document.getElementById('province');
     const citySelect = document.getElementById('city');
@@ -469,13 +624,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Change logo button
-    document.querySelector('.logo-change-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        logoUpload.value = '';
-        logoUploadArea.style.display = 'flex';
-        logoPreview.style.display = 'none';
-        logoUpload.click();
-    });
+    const logoChangeBtn = document.querySelector('.logo-change-btn');
+    if (logoChangeBtn) {
+        logoChangeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logoUpload.value = '';
+            logoUploadArea.style.display = 'flex';
+            logoPreview.style.display = 'none';
+            logoUpload.click();
+        });
+    }
     
     // Drag and drop
     logoUploadSection.addEventListener('dragover', (e) => {
@@ -494,6 +652,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const event = new Event('change', { bubbles: true });
         logoUpload.dispatchEvent(event);
     });
-});
+}
 </script>
 @endsection

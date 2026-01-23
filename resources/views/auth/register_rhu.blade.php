@@ -451,29 +451,9 @@
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" name="email" class="form-control" placeholder="you@example.com" required value="{{ old('email') }}">
+                <small style="color: #9ca3af;">You will receive your credentials here after admin approval</small>
                 @error('email') <small style="color: #dc2626;">{{ $message }}</small> @enderror
             </div>
-
-            <!-- Username -->
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required value="{{ old('username') }}">
-                @error('username') <small style="color: #dc2626;">{{ $message }}</small> @enderror
-            </div>
-
-            <!-- Password Row -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="At least 8 characters" required>
-                    @error('password') <small style="color: #dc2626;">{{ $message }}</small> @enderror
-                </div>
-                <div class="form-group">
-                    <label for="password_confirmation">Confirm</label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
-                </div>
-            </div>
-            <small style="color: #9ca3af;">Must include a number and special character</small>
 
             <!-- RHU Name -->
             <div class="form-group">
