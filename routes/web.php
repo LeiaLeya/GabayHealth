@@ -90,9 +90,12 @@ Route::post('/register/rhu', [RegisterController::class, 'registerRhu'])->name('
 
 // Google OAuth routes
 Route::get('/auth/google', [RegisterController::class, 'redirectToGoogle'])->name('google.redirect');
+Route::get('/auth/google/bhw', [RegisterController::class, 'redirectToGoogleBhw'])->name('google.redirect.bhw');
 Route::get('/auth/google/callback', [RegisterController::class, 'handleGoogleCallback'])->name('google.callback');
 Route::get('/register/rhu/google', [RegisterController::class, 'showGoogleForm'])->name('register.rhu.google');
 Route::post('/register/rhu/google', [RegisterController::class, 'registerRhuGoogle'])->name('register.rhu.google.submit');
+Route::get('/register/bhw/google', [RegisterController::class, 'showGoogleFormBhw'])->name('register.bhw.google');
+Route::post('/register/bhw/google', [RegisterController::class, 'registerBhwGoogle'])->name('register.bhw.google.submit');
 
 // Debug session route (public)
 Route::get('/debug-session', function() {
