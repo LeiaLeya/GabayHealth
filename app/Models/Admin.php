@@ -7,7 +7,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Admin extends Authenticatable
 {
-    public $timestamps = false;
     protected $table = 'admin';
 
     protected $fillable = [
@@ -19,9 +18,12 @@ class Admin extends Authenticatable
         'role',
         'status',
         'created_at',
+        'updated_at',
     ];
 
     protected $hidden = [
         'password',
     ];
+
+    public $timestamps = true;
 }

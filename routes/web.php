@@ -531,7 +531,7 @@ Route::middleware('auth.check')->group(function () {
         return match($role) {
             'rhu' => redirect()->route('rhu.reports.index'),
             'barangay' => redirect()->route('bhc.reports.index'),
-            'admin' => redirect()->route('admin.rhus.index'),
+            'admin' => redirect()->route('admin.system-admin.dashboard'),
             default => redirect()->route('login'),
         };
     })->name('dashboard');

@@ -29,7 +29,9 @@
             
             if ($userRole === 'admin') {
                 $navItems = [
-                    ['route' => 'RHUs.index', 'label' => 'Rural Health Units', 'icon' => 'bi-building'],
+                    ['route' => 'admin.system-admin.dashboard', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2'],
+                    ['route' => 'admin.system-admin.all-rhus', 'label' => 'All RHUs', 'icon' => 'bi-building'],
+                    ['route' => 'admin.system-admin.approved-rhus', 'label' => 'Approved RHUs', 'icon' => 'bi-check-circle'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } else {
@@ -55,6 +57,9 @@
                 <a href="{{ route($item['route']) }}">
                     @php
                         $iconMap = [
+                            'Dashboard' => 'bi-speedometer2',
+                            'All RHUs' => 'bi-building',
+                            'Approved RHUs' => 'bi-check-circle',
                             'Rural Health Units' => 'bi-building',
                             'Pending Approvals' => 'bi-clock-history',
                             'User Requests' => 'bi-person-plus',

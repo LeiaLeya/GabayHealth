@@ -22,13 +22,14 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        $firebaseService = app(FirebaseService::class);
-        $firestore = $firebaseService->getFirestore();
-
         try {
-            // Search for user by username in all collections (rhu, barangay, admin)
+            $firebaseService = app(FirebaseService::class);
+            $firestore = $firebaseService->getFirestore();
+            $auth = $firebaseService->getAuth();
+
             $user = null;
             $userRole = null;
+            $email = null;
 
             // Search in admin collection first
             $adminDocs = $firestore->collection('admin')
@@ -40,6 +41,7 @@ class LoginController extends Controller
                     $user = $doc->data();
                     $user['id'] = $doc->id();
                     $userRole = 'admin';
+                    $email = $user['email'];
                     break;
                 }
             }
@@ -56,6 +58,7 @@ class LoginController extends Controller
                         $user['id'] = $doc->id();
                         $user['uid'] = $doc->id();
                         $userRole = 'rhu';
+                        $email = $user['email'];
                         break;
                     }
                 }
@@ -73,17 +76,26 @@ class LoginController extends Controller
                         $user['id'] = $doc->id();
                         $user['uid'] = $doc->id();
                         $userRole = 'barangay';
+                        $email = $user['email'];
                         break;
                     }
                 }
             }
 
             if (!$user) {
+                \Log::warning('Login failed: User not found', ['username' => $request->username]);
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
-            // Verify password
-            if (!password_verify($request->password, $user['password'] ?? '')) {
+            // Verify password using Firebase Auth
+            try {
+                $signInResult = $auth->signInWithEmailAndPassword($email, $request->password);
+                \Log::info('Login successful via Firebase Auth', ['username' => $request->username, 'email' => $email]);
+            } catch (\Kreait\Firebase\Exception\Auth\InvalidPassword $e) {
+                \Log::warning('Login failed: Invalid password', ['username' => $request->username, 'email' => $email]);
+                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+            } catch (\Kreait\Firebase\Exception\Auth\UserNotFound $e) {
+                \Log::warning('Login failed: User not found in Firebase Auth', ['username' => $request->username, 'email' => $email]);
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
@@ -103,8 +115,8 @@ class LoginController extends Controller
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');
         } catch (\Exception $e) {
-            \Log::error('Login error: ' . $e->getMessage());
-            return back()->withErrors(['login' => 'Login failed. Please try again.'])->withInput();
+            \Log::error('Login error: ' . $e->getMessage() . '\nStack: ' . $e->getTraceAsString());
+            return back()->withErrors(['login' => 'Login failed: ' . $e->getMessage()])->withInput();
         }
     }
 

@@ -11,6 +11,7 @@ class FirebaseService
     protected $firestore;
     protected $storage;
     protected $auth;
+    protected $factory;
 
     public function __construct()
     {
@@ -25,10 +26,30 @@ class FirebaseService
             );
         }
 
-        $factory = (new Factory)->withServiceAccount($credentialsPath);
-        $this->firestore = $factory->createFirestore()->database();
-        $this->storage = $factory->createStorage();
-        $this->auth = $factory->createAuth();
+        try {
+            // Load and validate credentials
+            $credentialsJson = file_get_contents($credentialsPath);
+            $credentials = json_decode($credentialsJson, true);
+            
+            if (!$credentials || empty($credentials['project_id'])) {
+                throw new \Exception('Invalid Firebase credentials: missing or empty project_id');
+            }
+
+            // Create factory with credentials
+            $this->factory = (new Factory)->withServiceAccount($credentialsPath);
+            
+            // Create Firestore instance - createFirestore() returns the Firestore service
+            // which has a database() method to get the default database
+            $firestoreService = $this->factory->createFirestore();
+            $this->firestore = $firestoreService->database();
+            
+            $this->storage = $this->factory->createStorage();
+            $this->auth = $this->factory->createAuth();
+            
+        } catch (\Exception $e) {
+            \Log::error('Firebase initialization error: ' . $e->getMessage());
+            throw new \Exception('Failed to initialize Firebase: ' . $e->getMessage());
+        }
     }
 
     public function getFirestore()
