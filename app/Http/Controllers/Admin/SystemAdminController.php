@@ -87,7 +87,7 @@ class SystemAdminController extends Controller
     }
 
     /**
-     * Approve RHU and generate credentials
+     * Approve RHU and send account setup email
      */
     public function approveAndSendCredentials($rhuId)
     {
@@ -108,38 +108,46 @@ class SystemAdminController extends Controller
             $rhuEmail = $rhuData['email'];
             $rhuName = $rhuData['rhuName'] ?? $rhuData['name'];
 
-            // Generate credentials
+            // Generate username for the RHU
             $username = 'RHU_' . strtoupper(substr(Str::uuid(), 0, 8));
-            $tempPassword = $this->generateSecurePassword();
 
-            // Create Firebase Auth user
+            // Create Firebase Auth user without a password initially
             try {
                 $authUser = $this->auth->createUser([
                     'email' => $rhuEmail,
-                    'password' => $tempPassword,
                     'displayName' => $rhuName,
                     'emailVerified' => false,
                 ]);
 
                 $uid = $authUser->uid;
 
-                // Update Firestore document with credentials and approved status
+                // Update Firestore document with username and UID, status to pending_setup
                 $this->firestore->collection('rhu')->document($rhuId)->update([
                     ['path' => 'username', 'value' => $username],
                     ['path' => 'uid', 'value' => $uid],
-                    ['path' => 'status', 'value' => 'credentials_sent'],
-                    ['path' => 'credentials_generated_at', 'value' => now()->toDateTimeString()],
-                    ['path' => 'credentials_sent_at', 'value' => now()->toDateTimeString()],
+                    ['path' => 'status', 'value' => 'pending_setup'],
                     ['path' => 'approved_by', 'value' => $user['id']],
-                    ['path' => 'temp_password', 'value' => $tempPassword], // Store for reference
+                    ['path' => 'approved_at', 'value' => now()->toDateTimeString()],
                 ]);
 
-                // Send email with credentials
-                $this->sendCredentialsEmail($rhuEmail, $username, $tempPassword, $rhuName);
+                // Send setup email with token
+                $setupController = new \App\Http\Controllers\Auth\RhuAccountSetupController();
+                $emailSent = $setupController::sendSetupEmail($rhuId, $rhuEmail, $rhuName, $username);
+
+                if (!$emailSent) {
+                    throw new Exception('Failed to send setup email');
+                }
+
+                \Log::info('RHU approved and setup email sent', [
+                    'rhu_id' => $rhuId,
+                    'username' => $username,
+                    'email' => $rhuEmail,
+                    'approved_by' => $user['id'],
+                ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'RHU approved and credentials sent successfully.',
+                    'message' => 'RHU approved! Setup email has been sent to ' . $rhuEmail,
                     'username' => $username,
                     'email' => $rhuEmail,
                 ]);
@@ -149,7 +157,7 @@ class SystemAdminController extends Controller
             }
         } catch (Exception $e) {
             \Log::error('Error approving RHU: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to approve RHU'], 500);
+            return response()->json(['error' => 'Failed to approve RHU: ' . $e->getMessage()], 500);
         }
     }
 
@@ -315,46 +323,7 @@ class SystemAdminController extends Controller
         }
     }
 
-    /**
-     * Generate a secure password
-     */
-    private function generateSecurePassword($length = 12)
-    {
-        $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $lowercase = 'abcdefghijklmnopqrstuvwxyz';
-        $numbers = '0123456789';
-        $special = '!@#$%^&*';
 
-        $password = '';
-        $password .= $uppercase[rand(0, strlen($uppercase) - 1)];
-        $password .= $lowercase[rand(0, strlen($lowercase) - 1)];
-        $password .= $numbers[rand(0, strlen($numbers) - 1)];
-        $password .= $special[rand(0, strlen($special) - 1)];
-
-        $all = $uppercase . $lowercase . $numbers . $special;
-        for ($i = 4; $i < $length; $i++) {
-            $password .= $all[rand(0, strlen($all) - 1)];
-        }
-
-        return str_shuffle($password);
-    }
-
-    /**
-     * Send credentials email to RHU
-     */
-    private function sendCredentialsEmail($email, $username, $tempPassword, $rhuName)
-    {
-        // TODO: Implement proper email sending
-        // For now, we'll just log it
-        \Log::info("Credentials sent to {$email}", [
-            'username' => $username,
-            'rhuName' => $rhuName,
-        ]);
-
-        // This is where you'd use Mail::send() or a mailable class
-        // Example:
-        // Mail::to($email)->send(new RhuCredentialsEmail($username, $tempPassword, $email));
-    }
 
     /**
      * Count RHUs by status

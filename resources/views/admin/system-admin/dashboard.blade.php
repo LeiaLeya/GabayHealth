@@ -43,31 +43,37 @@
     </div>
 
     <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Pending RHU Applications</h5>
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">⏳ Pending RHU Applications</h5>
         </div>
         <div class="card-body">
             @if(empty($pendingRhus))
                 <p class="text-muted">No pending applications.</p>
             @else
-                <table class="table table-striped">
-                    <thead>
+                <table class="table table-hover">
+                    <thead class="table-light">
                         <tr>
                             <th>RHU Name</th>
                             <th>Email</th>
                             <th>City</th>
+                            <th>Contact</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($pendingRhus as $rhu)
-                            <tr>
+                            <tr id="rhu-row-{{ $rhu['id'] }}">
                                 <td><strong>{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</strong></td>
-                                <td>{{ $rhu['email'] ?? 'N/A' }}</td>
+                                <td><small>{{ $rhu['email'] ?? 'N/A' }}</small></td>
                                 <td>{{ $rhu['city'] ?? 'N/A' }}</td>
+                                <td><small>{{ $rhu['phone'] ?? 'N/A' }}</small></td>
                                 <td>
-                                    <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}" class="btn btn-sm btn-primary">View</a>
-                                    <button type="button" class="btn btn-sm btn-success approve-btn" data-rhu-id="{{ $rhu['id'] }}">Approve</button>
+                                    <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-success approve-btn" data-rhu-id="{{ $rhu['id'] }}">
+                                        <i class="bi bi-check-circle"></i> Approve & Send Email
+                                    </button>
                                 </td>
                             </tr>
                         @endforeach
@@ -78,34 +84,89 @@
     </div>
 </div>
 
+<!-- Toast notification for feedback -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <strong class="me-auto">✓ Success</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="successMessage"></div>
+    </div>
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <strong class="me-auto">✕ Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="errorMessage"></div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.approve-btn').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
             const rhuId = this.getAttribute('data-rhu-id');
-            const row = this.closest('tr');
+            const row = document.getElementById(`rhu-row-${rhuId}`);
             const rhuName = row.querySelector('strong').textContent;
+            const btn = this;
 
-            if (confirm(`Approve "${rhuName}"?`)) {
+            if (confirm(`Approve "${rhuName}" and send account setup email?`)) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
                 fetch(`/admin/system-admin/${rhuId}/approve`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Content-Type': 'application/json',
                     },
+                    body: JSON.stringify({})
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(`Approved! Username: ${data.username}`);
-                        location.reload();
+                        // Show success toast
+                        const successMsg = document.getElementById('successMessage');
+                        successMsg.innerHTML = `
+                            <strong>${rhuName}</strong> has been approved!<br>
+                            <strong>Username:</strong> ${data.username}<br>
+                            <strong>Email:</strong> ${data.email}<br>
+                            <small>Setup email sent. RHU will receive password setup link.</small>
+                        `;
+                        const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+                        successToast.show();
+                        
+                        // Remove row after 2 seconds
+                        setTimeout(() => {
+                            row.style.opacity = '0.5';
+                            row.style.textDecoration = 'line-through';
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Approved';
+                            btn.classList.remove('btn-success');
+                            btn.classList.add('btn-secondary');
+                        }, 500);
                     } else {
-                        alert(`Error: ${data.error}`);
+                        // Show error toast
+                        const errorMsg = document.getElementById('errorMessage');
+                        errorMsg.innerHTML = `<strong>Error:</strong> ${data.error || 'Failed to approve RHU'}`;
+                        const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
+                        errorToast.show();
+                        
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-check-circle"></i> Approve & Send Email';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error approving RHU');
+                    const errorMsg = document.getElementById('errorMessage');
+                    errorMsg.innerHTML = '<strong>Error:</strong> Failed to approve RHU. Check console for details.';
+                    const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
+                    errorToast.show();
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-circle"></i> Approve & Send Email';
                 });
             }
         });
