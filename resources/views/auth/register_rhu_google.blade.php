@@ -478,9 +478,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const mapboxAccessToken = @json(env('VITE_MAPBOX_ACCESS_TOKEN'));
+    const mapboxAccessToken = @json(config('mapbox.access_token'));
     
-    if (!mapboxAccessToken || mapboxAccessToken === 'your_mapbox_access_token_here') {
+    if (!mapboxAccessToken) {
         console.error('Mapbox token not configured');
         loadLocationDropdowns();
         return;

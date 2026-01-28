@@ -111,50 +111,58 @@ class SystemAdminController extends Controller
             // Generate username for the RHU
             $username = 'RHU_' . strtoupper(substr(Str::uuid(), 0, 8));
 
-            // Create Firebase Auth user without a password initially
+            // Try to get or create Firebase Auth user
+            $uid = null;
             try {
+                // Try to create Firebase Auth user
                 $authUser = $this->auth->createUser([
                     'email' => $rhuEmail,
                     'displayName' => $rhuName,
                     'emailVerified' => false,
                 ]);
-
                 $uid = $authUser->uid;
-
-                // Update Firestore document with username and UID, status to pending_setup
-                $this->firestore->collection('rhu')->document($rhuId)->update([
-                    ['path' => 'username', 'value' => $username],
-                    ['path' => 'uid', 'value' => $uid],
-                    ['path' => 'status', 'value' => 'pending_setup'],
-                    ['path' => 'approved_by', 'value' => $user['id']],
-                    ['path' => 'approved_at', 'value' => now()->toDateTimeString()],
-                ]);
-
-                // Send setup email with token
-                $setupController = new \App\Http\Controllers\Auth\RhuAccountSetupController();
-                $emailSent = $setupController::sendSetupEmail($rhuId, $rhuEmail, $rhuName, $username);
-
-                if (!$emailSent) {
-                    throw new Exception('Failed to send setup email');
-                }
-
-                \Log::info('RHU approved and setup email sent', [
-                    'rhu_id' => $rhuId,
-                    'username' => $username,
-                    'email' => $rhuEmail,
-                    'approved_by' => $user['id'],
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'RHU approved! Setup email has been sent to ' . $rhuEmail,
-                    'username' => $username,
-                    'email' => $rhuEmail,
-                ]);
             } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
-                \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
-                return response()->json(['error' => 'Email already registered in system'], 422);
+                // Email already exists, try to get the existing user
+                \Log::info('Firebase user already exists for email: ' . $rhuEmail);
+                try {
+                    $existingUser = $this->auth->getUserByEmail($rhuEmail);
+                    $uid = $existingUser->uid;
+                } catch (Exception $getUserException) {
+                    \Log::error('Could not get existing Firebase user: ' . $getUserException->getMessage());
+                    throw new Exception('Email already registered in system');
+                }
             }
+
+            // Update Firestore document with username and UID, status to pending_setup
+            $this->firestore->collection('rhu')->document($rhuId)->update([
+                ['path' => 'username', 'value' => $username],
+                ['path' => 'uid', 'value' => $uid],
+                ['path' => 'status', 'value' => 'pending_setup'],
+                ['path' => 'approved_by', 'value' => $user['id']],
+                ['path' => 'approved_at', 'value' => now()->toDateTimeString()],
+            ]);
+
+            // Send setup email with token
+            $setupController = new \App\Http\Controllers\Auth\RhuAccountSetupController();
+            $emailSent = $setupController::sendSetupEmail($rhuId, $rhuEmail, $rhuName, $username);
+
+            if (!$emailSent) {
+                throw new Exception('Failed to send setup email');
+            }
+
+            \Log::info('RHU approved and setup email sent', [
+                'rhu_id' => $rhuId,
+                'username' => $username,
+                'email' => $rhuEmail,
+                'approved_by' => $user['id'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'RHU approved! Setup email has been sent to ' . $rhuEmail,
+                'username' => $username,
+                'email' => $rhuEmail,
+            ]);
         } catch (Exception $e) {
             \Log::error('Error approving RHU: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to approve RHU: ' . $e->getMessage()], 500);

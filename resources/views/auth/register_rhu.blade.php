@@ -622,9 +622,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <!-- Mapbox Geocoding API -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const mapboxAccessToken = @json(env('VITE_MAPBOX_ACCESS_TOKEN'));
+    const mapboxAccessToken = @json(config('mapbox.access_token'));
     
-    if (!mapboxAccessToken || mapboxAccessToken === 'your_mapbox_access_token_here') {
+    if (!mapboxAccessToken) {
         console.error('Mapbox token not configured');
         return;
     }
@@ -656,15 +656,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function searchMapbox(query) {
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-            `access_token=${mapboxAccessToken}` +
-            `&country=PH` +
-            `&proximity=120.7,15.5` +
-            `&limit=5`;
+            `access_token=${mapboxAccessToken}&` +
+            `country=PH&` +
+            `proximity=121.7740,12.8797&` +
+            `limit=8`;
 
         fetch(url)
             .then(res => res.json())
             .then(data => {
-                displaySuggestions(data.features);
+                displaySuggestions(data.features || []);
             })
             .catch(error => console.error('Geocoding error:', error));
     }
@@ -672,13 +672,13 @@ document.addEventListener('DOMContentLoaded', function () {
     function displaySuggestions(features) {
         suggestionsList.innerHTML = '';
 
-        if (features.length === 0) {
+        if (!features || features.length === 0) {
             suggestionsList.innerHTML = '<div style="padding: 12px; color: #9ca3af;">No results found</div>';
             suggestionsList.classList.add('show');
             return;
         }
 
-        features.forEach((feature, index) => {
+        features.forEach((feature) => {
             const item = document.createElement('div');
             item.className = 'suggestion-item';
             
@@ -705,8 +705,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         searchInput.value = feature.place_name;
         fullAddressInput.value = feature.place_name;
-        latitudeInput.value = latitude;
-        longitudeInput.value = longitude;
+        latitudeInput.value = latitude.toFixed(6);
+        longitudeInput.value = longitude.toFixed(6);
         coordsDisplay.textContent = `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
         suggestionsList.innerHTML = '';
