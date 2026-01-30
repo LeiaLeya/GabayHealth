@@ -40,7 +40,6 @@
                 $navItems = [
                     ['route' => 'admin.system-admin.dashboard', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2'],
                     ['route' => 'admin.system-admin.all-rhus', 'label' => 'All RHUs', 'icon' => 'bi-building'],
-                    ['route' => 'admin.system-admin.approved-rhus', 'label' => 'Approved RHUs', 'icon' => 'bi-check-circle'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } else {
