@@ -516,6 +516,8 @@ Route::middleware('auth.check')->group(function () {
             Route::get('/profile', [RHUAccountController::class, 'editProfile'])->name('profile.edit');
             Route::put('/profile', [RHUAccountController::class, 'updateProfile'])->name('profile.update');
             Route::put('/password', [RHUAccountController::class, 'changePassword'])->name('password.update');
+            Route::post('/logo/upload', [RHUAccountController::class, 'uploadLogo'])->name('logo.upload');
+            Route::delete('/logo', [RHUAccountController::class, 'deleteLogo'])->name('logo.delete');
             Route::get('/staff/create', [RHUAccountController::class, 'createStaff'])->name('staff.create');
             Route::post('/staff', [RHUAccountController::class, 'storeStaff'])->name('staff.store');
             Route::get('/staff/{id}/edit', [RHUAccountController::class, 'editStaff'])->name('staff.edit');
