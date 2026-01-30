@@ -93,7 +93,11 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <small>{{ $rhu['city'] ?? 'N/A' }}, {{ $rhu['province'] ?? '' }}</small>
+                                        @if(isset($rhu['displayLocation']))
+                                            <small>{{ $rhu['displayLocation'] }}</small>
+                                        @else
+                                            <small>{{ $rhu['city'] ?? 'N/A' }}{{ isset($rhu['province']) ? ', ' . $rhu['province'] : '' }}</small>
+                                        @endif
                                     </td>
                                     <td>
                                         <small class="text-muted">{{ \Carbon\Carbon::parse($rhu['created_at'])->format('M d, Y') ?? 'N/A' }}</small>

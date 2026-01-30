@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Support\Str;
 use Exception;
+use Illuminate\Support\Facades\Http;
 
 class SystemAdminController extends Controller
 {
@@ -78,6 +79,14 @@ class SystemAdminController extends Controller
             }
 
             $rhu = array_merge(['id' => $rhuId], $rhuDoc->data());
+            
+            // Resolve location names from PSGC codes
+            if (isset($rhu['region']) && isset($rhu['province']) && isset($rhu['city'])) {
+                $location = $this->getLocationFromPSGC($rhu['region'], $rhu['province'], $rhu['city']);
+                if ($location) {
+                    $rhu['displayLocation'] = $location;
+                }
+            }
 
             return view('admin.system-admin.view-application', compact('rhu'));
         } catch (Exception $e) {
@@ -260,6 +269,13 @@ class SystemAdminController extends Controller
             foreach ($rhuDocs as $doc) {
                 if ($doc->exists()) {
                     $data = $doc->data();
+                    // Resolve location names from PSGC codes
+                    if (isset($data['region']) && isset($data['province']) && isset($data['city'])) {
+                        $location = $this->getLocationFromPSGC($data['region'], $data['province'], $data['city']);
+                        if ($location) {
+                            $data['displayLocation'] = $location;
+                        }
+                    }
                     $rhus[] = array_merge(['id' => $doc->id()], $data);
                 }
             }
@@ -354,6 +370,53 @@ class SystemAdminController extends Controller
         } catch (Exception $e) {
             \Log::error('Error counting RHUs by status: ' . $e->getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Helper to get location name with province and region from PSGC codes
+     */
+    private function getLocationFromPSGC($regionCode, $provinceCode, $cityCode)
+    {
+        try {
+            $locationParts = [];
+            
+            // Query the city/municipality
+            $cityResponse = Http::get("https://psgc.gitlab.io/api/cities/{$cityCode}.json");
+            if ($cityResponse->successful()) {
+                $cityData = $cityResponse->json();
+                $locationParts[] = $cityData['name'] ?? '';
+            }
+            
+            // Get province name
+            if ($provinceCode) {
+                try {
+                    $provinceResponse = Http::get("https://psgc.gitlab.io/api/provinces/{$provinceCode}.json");
+                    if ($provinceResponse->successful()) {
+                        $provinceData = $provinceResponse->json();
+                        $locationParts[] = $provinceData['name'] ?? '';
+                    }
+                } catch (\Exception $e) {
+                    // Continue without province
+                }
+            }
+            
+            // Get region name
+            if ($regionCode) {
+                try {
+                    $regionResponse = Http::get("https://psgc.gitlab.io/api/regions/{$regionCode}.json");
+                    if ($regionResponse->successful()) {
+                        $regionData = $regionResponse->json();
+                        $locationParts[] = $regionData['name'] ?? '';
+                    }
+                } catch (\Exception $e) {
+                    // Continue without region
+                }
+            }
+            
+            return implode(', ', array_filter($locationParts)) ?: null;
+        } catch (\Exception $e) {
+            return null;
         }
     }
 }

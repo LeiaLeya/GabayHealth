@@ -66,11 +66,18 @@
                             </p>
                         </div>
                         <div class="col-md-6">
-                            <p>
-                                <strong>Region:</strong> {{ $rhu['region'] ?? 'N/A' }}<br>
-                                <strong>Province:</strong> {{ $rhu['province'] ?? 'N/A' }}<br>
-                                <strong>City:</strong> {{ $rhu['city'] ?? 'N/A' }}
-                            </p>
+                            @if(isset($rhu['displayLocation']))
+                                <p>
+                                    <strong>Location:</strong><br>
+                                    {{ $rhu['displayLocation'] }}
+                                </p>
+                            @else
+                                <p>
+                                    <strong>Region:</strong> {{ $rhu['region'] ?? 'N/A' }}<br>
+                                    <strong>Province:</strong> {{ $rhu['province'] ?? 'N/A' }}<br>
+                                    <strong>City:</strong> {{ $rhu['city'] ?? 'N/A' }}
+                                </p>
+                            @endif
                         </div>
                     </div>
 
