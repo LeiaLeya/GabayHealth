@@ -113,6 +113,12 @@ class LoginController extends Controller
                 ]
             ]);
 
+            \Log::info('User session created after login', [
+                'user_id' => $user['uid'] ?? $user['id'],
+                'role' => $userRole,
+                'logo_url' => $user['logo_url'] ?? 'NOT SET',
+            ]);
+
             return redirect()->route('dashboard')->with('success', 'Login successful!');
         } catch (\Exception $e) {
             \Log::error('Login error: ' . $e->getMessage() . '\nStack: ' . $e->getTraceAsString());
@@ -197,8 +203,14 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
+                    'logo_url' => $user['logo_url'] ?? null,
                 ]
+            ]);
+
+            \Log::info('User session created after Google login', [
+                'user_id' => $userId,
+                'role' => $userRole,
+                'logo_url' => $user['logo_url'] ?? 'NOT SET',
             ]);
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');

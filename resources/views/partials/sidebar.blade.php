@@ -10,13 +10,19 @@
     </div>
 
     <div class="seal-section">
-        @if(session('user.logo_url'))
-            <img src="{{ session('user.logo_url') }}" 
+        @php
+            $logoUrl = session('user.logo_url');
+        @endphp
+        @if($logoUrl && !empty($logoUrl))
+            <img src="{{ $logoUrl }}" 
                  class="seal" 
                  alt="RHU Logo"
-                 onerror="this.src='{{ asset('images/seal.png') }}'">
+                 loading="eager"
+                 crossorigin="anonymous"
+                 onerror="console.error('Logo failed to load:', this.src); this.src='{{ asset('images/seal.png') }}'; this.classList.add('fallback-seal');"
+                 style="border-radius: 50%;">
         @else
-            <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
+            <img src="{{ asset('images/seal.png') }}" class="seal fallback-seal" alt="Municipal Seal" style="border-radius: 50%;">
         @endif
         <div class="center-name">
             {{ session('user.name', 'Health Center') }}
@@ -114,11 +120,14 @@
 
     .seal-section {
         text-align: center;
-        padding: 8px 16px;
+        padding: 16px 16px;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 12px;
+        background-color: rgba(255, 255, 255, 0.05);
+        margin: 16px;
+        border-radius: 8px;
     }
 
     .rhu-logo {
@@ -130,13 +139,24 @@
 
     .seal {
         width: 80px;
+        height: 80px;
         border-radius: 50%;
         object-fit: cover;
+        background-color: white;
+        flex-shrink: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .seal.fallback-seal {
+        background-color: #e0e0e0;
     }
 
     .center-name {
-        font-size: 16px;
-        margin-top: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        color: white;
+        line-height: 1.4;
+        word-break: break-word;
     }
 
     .nav-links {
