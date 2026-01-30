@@ -65,7 +65,7 @@
                             <tr id="rhu-row-{{ $rhu['id'] }}">
                                 <td><strong>{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</strong></td>
                                 <td><small>{{ $rhu['email'] ?? 'N/A' }}</small></td>
-                                <td>{{ $rhu['city'] ?? 'N/A' }}</td>
+                                <td>{{ $rhu['displayLocation'] ?? $rhu['city'] ?? 'N/A' }}</td>
                                 <td><small>{{ $rhu['phone'] ?? 'N/A' }}</small></td>
                                 <td>
                                     <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}" class="btn btn-sm btn-info">

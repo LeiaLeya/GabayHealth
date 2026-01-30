@@ -41,6 +41,13 @@ class SystemAdminController extends Controller
             foreach ($rhuDocs as $doc) {
                 if ($doc->exists()) {
                     $data = $doc->data();
+                    // Resolve location names from PSGC codes
+                    if (isset($data['region']) && isset($data['province']) && isset($data['city'])) {
+                        $location = $this->getLocationFromPSGC($data['region'], $data['province'], $data['city']);
+                        if ($location) {
+                            $data['displayLocation'] = $location;
+                        }
+                    }
                     $pendingRhus[] = array_merge(['id' => $doc->id()], $data);
                 }
             }
