@@ -12,8 +12,11 @@
     <div class="seal-section">
         @php
             $logoUrl = session('user.logo_url');
+            $userRole = session('user.role');
         @endphp
-        @if($logoUrl && !empty($logoUrl))
+        @if($userRole === 'admin')
+            <i class="bi bi-gear-fill" style="font-size: 3rem; color: white;"></i>
+        @elseif($logoUrl && !empty($logoUrl))
             <img src="{{ $logoUrl }}" 
                  class="seal" 
                  alt="RHU Logo"
