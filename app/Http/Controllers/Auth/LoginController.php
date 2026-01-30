@@ -188,8 +188,8 @@ class LoginController extends Controller
                 return redirect()->route('register.rhu.google')->with('info', 'Please complete your registration details.');
             }
 
-            // Check if account is approved
-            if (($user['status'] ?? 'pending') !== 'approved') {
+            // Check if account is active
+            if (($user['status'] ?? 'pending') !== 'active') {
                 return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
             }
 
