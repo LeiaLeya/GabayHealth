@@ -23,18 +23,18 @@ class RegisterController extends Controller
     public function showBhwForm()
     {
         $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
-        $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'approved')->documents();
+        $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'active')->documents();
         $rhus = [];
         foreach ($rhuDocs as $doc) {
             if ($doc->exists()) {
                 $data = $doc->data();
                 $rhus[] = [
                     'id' => $doc->id(),
-                    'name' => $data['name'] ?? 'Unnamed RHU',
+                    'name' => $data['rhuName'] ?? $data['name'] ?? 'Unnamed RHU',
                 ];
             }
         }
-        \Log::info('Approved RHUs:', $rhus);
+        \Log::info('Active RHUs for BHW registration:', $rhus);
         return view('auth.register_bhw', compact('rhus'));
     }
 
@@ -121,7 +121,7 @@ class RegisterController extends Controller
     public function registerRhu(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|max:255|unique:rhu,email',
+            'email' => 'required|email|max:255',
             'rhuName' => 'required|string|max:255',
             'fullAddress' => 'required|string|max:255',
             'region' => 'required|string',
@@ -132,6 +132,20 @@ class RegisterController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'terms' => 'required|accepted',
         ]);
+
+        $firebaseService = app(FirebaseService::class);
+        $firestore = $firebaseService->getFirestore();
+
+        // Check if email already exists in Firestore
+        $existingRhu = $firestore->collection('rhu')
+            ->where('email', '=', $request->email)
+            ->documents();
+        
+        foreach ($existingRhu as $doc) {
+            if ($doc->exists()) {
+                return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
+            }
+        }
 
         $firebaseService = app(FirebaseService::class);
         $firestore = $firebaseService->getFirestore();
