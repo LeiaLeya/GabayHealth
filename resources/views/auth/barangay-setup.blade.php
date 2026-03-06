@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@php($hideSidebar = true)
 
 @section('content')
 <div class="container mt-5">

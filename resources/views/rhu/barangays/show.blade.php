@@ -265,72 +265,27 @@
 
 <script>
 function sendCredentials(barangayId) {
-    const btn = document.getElementById('sendCredentialsBtn');
-    const messageDiv = document.getElementById('credentialsMessage');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
-    // Disable button and show loading state
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sending...';
-    messageDiv.style.display = 'none';
-
-    const sendCredentialsUrl = `{{ route('rhu.barangays.send-credentials', ['barangayId' => $barangay['id']]) }}`;
-
-    fetch(sendCredentialsUrl, {
+    fetch(`/rhu/barangays/${barangayId}/send-credentials`, {
         method: 'POST',
         headers: {
+            'X-CSRF-TOKEN': csrfToken,
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-        }
+        },
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || 'Failed to send credentials');
-            });
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            messageDiv.innerHTML = `
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle me-2"></i>
-                    <strong>Success!</strong> ${data.message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-            messageDiv.style.display = 'block';
-            
-            // Hide button and show info message
-            btn.style.display = 'none';
-            document.querySelector('.alert-info').innerHTML = `
-                <i class="bi bi-hourglass-split me-2"></i>
-                <strong>Setup in Progress</strong>
-                <p class="mb-0 small mt-2">Credentials have been sent. Waiting for password setup.</p>
-            `;
-            document.querySelector('.alert-info').classList.remove('alert-info');
-            document.querySelector('.alert-info').classList.add('alert-warning', 'text-dark');
-            
-            // Reload page after 3 seconds
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
+            alert(`✓ Credentials Generated!\n\nUsername: ${data.username}\nEmail: ${data.email}\n\nSetup email has been sent.`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error || 'Failed to send credentials'}`);
         }
     })
     .catch(error => {
-        messageDiv.innerHTML = `
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                <strong>Error!</strong> ${error.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        messageDiv.style.display = 'block';
-        
-        // Re-enable button
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-send me-2"></i> Generate & Send Credentials';
+        console.error('Error:', error);
+        alert('An error occurred');
     });
 }
 </script>
