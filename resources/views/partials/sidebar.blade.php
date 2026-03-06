@@ -46,6 +46,7 @@
                 $navItems = [
                     ['route' => 'rhu.reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
                     ['route' => 'rhu.reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'rhu.barangays.index', 'label' => 'Barangays', 'icon' => 'bi-geo-alt'],
                     ['route' => 'rhu.schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
                     ['route' => 'rhu.calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
                     ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'Events.png'],
@@ -73,6 +74,7 @@
                             'User Requests' => 'bi-person-plus',
                             'Reports' => 'bi-file-earmark-bar-graph',
                             'Verify Reports' => 'bi-patch-check',
+                            'Barangays' => 'bi-geo-alt',
                             'Schedules' => 'bi-calendar-event',
                             'Calendars' => 'bi-calendar3',
                             'Events' => 'bi-calendar2-event',

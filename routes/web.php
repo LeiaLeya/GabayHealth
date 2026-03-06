@@ -30,6 +30,7 @@ use App\Http\Controllers\BHC\AccountController as BHCAccountController;
 use App\Http\Controllers\BHC\NotificationController as BHCNotificationController;
 
 // RHU Controllers
+use App\Http\Controllers\RHU\BarangayController as RHUBarangayController;
 use App\Http\Controllers\RHU\ReportsController as RHUReportsController;
 use App\Http\Controllers\RHU\InventoryController as RHUInventoryController;
 use App\Http\Controllers\RHU\ScheduleController as RHUScheduleController;
@@ -79,6 +80,10 @@ Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 // RHU Account Setup Routes (public, token-based)
 Route::get('/setup-account/{token}', [\App\Http\Controllers\Auth\RhuAccountSetupController::class, 'showSetupForm'])->name('rhu.setup-password');
 Route::post('/setup-account', [\App\Http\Controllers\Auth\RhuAccountSetupController::class, 'handleSetup'])->name('rhu.setup-password.store');
+
+// Barangay Account Setup Routes (public, token-based)
+Route::get('/barangay/setup-account/{token}', [\App\Http\Controllers\Auth\BarangayAccountSetupController::class, 'showSetupForm'])->name('barangay.setup-password');
+Route::post('/barangay/setup-account', [\App\Http\Controllers\Auth\BarangayAccountSetupController::class, 'handleSetup'])->name('barangay.setup-password.store');
 
 // Google OAuth routes for LOGIN (not registration)
 Route::get('/auth/google/login', [LoginController::class, 'redirectToGoogle'])->name('google.login.redirect');
@@ -438,6 +443,11 @@ Route::middleware('auth.check')->group(function () {
     // RHU (Rural Health Unit) Routes
     // ============================================
     Route::middleware(['auth.check', 'role:rhu'])->prefix('rhu')->name('rhu.')->group(function () {
+        // Barangays routes
+        Route::get('/barangays', [RHUBarangayController::class, 'index'])->name('barangays.index');
+        Route::get('/barangays/{barangayId}', [RHUBarangayController::class, 'show'])->name('barangays.show');
+        Route::post('/barangays/{barangayId}/send-credentials', [RHUBarangayController::class, 'sendCredentials'])->name('barangays.send-credentials');
+
         // Reports routes
         Route::get('/reports', [RHUReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/verify', [RHUReportsController::class, 'verify'])->name('reports.verify');
