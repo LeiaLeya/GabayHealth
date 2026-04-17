@@ -20,35 +20,9 @@ class RegisterController extends Controller
 
     public function showBhwForm()
     {
-        $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
-        $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'active')->documents();
-        $rhus = [];
-        foreach ($rhuDocs as $doc) {
-            if ($doc->exists()) {
-                $data = $doc->data();
-                $rhus[] = [
-                    'id' => $doc->id(),
-                    'name' => $data['rhuName'] ?? $data['name'] ?? 'Unnamed RHU',
-                ];
         try {
             $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
-            
-            // Fetch all RHUs first to debug
-            $allRhuDocs = $firestore->collection('rhu')->documents();
-            $allRhus = [];
-            foreach ($allRhuDocs as $doc) {
-                if ($doc->exists()) {
-                    $data = $doc->data();
-                    $allRhus[] = [
-                        'id' => $doc->id(),
-                        'name' => $data['name'] ?? $data['rhuName'] ?? 'Unnamed RHU',
-                        'status' => $data['status'] ?? 'unknown',
-                    ];
-                }
-            }
-            \Log::info('All RHUs found:', ['count' => count($allRhus), 'rhus' => $allRhus]);
-            
-            // Now fetch only approved RHUs
+
             $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'approved')->documents();
             $rhus = [];
             foreach ($rhuDocs as $doc) {
@@ -60,24 +34,17 @@ class RegisterController extends Controller
                     ];
                 }
             }
-            
-            \Log::info('Approved RHUs found:', ['count' => count($rhus), 'rhus' => $rhus]);
-            
-            // If no approved RHUs, log a warning
             if (empty($rhus)) {
                 \Log::warning('No approved RHUs found. BHW registration form will show empty dropdown.');
             }
-            
+
             return view('auth.register_bhw', compact('rhus'));
         } catch (\Exception $e) {
             \Log::error('Error fetching RHUs for BHW registration: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
-            // Return empty array so form still loads
             $rhus = [];
             return view('auth.register_bhw', compact('rhus'))->with('warning', 'Unable to load RHU list. Please contact administrator.');
         }
-        \Log::info('Active RHUs for BHW registration:', $rhus);
-        return view('auth.register_bhw', compact('rhus'));
     }
 
     public function registerBhw(Request $request)
@@ -338,15 +305,11 @@ class RegisterController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
             $oauthType = session('oauth_type', 'rhu');
-            
+
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();
 
-            $existingUsers = $firestore->collection('rhu')
-                ->where('email', '=', $googleUser->email)
-                ->documents();
             if ($oauthType === 'bhw') {
-                // Check if user already exists in barangay collection
                 $existingUsers = $firestore->collection('barangay')
                     ->where('email', '=', $googleUser->email)
                     ->documents();
@@ -357,15 +320,6 @@ class RegisterController extends Controller
                     }
                 }
 
-            session([
-                'google_email' => $googleUser->email,
-                'google_name' => $googleUser->name,
-                'google_id' => $googleUser->id,
-                'google_avatar' => $googleUser->avatar,
-            ]);
-
-            return redirect()->route('register.rhu.google');
-                // Store Google data in session
                 session([
                     'google_email' => $googleUser->email,
                     'google_name' => $googleUser->name,
@@ -374,32 +328,28 @@ class RegisterController extends Controller
                     'oauth_type' => 'bhw',
                 ]);
 
-                // Redirect to the simplified registration form
                 return redirect()->route('register.bhw.google');
-            } else {
-                // RHU flow
-                $existingUsers = $firestore->collection('rhu')
-                    ->where('email', '=', $googleUser->email)
-                    ->documents();
-
-                foreach ($existingUsers as $doc) {
-                    if ($doc->exists()) {
-                        return redirect('/dashboard')->with('success', 'Welcome back!');
-                    }
-                }
-
-                // Store Google data in session
-                session([
-                    'google_email' => $googleUser->email,
-                    'google_name' => $googleUser->name,
-                    'google_id' => $googleUser->id,
-                    'google_avatar' => $googleUser->avatar,
-                    'oauth_type' => 'rhu',
-                ]);
-
-                // Redirect to the simplified registration form
-                return redirect()->route('register.rhu.google');
             }
+
+            $existingUsers = $firestore->collection('rhu')
+                ->where('email', '=', $googleUser->email)
+                ->documents();
+
+            foreach ($existingUsers as $doc) {
+                if ($doc->exists()) {
+                    return redirect('/dashboard')->with('success', 'Welcome back!');
+                }
+            }
+
+            session([
+                'google_email' => $googleUser->email,
+                'google_name' => $googleUser->name,
+                'google_id' => $googleUser->id,
+                'google_avatar' => $googleUser->avatar,
+                'oauth_type' => 'rhu',
+            ]);
+
+            return redirect()->route('register.rhu.google');
         } catch (Exception $e) {
             \Log::error('Google OAuth error: ' . $e->getMessage());
             $oauthType = session('oauth_type', 'rhu');

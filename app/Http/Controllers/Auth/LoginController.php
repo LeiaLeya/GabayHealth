@@ -23,76 +23,10 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
+        $firebaseService = app(FirebaseService::class);
+        $firestore = $firebaseService->getFirestore();
+
         try {
-            $firebaseService = app(FirebaseService::class);
-            $firestore = $firebaseService->getFirestore();
-            $auth = $firebaseService->getAuth();
-
-            $user = null;
-            $userRole = null;
-            $email = null;
-
-            $adminDocs = $firestore->collection('admin')
-                ->where('username', '=', $request->username)
-                ->documents();
-
-            foreach ($adminDocs as $doc) {
-                if ($doc->exists()) {
-                    $user = $doc->data();
-                    $user['id'] = $doc->id();
-                    $userRole = 'admin';
-                    $email = $user['email'];
-                    break;
-                }
-            }
-
-            if (!$user) {
-                $rhuDocs = $firestore->collection('rhu')
-                    ->where('username', '=', $request->username)
-                    ->documents();
-
-                foreach ($rhuDocs as $doc) {
-                    if ($doc->exists()) {
-                        $user = $doc->data();
-                        $user['id'] = $doc->id();
-                        $user['uid'] = $doc->id();
-                        $userRole = 'rhu';
-                        $email = $user['email'];
-                        break;
-                    }
-                }
-            }
-
-            if (!$user) {
-                $barangayDocs = $firestore->collection('barangay')
-                    ->where('username', '=', $request->username)
-                    ->documents();
-
-                foreach ($barangayDocs as $doc) {
-                    if ($doc->exists()) {
-                        $user = $doc->data();
-                        $user['id'] = $doc->id();
-                        $user['uid'] = $doc->id();
-                        $userRole = 'barangay';
-                        $email = $user['email'];
-                        break;
-                    }
-                }
-            }
-
-            if (!$user) {
-                \Log::warning('Login failed: User not found', ['username' => $request->username]);
-                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
-            }
-
-            try {
-                $signInResult = $auth->signInWithEmailAndPassword($email, $request->password);
-                \Log::info('Login successful via Firebase Auth', ['username' => $request->username, 'email' => $email]);
-            } catch (\Kreait\Firebase\Exception\Auth\InvalidPassword $e) {
-                \Log::warning('Login failed: Invalid password', ['username' => $request->username, 'email' => $email]);
-                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
-            } catch (\Kreait\Firebase\Exception\Auth\UserNotFound $e) {
-                \Log::warning('Login failed: User not found in Firebase Auth', ['username' => $request->username, 'email' => $email]);
             $account = $this->resolveAccountByUsername($firestore, $request->username);
             if (!$account) {
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
@@ -135,8 +69,8 @@ class LoginController extends Controller
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');
         } catch (\Exception $e) {
-            \Log::error('Login error: ' . $e->getMessage() . '\nStack: ' . $e->getTraceAsString());
-            return back()->withErrors(['login' => 'Login failed: ' . $e->getMessage()])->withInput();
+            \Log::error('Login error: ' . $e->getMessage());
+            return back()->withErrors(['login' => 'Login failed. Please try again.'])->withInput();
         }
     }
 
@@ -149,39 +83,10 @@ class LoginController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-            
+
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();
 
-            $rhuDocs = $firestore->collection('rhu')
-                ->where('email', '=', $googleUser->email)
-                ->documents();
-
-            $user = null;
-            $userRole = null;
-            $userId = null;
-
-            foreach ($rhuDocs as $doc) {
-                if ($doc->exists()) {
-                    $user = $doc->data();
-                    $userId = $doc->id();
-                    $userRole = 'rhu';
-                    break;
-                }
-            }
-
-            if (!$user) {
-                $barangayDocs = $firestore->collection('barangay')
-                    ->where('email', '=', $googleUser->email)
-                    ->documents();
-
-                foreach ($barangayDocs as $doc) {
-                    if ($doc->exists()) {
-                        $user = $doc->data();
-                        $userId = $doc->id();
-                        $userRole = 'barangay';
-                        break;
-                    }
             $account = $this->resolveAccountByEmail($firestore, $googleUser->email);
             $user = null;
             $userRole = null;
@@ -208,7 +113,7 @@ class LoginController extends Controller
                 return redirect()->route('register.rhu.google')->with('info', 'Please complete your registration details.');
             }
 
-            if (($user['status'] ?? 'pending') !== 'active') {
+            if (($user['status'] ?? 'pending') !== 'approved') {
                 return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
             }
 
@@ -268,6 +173,19 @@ class LoginController extends Controller
 
     private function findAccount($firestore, string $field, string $value): ?array
     {
+        $adminDocs = $firestore->collection('admin')
+            ->where($field, '=', $value)
+            ->documents();
+        foreach ($adminDocs as $doc) {
+            if ($doc->exists()) {
+                return [
+                    'uid' => $doc->id(),
+                    'role' => 'admin',
+                    'collection' => 'admin',
+                ];
+            }
+        }
+
         $rhuDocs = $firestore->collection('rhu')
             ->where($field, '=', $value)
             ->documents();
