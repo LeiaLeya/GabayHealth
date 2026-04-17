@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Support\JwtAuth;
 use Illuminate\Support\Facades\Session;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,13 +21,18 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         // Check if user is logged in
-        if (!Session::has('user')) {
+        if (!Session::has('user') || !Session::has('auth_token')) {
             Session::put('intended_url', $request->url());
             return redirect()->route('login')->with('error', 'Please log in to access this page.');
         }
 
-        $user = Session::get('user');
-        $userRole = $user['role'] ?? null;
+        $tokenPayload = JwtAuth::decode(Session::get('auth_token'));
+        $userRole = strtolower((string) ($tokenPayload['role'] ?? ''));
+
+        if ($userRole === '') {
+            Session::flush();
+            return redirect()->route('login')->with('error', 'Your session has expired. Please log in again.');
+        }
 
         // Map role names for flexibility
         $roleMap = [

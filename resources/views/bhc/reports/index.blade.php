@@ -27,103 +27,97 @@
                         <option value="{{ strtolower($symptom) }}" {{ $symptomFilter === strtolower($symptom) ? 'selected' : '' }}>{{ $symptom }}</option>
                     @endforeach
                 </select>
-                <select class="form-select form-select-sm" id="dateRangeFilter" style="width: 120px;">
-                    <option value="week" {{ $dateRange === 'week' ? 'selected' : '' }}>This Week</option>
-                    <option value="month" {{ $dateRange === 'month' ? 'selected' : '' }}>This Month</option>
-                    <option value="quarter" {{ $dateRange === 'quarter' ? 'selected' : '' }}>This Quarter</option>
-                    <option value="year" {{ $dateRange === 'year' ? 'selected' : '' }}>This Year</option>
-                </select>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card border">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-clipboard-pulse fs-2 text-dark"></i>
+    @php
+        $priorityCases = ($stats['fever_cases'] ?? 0) + ($stats['dengue_cases'] ?? 0);
+    @endphp
+
+    <input type="hidden" id="dateRangeFilter" value="{{ $dateRange ?? 'month' }}">
+
+    <!-- KPI + Controls -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-8">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card border h-100 kpi-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-clipboard-pulse fs-2 text-dark"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h4 class="mb-0 text-dark">{{ $stats['total_cases'] }}</h4>
+                                    <small class="text-muted">Total Cases</small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['total_cases'] }}</h4>
-                            <small class="text-muted">Total Cases</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border h-100 kpi-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-exclamation-triangle fs-2 text-dark"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h4 class="mb-0 text-dark">{{ $priorityCases }}</h4>
+                                    <small class="text-muted">Priority (Fever + Dengue)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border h-100 kpi-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-activity fs-2 text-dark"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h4 class="mb-0 text-dark">{{ $stats['recent_cases'] }}</h4>
+                                    <small class="text-muted">Recent (7 days)</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card border">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-thermometer-half fs-2 text-dark"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['fever_cases'] }}</h4>
-                            <small class="text-muted">Fever Cases</small>
-                        </div>
-                    </div>
+        <div class="col-lg-4">
+            <div class="card border controls-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-sliders me-2"></i>Layer and Time Controls</h5>
+                    <small class="text-white-50">Early warning visibility</small>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-bug fs-2 text-dark"></i>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="toggleUnverified" checked>
+                                <label class="form-check-label" for="toggleUnverified">Show unverified symptoms</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="toggleConfirmedOnly">
+                                <label class="form-check-label" for="toggleConfirmedOnly">Show confirmed cases only</label>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="toggleHotspots" checked>
+                                <label class="form-check-label" for="toggleHotspots">Show hotspots / risk radius</label>
+                            </div>
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['dengue_cases'] }}</h4>
-                            <small class="text-muted">Dengue Cases</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-activity fs-2 text-dark"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['recent_cases'] }}</h4>
-                            <small class="text-muted">Recent (7 days)</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-geo-alt fs-2 text-dark"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h6 class="mb-0 text-dark">{{ Str::limit($stats['top_barangay'], 15) }}</h6>
-                            <small class="text-muted">Top Area ({{ $stats['top_cases'] }})</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-graph-up fs-2 text-dark"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['cough_cases'] + $stats['headache_cases'] }}</h4>
-                            <small class="text-muted">Other Symptoms</small>
+                        <div class="col-md-6">
+                            <label for="timeWindowSlider" class="form-label fw-semibold mb-1">
+                                Time window: <span id="timeWindowValue" class="text-primary">This Month</span>
+                            </label>
+                            <input type="range" class="form-range" id="timeWindowSlider" min="1" max="7" step="1" value="3">
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>7d</span><span>14d</span><span>30d</span><span>60d</span><span>90d</span><span>180d</span><span>365d</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -136,32 +130,35 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-map me-2"></i>Health Cases Heatmap
-                    </h5>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-map me-2"></i>Verified Disease Bubble Map
+                        </h5>
+                        <small class="text-white-50">Verified (solid) + possible (faded) layers</small>
+                    </div>
                 </div>
                 <div class="card-body p-0">
-                    <div id="heatmap" style="height: 400px; position: relative;">
+                    <div id="heatmap" class="map-wrapper">
                         <div id="map" style="height: 100%; width: 100%;"></div>
                         
                         <!-- Legend -->
                         <div class="position-absolute bottom-0 start-0 m-3">
                             <div class="bg-white p-2 rounded shadow-sm">
                                 <div class="d-flex align-items-center gap-2 mb-1">
-                                    <div class="badge bg-warning rounded-circle" style="width: 12px; height: 12px;"></div>
-                                    <small class="text-muted">Fever</small>
-                                </div>
-                                <div class="d-flex align-items-center gap-2 mb-1">
                                     <div class="badge bg-danger rounded-circle" style="width: 12px; height: 12px;"></div>
-                                    <small class="text-muted">Dengue</small>
+                                    <small class="text-muted">Dengue Category (Verified)</small>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 mb-1">
                                     <div class="badge bg-primary rounded-circle" style="width: 12px; height: 12px;"></div>
-                                    <small class="text-muted">Rash</small>
+                                    <small class="text-muted">Respiratory Category (Verified)</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <div class="badge bg-success rounded-circle" style="width: 12px; height: 12px;"></div>
+                                    <small class="text-muted">Waterborne Category (Verified)</small>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="badge rounded-circle" style="width: 12px; height: 12px; background-color: #1657c1;"></div>
-                                    <small class="text-muted">Diarrhea</small>
+                                    <div class="badge rounded-circle" style="width: 12px; height: 12px; background-color: rgba(220,53,69,0.45); border: 1px solid #dc3545;"></div>
+                                    <small class="text-muted">Faded = Unverified / Possible cases</small>
                                 </div>
                             </div>
                         </div>
@@ -171,21 +168,6 @@
         </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-bar-chart me-2"></i>Symptom Distribution
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="symptomChart" width="400" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <style>
@@ -219,6 +201,29 @@
 .btn {
     border-radius: 0.5rem;
     font-weight: 500;
+}
+
+.kpi-card .card-body {
+    padding: 1rem 1.1rem;
+}
+
+.controls-card .card-body {
+    min-height: 170px;
+}
+
+.map-wrapper {
+    position: relative;
+    height: clamp(420px, calc(100vh - 320px), 980px);
+}
+
+.container-fluid {
+    overflow-x: hidden;
+}
+
+@media (max-width: 991.98px) {
+    .map-wrapper {
+        height: clamp(360px, calc(100vh - 250px), 760px);
+    }
 }
 
 .bg-purple {
@@ -269,42 +274,68 @@
     transform: scale(1.1);
     box-shadow: 0 6px 12px rgba(0,0,0,0.4);
 }
+
+.form-range::-webkit-slider-thumb {
+    background: #0d6efd;
+}
+
+.form-range::-moz-range-thumb {
+    background: #0d6efd;
+}
 </style>
 
 <!-- Include Leaflet CSS and JS for map -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
 // Initialize map
 let map;
 let heatmapLayer;
 
-// Heatmap data from backend
-const heatmapData = @json($heatmapData);
+// Map data from backend
+const verifiedBubbleData = @json($verifiedBubbleData ?? []);
+const unverifiedBubbleData = @json($unverifiedBubbleData ?? []);
+const hotspotData = @json($hotspotData ?? []);
 const chartData = @json($chartData);
 const centerLat = {{ $centerLat ?? 10.2456 }};
 const centerLng = {{ $centerLng ?? 123.7890 }};
+const verifiedLayers = [];
+const unverifiedLayers = [];
+const hotspotLayers = [];
+const riskRadiusLayers = [];
+const timeWindowDays = [7, 14, 30, 60, 90, 180, 365];
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeMap();
-    initializeCharts();
     
-    // Filter change handler
-    document.getElementById('conditionFilter').addEventListener('change', function() {
-        updateFilters();
-    });
-    
-    document.getElementById('symptomFilter').addEventListener('change', function() {
-        updateFilters();
-    });
-    
-    document.getElementById('dateRangeFilter').addEventListener('change', function() {
-        updateFilters();
-    });
+    document.getElementById('conditionFilter')?.addEventListener('change', updateFilters);
+    document.getElementById('symptomFilter')?.addEventListener('change', updateFilters);
+
+    const toggleUnverified = document.getElementById('toggleUnverified');
+    const toggleConfirmedOnly = document.getElementById('toggleConfirmedOnly');
+    const toggleHotspots = document.getElementById('toggleHotspots');
+    loadToggleStates();
+    if (toggleUnverified) {
+        toggleUnverified.addEventListener('change', function() {
+            saveToggleStates();
+            renderLayerVisibility();
+        });
+    }
+    if (toggleConfirmedOnly) {
+        toggleConfirmedOnly.addEventListener('change', function() {
+            saveToggleStates();
+            renderLayerVisibility();
+        });
+    }
+    if (toggleHotspots) {
+        toggleHotspots.addEventListener('change', function() {
+            saveToggleStates();
+            renderLayerVisibility();
+        });
+    }
+
+    setupTimeWindowSlider();
 });
 
 function initializeMap() {
@@ -315,62 +346,235 @@ function initializeMap() {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
-    
-    // Add bubble markers with case numbers
-    heatmapData.forEach(point => {
-        // Calculate bubble size based on case count (minimum 40px, scales with cases)
-        const baseRadius = 40;
-        const maxRadius = 150;
-        const radius = Math.min(maxRadius, Math.max(baseRadius, point.cases * 8));
-        
-        // Create a custom div icon with case number
-        const bubbleIcon = L.divIcon({
-            className: 'bubble-marker',
-            html: `<div class="bubble-content">${point.cases}</div>`,
-            iconSize: [radius, radius],
-            iconAnchor: [radius / 2, radius / 2]
-        });
-        
-        // Create marker with custom icon
-        const marker = L.marker([point.lat, point.lng], {
-            icon: bubbleIcon
+
+    // Custom panes to keep hotspots behind bubbles while preserving clickability.
+    map.createPane('hotspotPane');
+    map.getPane('hotspotPane').style.zIndex = 410;
+    map.createPane('unverifiedPane');
+    map.getPane('unverifiedPane').style.zIndex = 470;
+    map.createPane('verifiedPane');
+    map.getPane('verifiedPane').style.zIndex = 490;
+
+    hotspotData.forEach(zone => {
+        const color = getCategoryColor(zone.diseaseCategory);
+        const layer = L.circle([zone.lat, zone.lng], {
+            pane: 'hotspotPane',
+            radius: zone.radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.12,
+            opacity: 0.4,
+            weight: 2
         }).addTo(map);
-        
-        // Get symptoms list for popup
-        const symptoms = point.symptoms || [];
-        const symptomsList = symptoms.length > 0 
-            ? symptoms.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
-            : 'No specific symptoms';
-        
-        // Add enhanced popup with better styling
-        marker.bindPopup(`
-            <div style="min-width: 250px; padding: 10px;">
-                <div style="font-size: 18px; font-weight: bold; color: #2563eb; margin-bottom: 10px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
-                    ${point.barangay}
-                </div>
-                <div style="margin-bottom: 8px;">
-                    <span style="font-weight: 600; color: #333;">Total Cases:</span> 
-                    <span style="color: #dc3545; font-weight: bold; font-size: 20px;">${point.cases}</span>
-                </div>
-                <div>
-                    <span style="font-weight: 600; color: #333;">Symptoms:</span> 
-                    <span style="color: #666;">${symptomsList}</span>
-                </div>
+
+        layer.bindPopup(`
+            <div style="min-width: 240px; padding: 6px;">
+                <div class="fw-bold mb-1">Hotspot Zone</div>
+                <div><span class="text-muted">Disease:</span> <strong>${formatCategory(zone.diseaseCategory)}</strong></div>
+                <div><span class="text-muted">Barangays involved:</span> <strong>${zone.barangayCount}</strong></div>
+                <div><span class="text-muted">Total confirmed cases:</span> <strong>${zone.totalCases}</strong></div>
             </div>
         `);
+        hotspotLayers.push(layer);
+    });
+    
+    verifiedBubbleData.forEach(point => {
+        const color = getCategoryColor(point.diseaseCategory);
+        const radius = getBubbleRadius(point.totalCases, 140, 18);
+
+        const verified = L.circleMarker([point.lat, point.lng], {
+            pane: 'verifiedPane',
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.9,
+            weight: 2
+        }).addTo(map);
+
+        verified.bindTooltip(`${point.barangay}: ${point.totalCases} verified`, { direction: 'top' });
+        verified.bindPopup(`
+            <div style="min-width: 260px; padding: 6px;">
+                <div class="fw-bold mb-1">${point.barangay}</div>
+                <div><span class="text-muted">Confirmed disease category:</span> <strong>${formatCategory(point.diseaseCategory)}</strong></div>
+                <div><span class="text-muted">Confirmed cases:</span> <strong>${point.totalCases}</strong></div>
+            </div>
+        `);
+        verifiedLayers.push(verified);
+
+        if ((point.totalCases || 0) >= 8) {
+            const radiusLayer = L.circle([point.lat, point.lng], {
+                pane: 'hotspotPane',
+                radius: 250 + (point.totalCases * 25),
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.08,
+                opacity: 0.3,
+                weight: 1
+            }).addTo(map);
+            riskRadiusLayers.push(radiusLayer);
+        }
+    });
+
+    unverifiedBubbleData.forEach(point => {
+        const color = getCategoryColor(point.possibleCategory);
+        const radius = getBubbleRadius(point.totalSignals, 110, 15);
+        const layer = L.circleMarker([point.lat, point.lng], {
+            pane: 'unverifiedPane',
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.3,
+            opacity: 0.6,
+            weight: 1,
+            dashArray: '3,3'
+        }).addTo(map);
+
+        layer.bindTooltip(`${point.barangay}: ${point.totalSignals} possible`, { direction: 'bottom' });
+        layer.bindPopup(`
+            <div style="min-width: 260px; padding: 6px;">
+                <div class="fw-bold mb-1">${point.barangay}</div>
+                <div><span class="text-muted">Possible category:</span> <strong>${formatCategory(point.possibleCategory)}</strong></div>
+                <div><span class="text-muted">Unverified symptom reports:</span> <strong>${point.totalSignals}</strong></div>
+                <small class="text-warning">Unverified / Early warning signal only</small>
+            </div>
+        `);
+        unverifiedLayers.push(layer);
+    });
+
+    renderLayerVisibility();
+}
+
+function getCategoryColor(category) {
+    const colors = {
+        dengue: '#dc3545',
+        respiratory: '#0d6efd',
+        waterborne: '#198754'
+    };
+    return colors[category] || '#6c757d';
+}
+
+function formatCategory(category) {
+    const labels = {
+        dengue: 'Dengue',
+        respiratory: 'Respiratory Disease',
+        waterborne: 'Waterborne Disease'
+    };
+    return labels[category] || 'Other';
+}
+
+function getBubbleRadius(count, maxRadius = 140, scale = 16) {
+    const safe = Math.max(1, Number(count || 0));
+    return Math.min(maxRadius, Math.max(10, Math.sqrt(safe) * scale));
+}
+
+function renderLayerVisibility() {
+    const showUnverified = document.getElementById('toggleUnverified')?.checked ?? true;
+    const confirmedOnly = document.getElementById('toggleConfirmedOnly')?.checked ?? false;
+    const showHotspots = document.getElementById('toggleHotspots')?.checked ?? true;
+    const showUnverifiedLayer = showUnverified && !confirmedOnly;
+    const showHotspotLayer = showHotspots && !confirmedOnly;
+
+    unverifiedLayers.forEach((layer) => {
+        if (showUnverifiedLayer && !map.hasLayer(layer)) map.addLayer(layer);
+        if (!showUnverifiedLayer && map.hasLayer(layer)) map.removeLayer(layer);
+    });
+
+    hotspotLayers.forEach((layer) => {
+        if (showHotspotLayer && !map.hasLayer(layer)) map.addLayer(layer);
+        if (!showHotspotLayer && map.hasLayer(layer)) map.removeLayer(layer);
+    });
+
+    riskRadiusLayers.forEach((layer) => {
+        if (showHotspotLayer && !map.hasLayer(layer)) map.addLayer(layer);
+        if (!showHotspotLayer && map.hasLayer(layer)) map.removeLayer(layer);
     });
 }
 
-function getConditionColor(condition) {
-    const colors = {
-        'fever': '#ffc107',      // Bright yellow
-        'dengue': '#dc3545',     // Bright red
-        'diarrhea': '#1657c1',   // Blue (matching sidebar)
-        'rash': '#0d6efd',       // Bright blue
-        'cough': '#fd7e14',      // Orange
-        'headache': '#20c997'    // Teal
-    };
-    return colors[condition.toLowerCase()] || '#ffc107';
+function setupTimeWindowSlider() {
+    const slider = document.getElementById('timeWindowSlider');
+    const label = document.getElementById('timeWindowValue');
+    if (!slider || !label) {
+        return;
+    }
+
+    const currentDateRange = document.getElementById('dateRangeFilter')?.value || 'month';
+    const initialIndexMap = { week: 1, month: 3, quarter: 5, year: 7 };
+    slider.value = initialIndexMap[currentDateRange] || 3;
+    updateTimeWindowLabel(Number(slider.value), label);
+
+    slider.addEventListener('input', function() {
+        updateTimeWindowLabel(Number(this.value), label);
+    });
+
+    slider.addEventListener('change', function() {
+        const days = timeWindowDays[Number(this.value) - 1] || 30;
+        const mappedRange = mapDaysToDateRange(days);
+        const dateRangeFilter = document.getElementById('dateRangeFilter');
+        if (dateRangeFilter) {
+            dateRangeFilter.value = mappedRange;
+        }
+        updateFilters();
+    });
+}
+
+function saveToggleStates() {
+    try {
+        const payload = {
+            showUnverified: document.getElementById('toggleUnverified')?.checked ?? true,
+            confirmedOnly: document.getElementById('toggleConfirmedOnly')?.checked ?? false,
+            showHotspots: document.getElementById('toggleHotspots')?.checked ?? true,
+        };
+        localStorage.setItem('gabayHealth.reportMapToggles', JSON.stringify(payload));
+    } catch (e) {
+        // Ignore localStorage failures.
+    }
+}
+
+function loadToggleStates() {
+    try {
+        const raw = localStorage.getItem('gabayHealth.reportMapToggles');
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (typeof state.showUnverified === 'boolean' && document.getElementById('toggleUnverified')) {
+            document.getElementById('toggleUnverified').checked = state.showUnverified;
+        }
+        if (typeof state.confirmedOnly === 'boolean' && document.getElementById('toggleConfirmedOnly')) {
+            document.getElementById('toggleConfirmedOnly').checked = state.confirmedOnly;
+        }
+        if (typeof state.showHotspots === 'boolean' && document.getElementById('toggleHotspots')) {
+            document.getElementById('toggleHotspots').checked = state.showHotspots;
+        }
+    } catch (e) {
+        // Ignore parse failures.
+    }
+}
+
+function updateTimeWindowLabel(index, labelEl) {
+    const days = timeWindowDays[index - 1] || 30;
+    if (days < 30) {
+        labelEl.textContent = `${days} days`;
+        return;
+    }
+    if (days === 30) {
+        labelEl.textContent = 'This Month';
+        return;
+    }
+    if (days === 90) {
+        labelEl.textContent = 'This Quarter';
+        return;
+    }
+    if (days === 365) {
+        labelEl.textContent = 'This Year';
+        return;
+    }
+    labelEl.textContent = `${days} days`;
+}
+
+function mapDaysToDateRange(days) {
+    if (days <= 14) return 'week';
+    if (days <= 60) return 'month';
+    if (days <= 120) return 'quarter';
+    return 'year';
 }
 
 function updateFilters() {
@@ -386,46 +590,5 @@ function updateFilters() {
     window.location.href = url.toString();
 }
 
-// Chart data
-const symptomData = {
-    labels: ['Fever', 'Dengue', 'Diarrhea', 'Cough', 'Headache'],
-    datasets: [{
-        label: 'Cases',
-        data: [
-            {{ $stats['fever_cases'] }},
-            {{ $stats['dengue_cases'] }},
-            {{ $stats['diarrhea_cases'] }},
-            {{ $stats['cough_cases'] }},
-            {{ $stats['headache_cases'] }}
-        ],
-        backgroundColor: [
-            '#ffc107',
-            '#dc3545',
-            '#1657c1',
-            '#6c757d',
-            '#495057'
-        ],
-        borderWidth: 2,
-        borderColor: '#fff'
-    }]
-};
-
-function initializeCharts() {
-    // Symptom distribution chart
-    const symptomCtx = document.getElementById('symptomChart').getContext('2d');
-    new Chart(symptomCtx, {
-        type: 'doughnut',
-        data: symptomData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-}
 </script>
 @endsection 

@@ -151,7 +151,6 @@ class ReportsController extends Controller
             'reports' => $reports
         ]);
         // This will look for: resources/views/bhc/reports/index.blade.php
-        // Falls back to: resources/views/pages/reports/index.blade.php
     }
 }
 ```
