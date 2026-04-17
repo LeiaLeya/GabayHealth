@@ -20,6 +20,7 @@ use App\Http\Controllers\BHC\AccountController as BHCAccountController;
 use App\Http\Controllers\BHC\NotificationController as BHCNotificationController;
 
 // RHU Controllers
+use App\Http\Controllers\RHU\BarangayController as RHUBarangayController;
 use App\Http\Controllers\RHU\ReportsController as RHUReportsController;
 use App\Http\Controllers\RHU\InventoryController as RHUInventoryController;
 use App\Http\Controllers\RHU\ScheduleController as RHUScheduleController;
@@ -52,7 +53,7 @@ Route::get('/', function() {
     if (session('user')) {
         $role = session('user.role');
         if ($role === 'admin') {
-            return redirect()->route('admin.rhus.index');
+            return redirect()->route('admin.system-admin.dashboard');
         } elseif ($role === 'rhu') {
             return redirect()->route('rhu.reports.index');
         } elseif ($role === 'barangay') {
@@ -62,10 +63,33 @@ Route::get('/', function() {
     return redirect()->route('login');
 })->name('home');
 
+// Dashboard route (convenience route)
+Route::get('/dashboard', function() {
+    if (session('user')) {
+        $role = session('user.role');
+        if ($role === 'admin') {
+            return redirect()->route('admin.system-admin.dashboard');
+        } elseif ($role === 'rhu') {
+            return redirect()->route('rhu.reports.index');
+        } elseif ($role === 'barangay') {
+            return redirect()->route('bhc.reports.index');
+        }
+    }
+    return redirect()->route('login');
+})->name('dashboard');
+
 // Public routes (no authentication required)
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+
+// RHU Account Setup Routes (public, token-based)
+Route::get('/setup-account/{token}', [\App\Http\Controllers\Auth\RhuAccountSetupController::class, 'showSetupForm'])->name('rhu.setup-password');
+Route::post('/setup-account', [\App\Http\Controllers\Auth\RhuAccountSetupController::class, 'handleSetup'])->name('rhu.setup-password.store');
+
+// Barangay Account Setup Routes (public, token-based)
+Route::get('/barangay/setup-account/{token}', [\App\Http\Controllers\Auth\BarangayAccountSetupController::class, 'showSetupForm'])->name('barangay.setup-password');
+Route::post('/barangay/setup-account', [\App\Http\Controllers\Auth\BarangayAccountSetupController::class, 'handleSetup'])->name('barangay.setup-password.store');
 
 // Google OAuth routes for LOGIN (not registration)
 Route::get('/auth/google/login', [LoginController::class, 'redirectToGoogle'])->name('google.login.redirect');
@@ -127,6 +151,19 @@ Route::get('/test-login-simulation', function() {
 
 // Protected routes (require authentication)
 Route::middleware('auth.check')->group(function () {
+    
+    // ============================================
+    // SYSTEM ADMIN ROUTES
+    // ============================================
+    Route::middleware('role:admin')->prefix('admin/system-admin')->name('admin.system-admin.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Admin\SystemAdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/all-rhus', [App\Http\Controllers\Admin\SystemAdminController::class, 'allRhus'])->name('all-rhus');
+        Route::get('/approved-rhus', [App\Http\Controllers\Admin\SystemAdminController::class, 'approvedRhus'])->name('approved-rhus');
+        Route::get('/{rhuId}/view', [App\Http\Controllers\Admin\SystemAdminController::class, 'viewApplication'])->name('view-application');
+        Route::post('/{rhuId}/approve', [App\Http\Controllers\Admin\SystemAdminController::class, 'approveAndSendCredentials'])->name('approve');
+        Route::post('/{rhuId}/reject', [App\Http\Controllers\Admin\SystemAdminController::class, 'rejectApplication'])->name('reject');
+        Route::post('/{rhuId}/resend-credentials', [App\Http\Controllers\Admin\SystemAdminController::class, 'resendCredentials'])->name('resend-credentials');
+    });
     
     // Remove the auth middleware group for RHUs
     Route::get('/RHUs/approvals', [AdminController::class, 'indexApprovals'])->name('RHUs.approvals');
@@ -890,6 +927,11 @@ Route::middleware('auth.check')->group(function () {
     // RHU (Rural Health Unit) Routes
     // ============================================
     Route::middleware(['auth.check', 'role:rhu'])->prefix('rhu')->name('rhu.')->group(function () {
+        // Barangays routes
+        Route::get('/barangays', [RHUBarangayController::class, 'index'])->name('barangays.index');
+        Route::get('/barangays/{barangayId}', [RHUBarangayController::class, 'show'])->name('barangays.show');
+        Route::post('/barangays/{barangayId}/send-credentials', [RHUBarangayController::class, 'sendCredentials'])->name('barangays.send-credentials');
+
         // Reports routes
         Route::get('/reports', [RHUReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/verify', [RHUReportsController::class, 'verify'])->name('reports.verify');
@@ -969,6 +1011,8 @@ Route::middleware('auth.check')->group(function () {
             Route::get('/profile', [RHUAccountController::class, 'editProfile'])->name('profile.edit');
             Route::put('/profile', [RHUAccountController::class, 'updateProfile'])->name('profile.update');
             Route::put('/password', [RHUAccountController::class, 'changePassword'])->name('password.update');
+            Route::post('/logo/upload', [RHUAccountController::class, 'uploadLogo'])->name('logo.upload');
+            Route::delete('/logo', [RHUAccountController::class, 'deleteLogo'])->name('logo.delete');
             Route::get('/staff/create', [RHUAccountController::class, 'createStaff'])->name('staff.create');
             Route::post('/staff', [RHUAccountController::class, 'storeStaff'])->name('staff.store');
             Route::get('/staff/{id}/edit', [RHUAccountController::class, 'editStaff'])->name('staff.edit');
@@ -988,7 +1032,7 @@ Route::middleware('auth.check')->group(function () {
         return match($role) {
             'rhu' => redirect()->route('rhu.reports.index'),
             'barangay' => redirect()->route('bhc.reports.index'),
-            'admin' => redirect()->route('admin.rhus.index'),
+            'admin' => redirect()->route('admin.system-admin.dashboard'),
             default => redirect()->route('login'),
         };
     })->name('dashboard');

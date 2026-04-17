@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Services\FirebaseService;
 use Laravel\Socialite\Facades\Socialite;
 use Cloudinary\Cloudinary;
@@ -12,15 +13,23 @@ use Exception;
 
 class RegisterController extends Controller
 {
-    // Landing page for role selection
     public function landing()
     {
         return view('auth.register_landing');
     }
 
-    // Show Barangay Health Worker (Barangay) registration form
     public function showBhwForm()
     {
+        $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
+        $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'active')->documents();
+        $rhus = [];
+        foreach ($rhuDocs as $doc) {
+            if ($doc->exists()) {
+                $data = $doc->data();
+                $rhus[] = [
+                    'id' => $doc->id(),
+                    'name' => $data['rhuName'] ?? $data['name'] ?? 'Unnamed RHU',
+                ];
         try {
             $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
             
@@ -67,9 +76,10 @@ class RegisterController extends Controller
             $rhus = [];
             return view('auth.register_bhw', compact('rhus'))->with('warning', 'Unable to load RHU list. Please contact administrator.');
         }
+        \Log::info('Active RHUs for BHW registration:', $rhus);
+        return view('auth.register_bhw', compact('rhus'));
     }
 
-    // Handle Barangay registration
     public function registerBhw(Request $request)
     {
         $request->validate([
@@ -92,10 +102,8 @@ class RegisterController extends Controller
         $auth = $firebaseService->getAuth();
 
         try {
-            // Generate email from username for Firebase Auth
             $email = strtolower($request->username) . '@gabay-health.local';
             
-            // Create Firebase Auth user
             $authUser = $auth->createUser([
                 'email' => $email,
                 'password' => $request->password,
@@ -139,8 +147,8 @@ class RegisterController extends Controller
             $firestore->collection('barangay')->document($uid)->set([
                 'username' => $request->username,
                 'email' => $email,
-                'uid' => $uid, // Store Firebase UID
-                'password' => bcrypt($request->password), // Keep for backward compatibility
+                'uid' => $uid,
+                'password' => bcrypt($request->password),
                 'healthCenterName' => $request->healthCenterName,
                 'fullAddress' => $request->fullAddress,
                 'region' => $request->region,
@@ -178,73 +186,88 @@ class RegisterController extends Controller
         }
     }
 
-    // Show RHU Officer registration form
     public function showRhuForm()
     {
         return view('auth.register_rhu');
     }
 
-    // Handle RHU Officer registration
     public function registerRhu(Request $request)
     {
         $request->validate([
             'email' => 'required|email|max:255',
-            'password' => 'required|string|min:6|confirmed',
-            'username' => 'required|string|max:255',
             'rhuName' => 'required|string|max:255',
             'fullAddress' => 'required|string|max:255',
             'region' => 'required|string',
             'province' => 'required|string',
             'city' => 'required|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'terms' => 'required|accepted',
         ]);
 
         $firebaseService = app(FirebaseService::class);
         $firestore = $firebaseService->getFirestore();
-        $auth = $firebaseService->getAuth();
+
+        $existingRhu = $firestore->collection('rhu')
+            ->where('email', '=', $request->email)
+            ->documents();
+        
+        foreach ($existingRhu as $doc) {
+            if ($doc->exists()) {
+                return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
+            }
+        }
+
+        $firebaseService = app(FirebaseService::class);
+        $firestore = $firebaseService->getFirestore();
 
         try {
-            $existingUsername = $firestore->collection('rhu')
-                ->where('username', '=', $request->username)
-                ->documents();
+            $uid = \Str::uuid();
 
-            foreach ($existingUsername as $doc) {
-                if ($doc->exists()) {
-                    return back()->withErrors(['username' => 'This username is already taken.'])->withInput();
-                }
-            }
-
-            $email = $request->email;
-            
-            $authUser = $auth->createUser([
-                'email' => $email,
-                'password' => $request->password,
-                'displayName' => $request->rhuName,
-                'emailVerified' => false,
-            ]);
-
-            $uid = $authUser->uid;
-
-            // UPLOAD TO CLOUDINARY
             $logoUrl = null;
             if ($request->hasFile('logo')) {
                 try {
-                    $cloudinary = new Cloudinary([
-                        'cloud' => [
-                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                            'api_key' => env('CLOUDINARY_API_KEY'),
-                            'api_secret' => env('CLOUDINARY_API_SECRET'),
-                        ]
+                    $logo = $request->file('logo');
+                    \Log::info('Logo file detected', [
+                        'filename' => $logo->getClientOriginalName(),
+                        'size' => $logo->getSize(),
+                        'mime' => $logo->getMimeType(),
+                        'tmp_path' => $logo->getRealPath(),
                     ]);
-                    $result = $cloudinary->uploadApi()->upload($request->file('logo')->getRealPath(), [
+
+                    $cloudinaryUrl = env('CLOUDINARY_URL');
+                    \Log::info('Cloudinary environment check', [
+                        'CLOUDINARY_URL_set' => !empty($cloudinaryUrl),
+                        'CLOUDINARY_CLOUD_NAME' => env('CLOUDINARY_CLOUD_NAME'),
+                        'CLOUDINARY_API_KEY' => env('CLOUDINARY_API_KEY') ? 'SET' : 'NOT SET',
+                    ]);
+
+                    $cloudinary = new Cloudinary();
+                    \Log::info('Cloudinary instance created');
+                    
+                    $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
                         'folder' => "gabayhealth/rhu/{$uid}",
                         'resource_type' => 'auto',
+                        'quality' => 'auto',
                     ]);
+                    
                     $logoUrl = $result['secure_url'];
+                    \Log::info('Logo uploaded to Cloudinary', [
+                        'rhu_id' => $uid,
+                        'logo_url' => $logoUrl,
+                        'public_id' => $result['public_id'] ?? 'N/A',
+                    ]);
                 } catch (\Exception $e) {
-                    \Log::error('Cloudinary upload error: ' . $e->getMessage());
+                    \Log::error('Cloudinary upload error: ' . $e->getMessage(), [
+                        'rhu_id' => $uid,
+                        'file' => $request->file('logo') ? 'File present' : 'No file',
+                        'exception_class' => get_class($e),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
+            } else {
+                \Log::info('No logo file uploaded for RHU', ['rhu_id' => $uid]);
             }
 
             // Build location object: { latitude, longitude, name }
@@ -257,23 +280,33 @@ class RegisterController extends Controller
             ];
 
             $firestore->collection('rhu')->document($uid)->set([
-                'username' => $request->username,
-                'email' => $email,
-                'uid' => $uid,
-                'password' => bcrypt($request->password),
+                'email' => $request->email,
                 'name' => $request->rhuName,
-                'healthCenterName' => $request->rhuName,
+                'rhuName' => $request->rhuName,
                 'fullAddress' => $request->fullAddress,
                 'region' => $request->region,
                 'province' => $request->province,
                 'city' => $request->city,
+                'location' => [
+                    'latitude' => $request->latitude ? (float) $request->latitude : null,
+                    'longitude' => $request->longitude ? (float) $request->longitude : null,
+                ],
                 'role' => 'rhu',
                 'status' => 'pending',
                 'logo_url' => $logoUrl,
                 'location' => $location,
                 'created_at' => now()->toDateTimeString(),
+                'username' => null,
+                'uid' => null,
             ]);
 
+            \Log::info('RHU registration created', [
+                'rhu_id' => $uid,
+                'rhu_name' => $request->rhuName,
+                'logo_url' => $logoUrl,
+            ]);
+
+            return back()->with('success', 'RHU registration submitted successfully! Please wait for admin approval and credentials via email.');
             $this->saveUserProfile($firestore, $uid, $email, 'rhu', $uid, $request->rhuName);
 
             return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
@@ -309,6 +342,9 @@ class RegisterController extends Controller
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();
 
+            $existingUsers = $firestore->collection('rhu')
+                ->where('email', '=', $googleUser->email)
+                ->documents();
             if ($oauthType === 'bhw') {
                 // Check if user already exists in barangay collection
                 $existingUsers = $firestore->collection('barangay')
@@ -321,6 +357,14 @@ class RegisterController extends Controller
                     }
                 }
 
+            session([
+                'google_email' => $googleUser->email,
+                'google_name' => $googleUser->name,
+                'google_id' => $googleUser->id,
+                'google_avatar' => $googleUser->avatar,
+            ]);
+
+            return redirect()->route('register.rhu.google');
                 // Store Google data in session
                 session([
                     'google_email' => $googleUser->email,
@@ -367,72 +411,76 @@ class RegisterController extends Controller
         }
     }
 
-    // New method to show Google registration form
     public function showGoogleForm()
     {
-        // If no Google session data, redirect back to register
         if (!session('google_email')) {
             return redirect()->route('register.rhu');
         }
         return view('auth.register_rhu_google');
     }
 
-    // Handle RHU Officer registration via Google
     public function registerRhuGoogle(Request $request)
     {
         $request->validate([
-            'password' => 'required|string|min:8|confirmed',
-            'username' => 'required|string',
             'rhuName' => 'required|string',
+            'fullAddress' => 'required|string',
             'region' => 'required|string',
             'province' => 'required|string',
             'city' => 'required|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         $firebaseService = app(FirebaseService::class);
         $firestore = $firebaseService->getFirestore();
-        $auth = $firebaseService->getAuth();
 
         try {
-            $existingUsername = $firestore->collection('rhu')
-                ->where('username', '=', $request->username)
-                ->documents();
+            $uid = Str::uuid();
 
-            foreach ($existingUsername as $doc) {
-                if ($doc->exists()) {
-                    return back()->withErrors(['username' => 'This username is already taken.'])->withInput();
-                }
-            }
-
-            $authUser = $auth->createUser([
-                'email' => session('google_email'),
-                'password' => $request->password,
-                'displayName' => session('google_name'),
-                'emailVerified' => true,
-            ]);
-
-            $uid = $authUser->uid;
-
-            // UPLOAD TO CLOUDINARY
             $logoUrl = null;
             if ($request->hasFile('logo')) {
                 try {
-                    $cloudinary = new Cloudinary([
-                        'cloud' => [
-                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                            'api_key' => env('CLOUDINARY_API_KEY'),
-                            'api_secret' => env('CLOUDINARY_API_SECRET'),
-                        ]
+                    $logo = $request->file('logo');
+                    \Log::info('Logo file detected (Google OAuth)', [
+                        'filename' => $logo->getClientOriginalName(),
+                        'size' => $logo->getSize(),
+                        'mime' => $logo->getMimeType(),
+                        'tmp_path' => $logo->getRealPath(),
                     ]);
-                    $result = $cloudinary->uploadApi()->upload($request->file('logo')->getRealPath(), [
+
+                    $cloudinaryUrl = env('CLOUDINARY_URL');
+                    \Log::info('Cloudinary environment check (Google OAuth)', [
+                        'CLOUDINARY_URL_set' => !empty($cloudinaryUrl),
+                        'CLOUDINARY_CLOUD_NAME' => env('CLOUDINARY_CLOUD_NAME'),
+                        'CLOUDINARY_API_KEY' => env('CLOUDINARY_API_KEY') ? 'SET' : 'NOT SET',
+                    ]);
+
+                    $cloudinary = new Cloudinary();
+                    \Log::info('Cloudinary instance created (Google OAuth)');
+                    
+                    $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
                         'folder' => "gabayhealth/rhu/{$uid}",
                         'resource_type' => 'auto',
+                        'quality' => 'auto',
                     ]);
+                    
                     $logoUrl = $result['secure_url'];
+                    \Log::info('Logo uploaded to Cloudinary (Google OAuth)', [
+                        'rhu_id' => $uid,
+                        'logo_url' => $logoUrl,
+                        'public_id' => $result['public_id'] ?? 'N/A',
+                    ]);
                 } catch (\Exception $e) {
-                    \Log::error('Cloudinary upload error: ' . $e->getMessage());
+                    \Log::error('Cloudinary upload error (Google OAuth): ' . $e->getMessage(), [
+                        'rhu_id' => $uid,
+                        'file' => $request->file('logo') ? 'File present' : 'No file',
+                        'exception_class' => get_class($e),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
+            } else {
+                \Log::info('No logo file uploaded for RHU (Google OAuth)', ['rhu_id' => $uid]);
             }
 
             // Build location object: { latitude, longitude, name } — Google form has no address/coords, use rhuName
@@ -443,27 +491,37 @@ class RegisterController extends Controller
             ];
 
             $firestore->collection('rhu')->document($uid)->set([
-                'username' => $request->username,
                 'email' => session('google_email'),
-                'uid' => $uid,
-                'password' => bcrypt($request->password),
                 'rhuName' => $request->rhuName,
+                'fullAddress' => $request->fullAddress,
                 'region' => $request->region,
                 'province' => $request->province,
                 'city' => $request->city,
+                'location' => [
+                    'latitude' => $request->latitude ? (float) $request->latitude : null,
+                    'longitude' => $request->longitude ? (float) $request->longitude : null,
+                ],
                 'role' => 'rhu',
                 'status' => 'pending',
                 'logo_url' => $logoUrl,
                 'location' => $location,
                 'google_id' => session('google_id'),
                 'created_at' => now()->toDateTimeString(),
+                'username' => null,
+                'uid' => null,
+            ]);
+
+            \Log::info('RHU registration created (Google OAuth)', [
+                'rhu_id' => $uid,
+                'rhu_name' => $request->rhuName,
+                'logo_url' => $logoUrl,
             ]);
 
             $this->saveUserProfile($firestore, $uid, session('google_email'), 'rhu', $uid, $request->rhuName);
 
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar']);
 
-            return redirect()->route('dashboard')->with('success', 'Registration submitted! Waiting for admin approval.');
+            return redirect()->route('register.landing')->with('success', 'Registration submitted successfully! Please wait for admin approval and credentials via email.');
         } catch (Exception $e) {
             \Log::error('Google RHU Registration error: ' . $e->getMessage());
             return back()->withErrors(['error' => $e->getMessage()]);

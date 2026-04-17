@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Cloudinary\Cloudinary;
 
 class AccountController extends Controller
 {
@@ -299,6 +300,104 @@ class AccountController extends Controller
             ]);
 
         return redirect()->route('rhu.accounts.index')->with('success', 'Password changed successfully!');
+    }
+
+    // Upload health center logo
+    public function uploadLogo(Request $request)
+    {
+        $validated = $request->validate([
+            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:5120', // max 5MB
+        ]);
+
+        $user = session('user');
+        
+        try {
+            $logo = $request->file('logo');
+            $cloudinary = new Cloudinary();
+            
+            // Upload to Cloudinary
+            $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
+                'folder' => "gabayhealth/rhu/{$user['id']}/logo",
+                'resource_type' => 'auto',
+                'quality' => 'auto',
+                'overwrite' => true,
+                'public_id' => 'main-logo',
+            ]);
+            
+            $logoUrl = $result['secure_url'];
+            
+            // Update Firestore with new logo URL
+            $collectionName = $this->getCollectionNameByRole($user['role']);
+            $this->firestore->getFirestore()
+                ->collection($collectionName)
+                ->document($user['id'])
+                ->update([
+                    ['path' => 'logo_url', 'value' => $logoUrl],
+                    ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
+                ]);
+
+            // Update session with new logo URL
+            $userSession = session('user');
+            $userSession['logo_url'] = $logoUrl;
+            session(['user' => $userSession]);
+
+            \Log::info('Logo uploaded to Cloudinary', [
+                'rhu_id' => $user['id'],
+                'logo_url' => $logoUrl,
+            ]);
+
+            return back()->with('success', 'Health center logo updated successfully!');
+        } catch (\Exception $e) {
+            \Log::error('Logo upload error: ' . $e->getMessage(), [
+                'rhu_id' => $user['id'],
+                'error' => $e->getMessage(),
+            ]);
+            return back()->withErrors(['error' => 'Failed to upload logo: ' . $e->getMessage()]);
+        }
+    }
+
+    // Delete health center logo
+    public function deleteLogo(Request $request)
+    {
+        $user = session('user');
+        
+        try {
+            $cloudinary = new Cloudinary();
+            
+            // Delete from Cloudinary
+            try {
+                $cloudinary->uploadApi()->destroy("gabayhealth/rhu/{$user['id']}/logo/main-logo", [
+                    'resource_type' => 'image',
+                ]);
+                \Log::info('Logo deleted from Cloudinary', ['rhu_id' => $user['id']]);
+            } catch (\Exception $e) {
+                \Log::warning('Cloudinary deletion failed, but continuing', ['error' => $e->getMessage()]);
+                // Continue even if Cloudinary deletion fails
+            }
+
+            // Update Firestore to remove logo URL
+            $collectionName = $this->getCollectionNameByRole($user['role']);
+            $this->firestore->getFirestore()
+                ->collection($collectionName)
+                ->document($user['id'])
+                ->update([
+                    ['path' => 'logo_url', 'value' => null],
+                    ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
+                ]);
+
+            // Update session to remove logo URL
+            $userSession = session('user');
+            $userSession['logo_url'] = null;
+            session(['user' => $userSession]);
+
+            return back()->with('success', 'Health center logo deleted successfully!');
+        } catch (\Exception $e) {
+            \Log::error('Logo deletion error: ' . $e->getMessage(), [
+                'rhu_id' => $user['id'],
+                'error' => $e->getMessage(),
+            ]);
+            return back()->withErrors(['error' => 'Failed to delete logo: ' . $e->getMessage()]);
+        }
     }
 
     // Helper methods

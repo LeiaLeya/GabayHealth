@@ -23,10 +23,76 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        $firebaseService = app(FirebaseService::class);
-        $firestore = $firebaseService->getFirestore();
-
         try {
+            $firebaseService = app(FirebaseService::class);
+            $firestore = $firebaseService->getFirestore();
+            $auth = $firebaseService->getAuth();
+
+            $user = null;
+            $userRole = null;
+            $email = null;
+
+            $adminDocs = $firestore->collection('admin')
+                ->where('username', '=', $request->username)
+                ->documents();
+
+            foreach ($adminDocs as $doc) {
+                if ($doc->exists()) {
+                    $user = $doc->data();
+                    $user['id'] = $doc->id();
+                    $userRole = 'admin';
+                    $email = $user['email'];
+                    break;
+                }
+            }
+
+            if (!$user) {
+                $rhuDocs = $firestore->collection('rhu')
+                    ->where('username', '=', $request->username)
+                    ->documents();
+
+                foreach ($rhuDocs as $doc) {
+                    if ($doc->exists()) {
+                        $user = $doc->data();
+                        $user['id'] = $doc->id();
+                        $user['uid'] = $doc->id();
+                        $userRole = 'rhu';
+                        $email = $user['email'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$user) {
+                $barangayDocs = $firestore->collection('barangay')
+                    ->where('username', '=', $request->username)
+                    ->documents();
+
+                foreach ($barangayDocs as $doc) {
+                    if ($doc->exists()) {
+                        $user = $doc->data();
+                        $user['id'] = $doc->id();
+                        $user['uid'] = $doc->id();
+                        $userRole = 'barangay';
+                        $email = $user['email'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$user) {
+                \Log::warning('Login failed: User not found', ['username' => $request->username]);
+                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+            }
+
+            try {
+                $signInResult = $auth->signInWithEmailAndPassword($email, $request->password);
+                \Log::info('Login successful via Firebase Auth', ['username' => $request->username, 'email' => $email]);
+            } catch (\Kreait\Firebase\Exception\Auth\InvalidPassword $e) {
+                \Log::warning('Login failed: Invalid password', ['username' => $request->username, 'email' => $email]);
+                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+            } catch (\Kreait\Firebase\Exception\Auth\UserNotFound $e) {
+                \Log::warning('Login failed: User not found in Firebase Auth', ['username' => $request->username, 'email' => $email]);
             $account = $this->resolveAccountByUsername($firestore, $request->username);
             if (!$account) {
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
@@ -48,7 +114,6 @@ class LoginController extends Controller
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
-            // Store user in session
             session([
                 'user' => [
                     'id' => $user['uid'] ?? $user['id'],
@@ -58,24 +123,28 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $user['name'],
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
+                    'logo_url' => $user['logo_url'] ?? null,
                 ]
+            ]);
+
+            \Log::info('User session created after login', [
+                'user_id' => $user['uid'] ?? $user['id'],
+                'role' => $userRole,
+                'logo_url' => $user['logo_url'] ?? 'NOT SET',
             ]);
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');
         } catch (\Exception $e) {
-            \Log::error('Login error: ' . $e->getMessage());
-            return back()->withErrors(['login' => 'Login failed. Please try again.'])->withInput();
+            \Log::error('Login error: ' . $e->getMessage() . '\nStack: ' . $e->getTraceAsString());
+            return back()->withErrors(['login' => 'Login failed: ' . $e->getMessage()])->withInput();
         }
     }
 
-    // Google OAuth redirect for login
     public function redirectToGoogle()
     {
         return Socialite::driver('google')->redirect();
     }
 
-    // Google OAuth callback for login
     public function handleGoogleCallback()
     {
         try {
@@ -84,6 +153,35 @@ class LoginController extends Controller
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();
 
+            $rhuDocs = $firestore->collection('rhu')
+                ->where('email', '=', $googleUser->email)
+                ->documents();
+
+            $user = null;
+            $userRole = null;
+            $userId = null;
+
+            foreach ($rhuDocs as $doc) {
+                if ($doc->exists()) {
+                    $user = $doc->data();
+                    $userId = $doc->id();
+                    $userRole = 'rhu';
+                    break;
+                }
+            }
+
+            if (!$user) {
+                $barangayDocs = $firestore->collection('barangay')
+                    ->where('email', '=', $googleUser->email)
+                    ->documents();
+
+                foreach ($barangayDocs as $doc) {
+                    if ($doc->exists()) {
+                        $user = $doc->data();
+                        $userId = $doc->id();
+                        $userRole = 'barangay';
+                        break;
+                    }
             $account = $this->resolveAccountByEmail($firestore, $googleUser->email);
             $user = null;
             $userRole = null;
@@ -99,9 +197,7 @@ class LoginController extends Controller
                 }
             }
 
-            // User not found - redirect to registration instead of showing error
             if (!$user) {
-                // Store Google data in session for registration
                 session([
                     'google_email' => $googleUser->email,
                     'google_name' => $googleUser->name,
@@ -112,12 +208,10 @@ class LoginController extends Controller
                 return redirect()->route('register.rhu.google')->with('info', 'Please complete your registration details.');
             }
 
-            // Check if account is approved
-            if (($user['status'] ?? 'pending') !== 'approved') {
+            if (($user['status'] ?? 'pending') !== 'active') {
                 return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
             }
 
-            // Login successful - store in session
             session([
                 'user' => [
                     'id' => $userId,
@@ -127,8 +221,14 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
+                    'logo_url' => $user['logo_url'] ?? null,
                 ]
+            ]);
+
+            \Log::info('User session created after Google login', [
+                'user_id' => $userId,
+                'role' => $userRole,
+                'logo_url' => $user['logo_url'] ?? 'NOT SET',
             ]);
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');
@@ -141,13 +241,10 @@ class LoginController extends Controller
 
     public function logout()
     {
-        // Clear all session data
         session()->flush();
         
-        // Invalidate the session
         session()->invalidate();
         
-        // Regenerate session token
         session()->regenerateToken();
         
         return redirect()->route('login')->with('success', 'You have been logged out.');

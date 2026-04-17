@@ -11,14 +11,45 @@ class FirebaseService
     protected $firestore;
     protected $storage;
     protected $auth;
+    protected $factory;
 
     public function __construct()
     {
-        $serviceAccount = storage_path('app/firebase/firebase_credentials.json');
-        $factory = (new Factory)->withServiceAccount($serviceAccount);
-        $this->firestore = $factory->createFirestore()->database();
-        $this->storage = $factory->createStorage();
-        $this->auth = $factory->createAuth();
+        // Construct the absolute path to the credentials file
+        // Get the project root by going up from app/Services to project root
+        $projectRoot = dirname(dirname(dirname(__FILE__)));
+        $credentialsPath = $projectRoot . '/storage/app/firebase/firebase_credentials.json';
+
+        if (!file_exists($credentialsPath)) {
+            throw new \Exception(
+                'Firebase credentials file not found at: ' . $credentialsPath
+            );
+        }
+
+        try {
+            // Load and validate credentials
+            $credentialsJson = file_get_contents($credentialsPath);
+            $credentials = json_decode($credentialsJson, true);
+            
+            if (!$credentials || empty($credentials['project_id'])) {
+                throw new \Exception('Invalid Firebase credentials: missing or empty project_id');
+            }
+
+            // Create factory with credentials
+            $this->factory = (new Factory)->withServiceAccount($credentialsPath);
+            
+            // Create Firestore instance - createFirestore() returns the Firestore service
+            // which has a database() method to get the default database
+            $firestoreService = $this->factory->createFirestore();
+            $this->firestore = $firestoreService->database();
+            
+            $this->storage = $this->factory->createStorage();
+            $this->auth = $this->factory->createAuth();
+            
+        } catch (\Exception $e) {
+            \Log::error('Firebase initialization error: ' . $e->getMessage());
+            throw new \Exception('Failed to initialize Firebase: ' . $e->getMessage());
+        }
     }
 
     public function getFirestore()
