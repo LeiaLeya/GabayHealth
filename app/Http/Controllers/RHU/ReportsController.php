@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class ReportsController extends Controller
@@ -71,14 +72,45 @@ class ReportsController extends Controller
         $filter = request('filter', 'all');
         $dateRange = request('date_range', 'month');
         $symptomFilter = request('symptom', 'all');
-        
-        // Fetch ALL verified reports from ALL barangays for the heatmap
-        $reports = $this->getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter);
-        $barangays = $this->getAllBarangaysWithCoordinates();
-        $heatmapData = $this->processHeatmapData($reports, $barangays);
-        $stats = $this->getStatistics($reports);
-        $chartData = $this->getChartData($reports);
-        $availableSymptoms = $this->getAvailableSymptoms($barangayId);
+
+        $cacheKey = sprintf(
+            'reports:index:rhu:%s:%s:%s:%s',
+            $barangayId ?? 'none',
+            $filter,
+            $dateRange,
+            $symptomFilter
+        );
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($filter, $dateRange, $symptomFilter, $barangayId) {
+            // Fetch ALL verified reports from ALL barangays for the heatmap
+            $reports = $this->getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter);
+            $barangays = $this->getAllBarangaysWithCoordinates();
+            $heatmapData = $this->processHeatmapData($reports, $barangays);
+
+            // Determine initial map center from the current user's barangay if available
+            $centerLat = 10.2456;
+            $centerLng = 123.7890;
+            if ($barangayId && isset($barangays[$barangayId])) {
+                $centerLat = $barangays[$barangayId]['lat'] ?? $centerLat;
+                $centerLng = $barangays[$barangayId]['lng'] ?? $centerLng;
+            }
+
+            return [
+                'heatmapData' => $heatmapData,
+                'stats' => $this->getStatistics($reports),
+                'chartData' => $this->getChartData($reports),
+                'availableSymptoms' => $this->getAvailableSymptoms($barangayId),
+                'centerLat' => $centerLat,
+                'centerLng' => $centerLng,
+            ];
+        });
+
+        $heatmapData = $payload['heatmapData'];
+        $stats = $payload['stats'];
+        $chartData = $payload['chartData'];
+        $availableSymptoms = $payload['availableSymptoms'];
+        $centerLat = $payload['centerLat'];
+        $centerLng = $payload['centerLng'];
         
         return $this->view('reports.index', compact(
             'heatmapData', 
@@ -87,7 +119,9 @@ class ReportsController extends Controller
             'filter', 
             'dateRange', 
             'symptomFilter', 
-            'availableSymptoms'
+            'availableSymptoms',
+            'centerLat',
+            'centerLng'
         ));
     }
 
@@ -109,6 +143,7 @@ class ReportsController extends Controller
             \Log::error('RHU ReportsController verify - No barangayId available, showing empty reports');
             return $this->view('reports.verify', [
                 'pendingReports' => [],
+                'barangayNames' => [],
                 'stats' => [
                     'pending' => 0,
                     'verified_today' => 0,
@@ -121,8 +156,9 @@ class ReportsController extends Controller
         $pendingReports = $this->getPendingReports($barangayId);
         $stats = $this->getVerificationStats($barangayId);
         $staffAccounts = $this->getStaffAccounts($user['id'], $user['role']);
+        $barangayNames = $this->getBarangayNamesForReports($pendingReports);
         
-        return $this->view('reports.verify', compact('pendingReports', 'stats', 'staffAccounts'));
+        return $this->view('reports.verify', compact('pendingReports', 'stats', 'staffAccounts', 'barangayNames'));
     }
 
     public function rejected()
@@ -143,6 +179,7 @@ class ReportsController extends Controller
             \Log::error('RHU ReportsController rejected - No barangayId available, showing empty reports');
             return $this->view('reports.rejected', [
                 'rejectedReports' => [],
+                'barangayNames' => [],
                 'stats' => [
                     'total_rejected' => 0,
                     'rejected_today' => 0,
@@ -153,8 +190,9 @@ class ReportsController extends Controller
         
         $rejectedReports = $this->getRejectedReports($barangayId);
         $stats = $this->getRejectedStats($barangayId);
+        $barangayNames = $this->getBarangayNamesForReports($rejectedReports);
         
-        return $this->view('reports.rejected', compact('rejectedReports', 'stats'));
+        return $this->view('reports.rejected', compact('rejectedReports', 'stats', 'barangayNames'));
     }
 
     public function verified()
@@ -174,13 +212,15 @@ class ReportsController extends Controller
         if (!$barangayId) {
             \Log::error('RHU ReportsController verified - No barangayId available, showing empty reports');
             return $this->view('reports.verified', [
-                'verifiedReports' => []
+                'verifiedReports' => [],
+                'barangayNames' => []
             ])->with('warning', 'Unable to determine barangay. Showing empty reports.');
         }
         
         $verifiedReports = $this->getVerifiedReports($barangayId);
+        $barangayNames = $this->getBarangayNamesForReports($verifiedReports);
         
-        return $this->view('reports.verified', compact('verifiedReports'));
+        return $this->view('reports.verified', compact('verifiedReports', 'barangayNames'));
     }
 
     public function approve(Request $request, $id)
@@ -1071,6 +1111,23 @@ class ReportsController extends Controller
         }
         
         return 'Unknown';
+    }
+
+    private function getBarangayNamesForReports(array $reports): array
+    {
+        $barangayNames = [];
+        $barangayIds = collect($reports)
+            ->pluck('barangayId')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($barangayIds as $barangayId) {
+            $barangayNames[$barangayId] = $this->getBarangayNameFromId($barangayId);
+        }
+
+        return $barangayNames;
     }
 
     private function getStatistics($reports)

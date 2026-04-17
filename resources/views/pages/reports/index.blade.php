@@ -258,6 +258,8 @@ let heatmapLayer;
 // Heatmap data from backend
 const heatmapData = @json($heatmapData);
 const chartData = @json($chartData);
+const centerLat = {{ $centerLat ?? 10.2456 }};
+const centerLng = {{ $centerLng ?? 123.7890 }};
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeMap();
@@ -278,8 +280,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeMap() {
-    // Initialize the map centered on Minglanilla, Cebu
-    map = L.map('map').setView([10.2456, 123.7890], 12);
+    // Initialize the map centered on the current barangay (fallback to Minglanilla, Cebu)
+    map = L.map('map').setView([centerLat, centerLng], 13);
     
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

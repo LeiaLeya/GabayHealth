@@ -156,6 +156,8 @@ class RegisterController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ]);
 
+            $this->saveUserProfile($firestore, $uid, $email, 'barangay', $uid, $request->healthCenterName);
+
             // Notify the selected RHU (add a notification document)
             $firestore->collection('rhu')->document($request->rhuId)
                 ->collection('notifications')->add([
@@ -271,6 +273,8 @@ class RegisterController extends Controller
                 'location' => $location,
                 'created_at' => now()->toDateTimeString(),
             ]);
+
+            $this->saveUserProfile($firestore, $uid, $email, 'rhu', $uid, $request->rhuName);
 
             return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
@@ -455,6 +459,8 @@ class RegisterController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ]);
 
+            $this->saveUserProfile($firestore, $uid, session('google_email'), 'rhu', $uid, $request->rhuName);
+
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar']);
 
             return redirect()->route('dashboard')->with('success', 'Registration submitted! Waiting for admin approval.');
@@ -578,6 +584,8 @@ class RegisterController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ]);
 
+            $this->saveUserProfile($firestore, $uid, session('google_email'), 'barangay', $uid, $request->healthCenterName);
+
             // Notify the selected RHU
             $firestore->collection('rhu')->document($request->rhuId)
                 ->collection('notifications')->add([
@@ -595,5 +603,18 @@ class RegisterController extends Controller
             \Log::error('Google BHW Registration error: ' . $e->getMessage());
             return back()->withErrors(['error' => $e->getMessage()]);
         }
+    }
+
+    private function saveUserProfile($firestore, string $uid, string $email, string $role, ?string $barangayId, ?string $barangayName): void
+    {
+        $firestore->collection('users')->document($uid)->set([
+            'uid' => $uid,
+            'email' => $email,
+            'role' => $role,
+            'barangay_id' => $barangayId ?? '',
+            'barangay_name' => $barangayName ?? '',
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ], ['merge' => true]);
     }
 }

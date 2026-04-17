@@ -4,10 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <title>GabayHealth</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/gabayhealth_logo.png') }}">
     <style>
-        /* Removed custom font-family, use default */
         * {
-            /* font-family intentionally left blank for default */
         }
 
         .main-wrapper {

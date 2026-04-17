@@ -177,6 +177,19 @@ class AccountController extends Controller
                 ->collection('accounts')
                 ->add($staffData);
 
+            $this->firestore->getFirestore()
+                ->collection('users')
+                ->document($uid)
+                ->set([
+                    'uid' => $uid,
+                    'email' => $validated['email'],
+                    'role' => $validated['role'],
+                    'barangay_id' => $user['barangayId'] ?? $user['id'],
+                    'barangay_name' => $user['name'] ?? $user['healthCenterName'] ?? '',
+                    'created_at' => now()->toDateTimeString(),
+                    'updated_at' => now()->toDateTimeString(),
+                ], ['merge' => true]);
+
             return redirect()->route('bhc.accounts.index')->with('success', 'Staff account created successfully!');
         } catch (\Kreait\Firebase\Auth\Exception\AuthException $e) {
             \Log::error('Firebase Auth error when creating staff: ' . $e->getMessage());

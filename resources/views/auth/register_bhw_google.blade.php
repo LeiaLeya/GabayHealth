@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 data.forEach(barangay => {
-                    barangaySelect.innerHTML += `<option value="${barangay.name}">${barangay.name}</option>`;
+                    barangaySelect.innerHTML += `<option value="${barangay.code}">${barangay.name}</option>`;
                 });
             });
     });

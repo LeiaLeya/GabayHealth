@@ -29,30 +29,27 @@
     @endif
 
     <!-- Personnel Cards -->
-    <div class="row g-4">
+    <div class="d-flex flex-wrap" style="gap: 1rem;">
         @forelse($personnel as $person)
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="card border position-relative personnel-card">
-                    <!-- Status Badge and Edit Button -->
-                    <div class="position-absolute top-0 end-0 m-2 d-flex align-items-center gap-2">
+            <div>
+                <div class="card border position-relative personnel-card h-100">
+                    <!-- Status Badge -->
+                    <div class="position-absolute top-0 end-0 m-2">
                         @php
                             $status = $person['status'] ?? 'Active';
                             $statusClass = $status === 'Active' ? 'success' : ($status === 'Inactive' ? 'secondary' : 'warning');
                         @endphp
                         <span class="badge bg-{{ $statusClass }}">{{ $status }}</span>
-                        <button class="btn btn-outline-secondary btn-sm" title="Edit Personnel" data-bs-toggle="modal" data-bs-target="#editPersonnelModal{{ $person['id'] }}">
-                            <i class="bi bi-pencil"></i>
-                        </button>
                     </div>
 
                     <!-- Personnel Image and Info -->
-                    <div class="card-body d-flex flex-column text-center">
+                    <div class="card-body d-flex flex-column text-center pt-5">
                         <!-- Profile Image -->
                         <div class="mb-3 d-flex justify-content-center">
                             @if(isset($person['image_url']))
-                                <img src="{{ $person['image_url'] }}" alt="Personnel Photo" class="rounded-circle" style="width:100px;height:100px;object-fit:cover;">
+                                <img src="{{ $person['image_url'] }}" alt="Personnel Photo" class="rounded-circle" style="width:120px;height:120px;object-fit:cover;border:1px solid #000;">
                             @else
-                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width:100px;height:100px;">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width:120px;height:120px;border:1px solid #000;">
                                     <i class="bi bi-person display-4 text-dark"></i>
                                 </div>
                             @endif
@@ -68,8 +65,8 @@
                         @if(isset($person['address']) && $person['address'])
                             <div class="mb-3">
                                 <div class="d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-geo-alt text-muted"></i>
-                                    <span class="text-dark small">{{ Str::limit($person['address'], 100) }}</span>
+                                    <i class="bi bi-geo-alt text-muted flex-shrink-0"></i>
+                                    <span class="text-dark small text-start">{{ Str::limit($person['address'], 100) }}</span>
                                 </div>
                             </div>
                         @endif
@@ -79,13 +76,9 @@
                             <button type="button" class="btn btn-primary btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#editPersonnelModal{{ $person['id'] }}">
                                 <i class="bi bi-pencil me-1"></i>Edit
                             </button>
-                            <form action="{{ route('rhu.personnel.destroy', $person['id']) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this personnel?')" title="Delete Personnel">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deletePersonnel('{{ $person['id'] }}', {{ json_encode($person['name'] ?? 'Unknown') }})" title="Delete Personnel">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -115,12 +108,13 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
-                                    <textarea name="address" class="form-control" rows="3" placeholder="Enter address" required>{{ $person['address'] ?? '' }}</textarea>
+                                    <input type="text" name="address" class="form-control" placeholder="Enter address" value="{{ $person['address'] ?? '' }}" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Profile Photo</label>
-                                    <input type="file" name="image" class="form-control" accept="image/*">
-                                    <small class="text-muted">Leave empty to keep current photo</small>
+                                    <input type="file" name="image" class="form-control personnel-image-input" accept="image/*">
+                                    <div class="image-preview-container mt-2" style="display:none;"></div>
+                                    <small class="text-muted">Leave empty to keep current photo. Click to select, then crop.</small>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -189,11 +183,12 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
-                    <textarea name="address" class="form-control" rows="3" placeholder="Enter address" required></textarea>
+                    <input type="text" name="address" class="form-control" placeholder="Enter address" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Profile Photo</label>
-                    <input type="file" name="image" class="form-control" accept="image/*">
+                    <input type="file" name="image" class="form-control personnel-image-input" accept="image/*">
+                    <div class="image-preview-container mt-2" style="display:none;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -208,8 +203,35 @@
     </div>
 </div>
 
+@include('partials.personnel_image_crop')
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deletePersonnelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Delete Personnel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="personnelName"></strong>? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deletePersonnelForm" method="POST" style="display: inline;">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Delete Personnel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .personnel-card {
+    width: 320px;
+    min-height: 360px;
     transition: box-shadow 0.2s;
 }
 
@@ -219,6 +241,13 @@
 </style>
 
 <script>
+function deletePersonnel(personnelId, personnelName) {
+    document.getElementById('personnelName').textContent = personnelName;
+    document.getElementById('deletePersonnelForm').action = '{{ url("rhu/personnel") }}/' + personnelId;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deletePersonnelModal'));
+    deleteModal.show();
+}
+
 function fillPersonnelData() {
     const select = document.getElementById('personnelSelect');
     const selectedOption = select.options[select.selectedIndex];

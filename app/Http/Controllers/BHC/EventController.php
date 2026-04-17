@@ -11,6 +11,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Cloudinary\Cloudinary;
+use Cloudinary\Uploader;
 
 class EventController extends Controller
 {
@@ -135,9 +137,7 @@ class EventController extends Controller
             
             // Get events; for barangay users, always use barangayId so it matches calendar
             $eventCollection = $user['role'];
-            $eventDocId = $user['role'] === 'barangay'
-                ? ($user['barangayId'] ?? $user['id'])
-                : $user['id'];
+            $eventDocId = $this->getBarangayId() ?? $user['id'];
 
             $eventsQuery = $this->firestore
                 ->collection($eventCollection)
@@ -180,7 +180,7 @@ class EventController extends Controller
     public function show($id)
     {
         $user = session('user');
-        $barangayId = $user['barangayId'] ?? null;
+        $barangayId = $this->getBarangayId();
 
         if (!$barangayId) {
             return redirect()->route('bhc.events.index')->with('error', 'Barangay ID not found.');
@@ -264,8 +264,8 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Get barangayId using trait method (handles barangay users correctly)
+        $this->barangayId = $this->getBarangayId();
         
         if (!$this->barangayId) {
             return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
@@ -294,15 +294,22 @@ class EventController extends Controller
 
         $imageUrl = null;
         if ($request->hasFile('image')) {
-            $bucket = $this->storage->getBucket();
-            $file = $request->file('image');
-            $fileName = 'events/' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                ['name' => $fileName]
-            );
-            $projectId = env('FIREBASE_PROJECT_ID');
-            $imageUrl = "https://firebasestorage.googleapis.com/v0/b/{$projectId}.appspot.com/o/" . rawurlencode($fileName) . "?alt=media";
+            try {
+                $cloudinary = new Cloudinary([
+                    'cloud' => [
+                        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                        'api_key' => env('CLOUDINARY_API_KEY'),
+                        'api_secret' => env('CLOUDINARY_API_SECRET'),
+                    ]
+                ]);
+                $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                    'folder' => "gabayhealth/events/{$this->barangayId}",
+                    'resource_type' => 'auto',
+                ]);
+                $imageUrl = $result['secure_url'];
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary upload error: ' . $e->getMessage());
+            }
         }
 
         $computedStatus = $this->computeStatus($request->date, $request->start_time, $request->end_time, $request->status);
@@ -318,6 +325,22 @@ class EventController extends Controller
             ));
 
         $allowedBarangayNames = array_map(fn ($id) => $barangayMap[$id], $allowedBarangays);
+
+        // Get barangay name from Firebase
+        $barangayName = null;
+        try {
+            $barangayDoc = $this->firestore
+                ->collection('barangay')
+                ->document($this->barangayId)
+                ->snapshot();
+            
+            if ($barangayDoc->exists()) {
+                $barangayData = $barangayDoc->data();
+                $barangayName = $barangayData['healthCenterName'] ?? null;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching barangay name: ' . $e->getMessage());
+        }
 
         $this->firestore
             ->collection("barangay/{$this->barangayId}/events")
@@ -338,6 +361,7 @@ class EventController extends Controller
                 'image_url' => $imageUrl,
                 'allowed_barangays' => $allowedBarangays,
                 'allowed_barangay_names' => $allowedBarangayNames,
+                'barangayName' => $barangayName,
                 'created_at' => now()->toDateTimeString(),
             ]);
 
@@ -353,8 +377,8 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Get barangayId using trait method (handles barangay users correctly)
+        $this->barangayId = $this->getBarangayId();
         
         if (!$this->barangayId) {
             return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
@@ -382,8 +406,8 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        // Get barangayId from user session
-        $this->barangayId = $user['barangayId'] ?? null;
+        // Get barangayId using trait method (handles barangay users correctly)
+        $this->barangayId = $this->getBarangayId();
         
         if (!$this->barangayId) {
             return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
@@ -423,6 +447,22 @@ class EventController extends Controller
             ));
 
         $allowedBarangayNames = array_map(fn ($id) => $barangayMap[$id], $allowedBarangays);
+
+        // Get barangay name from Firebase
+        $barangayName = null;
+        try {
+            $barangayDoc = $this->firestore
+                ->collection('barangay')
+                ->document($this->barangayId)
+                ->snapshot();
+            
+            if ($barangayDoc->exists()) {
+                $barangayData = $barangayDoc->data();
+                $barangayName = $barangayData['healthCenterName'] ?? null;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching barangay name: ' . $e->getMessage());
+        }
 
         // Get existing event data to check if date/time changed (rescheduling)
         $existingEventDoc = $this->firestore
@@ -460,6 +500,7 @@ class EventController extends Controller
             'in_charge' => $request->in_charge,
             'allowed_barangays' => $allowedBarangays,
             'allowed_barangay_names' => $allowedBarangayNames,
+            'barangayName' => $barangayName,
             'updated_at' => now()->toDateTimeString(),
         ];
 
@@ -473,16 +514,22 @@ class EventController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $bucket = $this->storage->getBucket();
-            $file = $request->file('image');
-            $fileName = 'events/' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                ['name' => $fileName]
-            );
-            $projectId = env('FIREBASE_PROJECT_ID');
-            $imageUrl = "https://firebasestorage.googleapis.com/v0/b/{$projectId}.appspot.com/o/" . rawurlencode($fileName) . "?alt=media";
-            $eventData['image_url'] = $imageUrl;
+            try {
+                $cloudinary = new Cloudinary([
+                    'cloud' => [
+                        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                        'api_key' => env('CLOUDINARY_API_KEY'),
+                        'api_secret' => env('CLOUDINARY_API_SECRET'),
+                    ]
+                ]);
+                $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                    'folder' => "gabayhealth/events/{$this->barangayId}",
+                    'resource_type' => 'auto',
+                ]);
+                $eventData['image_url'] = $result['secure_url'];
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary upload error: ' . $e->getMessage());
+            }
         }
 
         $this->firestore
@@ -507,7 +554,7 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to perform this action.');
         }
         
-        $this->barangayId = $user['barangayId'] ?? null;
+        $this->barangayId = $this->getBarangayId();
         if (!$this->barangayId) {
             return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');
         }
@@ -539,7 +586,7 @@ class EventController extends Controller
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
         
-        $this->barangayId = $user['barangayId'] ?? null;
+        $this->barangayId = $this->getBarangayId();
         
         if (!$this->barangayId) {
             return redirect()->back()->with('error', 'Barangay ID not found. Please contact administrator.');

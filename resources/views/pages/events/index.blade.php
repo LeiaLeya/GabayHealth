@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         container: 'mapPreview',
                         style: 'mapbox://styles/mapbox/streets-v11',
                         center: coordinates,
-                        zoom: 15
+                        zoom: 17
                     });
                     
                     new mapboxgl.Marker()
@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     container: 'editMapPreview',
                     style: 'mapbox://styles/mapbox/streets-v11',
                     center: [parseFloat(existingLng), parseFloat(existingLat)],
-                    zoom: 15
+                    zoom: 17
                 });
                 
                 new mapboxgl.Marker()
@@ -797,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         container: 'editMapPreview',
                         style: 'mapbox://styles/mapbox/streets-v11',
                         center: coordinates,
-                        zoom: 15
+                        zoom: 17
                     });
                     
                     new mapboxgl.Marker()

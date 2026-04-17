@@ -131,35 +131,9 @@
                                         @endphp
                                         <tr>
                                             <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <button class="btn btn-sm btn-link p-0 text-muted" 
-                                                            type="button" 
-                                                            data-bs-toggle="collapse" 
-                                                            data-bs-target="#{{ $collapseId }}" 
-                                                            aria-expanded="false" 
-                                                            aria-controls="{{ $collapseId }}"
-                                                            title="Toggle Details">
-                                                        <i class="bi bi-chevron-down"></i>
-                                                    </button>
-                                                    <span class="fw-semibold">
-                                                        @php
-                                                            $barangayName = '';
-                                                            try {
-                                                                $barangayDoc = app('App\Services\FirebaseService')->getFirestore()
-                                                                    ->collection("barangay")
-                                                                    ->document($report['barangayId'] ?? '')
-                                                                    ->snapshot();
-                                                                if ($barangayDoc->exists()) {
-                                                                    $data = $barangayDoc->data();
-                                                                    $barangayName = $data['healthCenterName'] ?? $data['barangay'] ?? 'Unknown';
-                                                                }
-                                                            } catch (\Exception $e) {
-                                                                $barangayName = 'Unknown';
-                                                            }
-                                                        @endphp
-                                                        {{ $barangayName }}
-                                                    </span>
-                                                </div>
+                                                <span class="fw-semibold">
+                                                    {{ $barangayNames[$report['barangayId'] ?? ''] ?? 'Unknown' }}
+                                                </span>
                                             </td>
                                             <td>
                                                 @if(isset($report['symptoms']) && is_array($report['symptoms']))
@@ -218,63 +192,6 @@
                                                             title="View Details">
                                                         <i class="bi bi-eye"></i>
                                                     </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr class="details-row">
-                                            <td colspan="7" class="p-0 bg-light border-0">
-                                                <div class="collapse collapse-detail p-3" id="{{ $collapseId }}">
-                                                    <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Additional Details</h6>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <div class="p-2 rounded border bg-white">
-                                                                <small class="text-muted d-block mb-1">Full Additional Info</small>
-                                                                <div>
-                                                                    @php
-                                                                        $additionalInfo = $report['additionalInfo'] ?? null;
-                                                                        if (is_array($additionalInfo)) {
-                                                                            $additionalInfo = json_encode($additionalInfo);
-                                                                        }
-                                                                        echo $additionalInfo ?: 'No additional information provided';
-                                                                    @endphp
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <div class="p-2 rounded border bg-white">
-                                                                <small class="text-muted d-block mb-1">Report ID</small>
-                                                                <div><code>{{ $report['id'] ?? 'N/A' }}</code></div>
-                                                            </div>
-                                                        </div>
-                                                        @php
-                                                            $location = $report['location'] ?? null;
-                                                            if (is_array($location)) {
-                                                                $location = is_string($location) ? $location : json_encode($location);
-                                                            }
-                                                        @endphp
-                                                        @if(!empty($location))
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded border bg-white">
-                                                                    <small class="text-muted d-block mb-1"><i class="bi bi-geo-alt me-1"></i>Location</small>
-                                                                    <div>{{ is_string($location) ? $location : json_encode($location) }}</div>
-                                                                </div>
-                                                            </div>
-                                                        @endif
-                                                        @php
-                                                            $contactNumber = $report['contactNumber'] ?? null;
-                                                            if (is_array($contactNumber)) {
-                                                                $contactNumber = is_string($contactNumber) ? $contactNumber : json_encode($contactNumber);
-                                                            }
-                                                        @endphp
-                                                        @if(!empty($contactNumber))
-                                                            <div class="col-md-6">
-                                                                <div class="p-2 rounded border bg-white">
-                                                                    <small class="text-muted d-block mb-1"><i class="bi bi-telephone me-1"></i>Contact Number</small>
-                                                                    <div>{{ is_string($contactNumber) ? $contactNumber : json_encode($contactNumber) }}</div>
-                                                                </div>
-                                                            </div>
-                                                        @endif
-                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
