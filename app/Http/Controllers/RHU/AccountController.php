@@ -184,6 +184,7 @@ class AccountController extends Controller
                 ->set([
                     'uid' => $uid,
                     'email' => $validated['email'],
+                    'fullname' => $validated['name'],
                     'role' => $validated['role'],
                     'barangay_id' => $user['barangayId'] ?? $user['id'],
                     'barangay_name' => $user['name'] ?? $user['healthCenterName'] ?? '',

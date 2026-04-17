@@ -131,7 +131,15 @@ class RegisterController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ]);
 
-            $this->saveUserProfile($firestore, $uid, $email, 'barangay', $uid, $request->healthCenterName);
+            $this->saveUserProfile(
+                $firestore,
+                $uid,
+                $email,
+                'barangay',
+                $uid,
+                $request->healthCenterName,
+                $request->input('fullName', $request->healthCenterName)
+            );
 
             // Notify the selected RHU (add a notification document)
             $firestore->collection('rhu')->document($request->rhuId)
@@ -266,6 +274,17 @@ class RegisterController extends Controller
                 'username' => null,
                 'uid' => null,
             ]);
+            $this->initializeRhuServicesSubcollection($firestore, $uid);
+
+            $this->saveUserProfile(
+                $firestore,
+                $uid,
+                $email,
+                'rhu',
+                $uid,
+                $request->rhuName,
+                $request->input('fullName', $request->rhuName)
+            );
 
             \Log::info('RHU registration created', [
                 'rhu_id' => $uid,
@@ -466,8 +485,17 @@ class RegisterController extends Controller
                 'rhu_name' => $request->rhuName,
                 'logo_url' => $logoUrl,
             ]);
+            $this->initializeRhuServicesSubcollection($firestore, $uid);
 
-            $this->saveUserProfile($firestore, $uid, session('google_email'), 'rhu', $uid, $request->rhuName);
+            $this->saveUserProfile(
+                $firestore,
+                $uid,
+                session('google_email'),
+                'rhu',
+                $uid,
+                $request->rhuName,
+                session('google_name', $request->rhuName)
+            );
 
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar']);
 
@@ -592,7 +620,15 @@ class RegisterController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ]);
 
-            $this->saveUserProfile($firestore, $uid, session('google_email'), 'barangay', $uid, $request->healthCenterName);
+            $this->saveUserProfile(
+                $firestore,
+                $uid,
+                session('google_email'),
+                'barangay',
+                $uid,
+                $request->healthCenterName,
+                session('google_name', $request->healthCenterName)
+            );
 
             // Notify the selected RHU
             $firestore->collection('rhu')->document($request->rhuId)
@@ -613,7 +649,15 @@ class RegisterController extends Controller
         }
     }
 
-    private function saveUserProfile($firestore, string $uid, string $email, string $role, ?string $barangayId, ?string $barangayName): void
+    private function saveUserProfile(
+        $firestore,
+        string $uid,
+        string $email,
+        string $role,
+        ?string $barangayId,
+        ?string $barangayName,
+        ?string $fullName = null
+    ): void
     {
         $firestore->collection('users')->document($uid)->set([
             'uid' => $uid,
@@ -621,8 +665,21 @@ class RegisterController extends Controller
             'role' => $role,
             'barangay_id' => $barangayId ?? '',
             'barangay_name' => $barangayName ?? '',
+            'fullname' => $fullName ?? $barangayName ?? '',
             'created_at' => now()->toDateTimeString(),
             'updated_at' => now()->toDateTimeString(),
         ], ['merge' => true]);
+    }
+
+    private function initializeRhuServicesSubcollection($firestore, string $rhuId): void
+    {
+        $firestore->collection('rhu')
+            ->document($rhuId)
+            ->collection('services')
+            ->document('_meta')
+            ->set([
+                '_meta' => true,
+                'initialized_at' => now()->toDateTimeString(),
+            ], ['merge' => true]);
     }
 }
