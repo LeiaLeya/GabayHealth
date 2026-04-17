@@ -10,19 +10,51 @@
     </div>
 
     <div class="seal-section">
-        <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
-        <div class="center-name">Pob. Ward IV Health Center</div>
+        @if(session('user.logo_url'))
+            <img src="{{ session('user.logo_url') }}" 
+                 class="seal" 
+                 alt="RHU Logo"
+                 onerror="this.src='{{ asset('images/seal.png') }}'">
+        @else
+            <img src="{{ asset('images/seal.png') }}" class="seal" alt="Municipal Seal">
+        @endif
+        <div class="center-name">
+            {{ session('user.name', 'Health Center') }}
+        </div>
     </div>
 
     <ul class="nav-links">
         @php
-            $navItems = [
-                ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                ['route' => 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
-                ['route' => 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
-                ['route' => 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
-                ['route' => 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
-            ];
+            $userRole = session('user.role');
+            
+            if ($userRole === 'admin') {
+                $navItems = [
+                    ['route' => 'RHUs.index', 'label' => 'Rural Health Units', 'icon' => 'bi-building'],
+                    ['route' => 'RHUs.approvals', 'label' => 'Pending Approvals', 'icon' => 'bi-clock-history'],
+                    ['route' => 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
+                ];
+            } else {
+                // Determine route prefix based on role: bhc. for Barangay, rhu. for RHU
+                $routePrefix = ($userRole === 'rhu') ? 'rhu.' : 'bhc.';
+                
+                $navItems = [
+                    ['route' => $routePrefix . 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => $routePrefix . 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => $routePrefix . 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                    ['route' => $routePrefix . 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
+                    ['route' => $routePrefix . 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
+                    ['route' => $routePrefix . 'notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
+                    ['route' => $routePrefix . 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                    ['route' => $routePrefix . 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
+                    ['route' => $routePrefix . 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                    ['route' => $routePrefix . 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
+                    ['route' => $routePrefix . 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
+                ];
+            }
         @endphp
 
         @foreach ($navItems as $item)
@@ -30,27 +62,28 @@
                 <a href="{{ route($item['route']) }}">
                     @php
                         $iconMap = [
+                            'Rural Health Units' => 'bi-building',
+                            'Pending Approvals' => 'bi-clock-history',
+                            'User Requests' => 'bi-person-plus',
                             'Reports' => 'bi-file-earmark-bar-graph',
+                            'Verify Reports' => 'bi-patch-check',
                             'Schedules' => 'bi-calendar-event',
+                            'Calendars' => 'bi-calendar3',
                             'Events' => 'bi-calendar2-event',
+                            'Notifications' => 'bi-bell',
                             'Inventory' => 'bi-box-seam',
+                            'Services' => 'bi-heart-pulse',
                             'Personnel' => 'bi-people',
+                            'Account Management' => 'bi-person-gear',
+                            'Logout' => 'bi-door-open',
                         ];
                     @endphp
-                    <i class="bi {{ $iconMap[$item['label']] }} nav-icon"></i>
+                    <i class="bi {{ $iconMap[$item['label']] ?? $item['icon'] }} nav-icon"></i>
                     <span>{{ $item['label'] }}</span>
                 </a>
             </li>
         @endforeach
     </ul>
-
-    <!-- Logout -->
-    <div class="logout-section mt-auto">
-        <a href="{{ route('logout') }}">
-            <i class="bi bi-door-open nav-icon"></i>
-            <span>Logout</span>
-        </a>
-    </div>
 </div>
 
 <style>
@@ -84,10 +117,23 @@
     .seal-section {
         text-align: center;
         padding: 8px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rhu-logo {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        margin-top: 8px;
     }
 
     .seal {
         width: 80px;
+        border-radius: 50%;
+        object-fit: cover;
     }
 
     .center-name {
@@ -102,16 +148,17 @@
     }
 
     .nav-links li {
-        padding: 18px 35px;
+        padding: 10px 24px;
         border-radius: 6px;
         transition: background 0.2s;
-        margin-bottom: 12px;
+        margin-bottom: -4px;
     }
 
     .nav-links li.active,
     .nav-links li:hover {
         background-color: #113d96;
         border-radius: 6px;
+        padding: 10px 24px;
     }
 
     .nav-links li a {
@@ -126,29 +173,5 @@
     .nav-icon {
         width: 18px;
         height: 18px;
-    }
-
-    .logout-section {
-        padding: 0 35px 16px 35px;
-        margin-top: auto;
-    }
-
-    .logout-section a {
-        color: white;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 15px;
-        line-height: 1;
-    }
-
-    .logout-section .nav-icon {
-        width: 20px;
-        height: 20px;
-    }
-
-    .logout-section a span {
-        margin-top: -2px;
     }
 </style>
