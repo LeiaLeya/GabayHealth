@@ -42,45 +42,45 @@
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-4">
-            <div class="card bg-danger text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-x-circle fs-2"></i>
+                            <i class="bi bi-x-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['total_rejected'] }}</h4>
-                            <small>Total Rejected</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['total_rejected'] }}</h4>
+                            <small class="text-muted">Total Rejected</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-warning text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-day fs-2"></i>
+                            <i class="bi bi-calendar-day fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['rejected_today'] }}</h4>
-                            <small>Rejected Today</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['rejected_today'] }}</h4>
+                            <small class="text-muted">Rejected Today</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-info text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-check fs-2"></i>
+                            <i class="bi bi-calendar-check fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0">{{ $stats['rejected_this_month'] }}</h4>
-                            <small>This Month</small>
+                            <h4 class="mb-0 text-dark">{{ $stats['rejected_this_month'] }}</h4>
+                            <small class="text-muted">This Month</small>
                         </div>
                     </div>
                 </div>

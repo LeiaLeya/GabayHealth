@@ -40,6 +40,9 @@ class ReportsController extends Controller
             \Log::error('RHU ReportsController index - No barangayId available, showing empty reports');
             return $this->view('reports.index', [
                 'heatmapData' => [],
+                'verifiedBubbleData' => [],
+                'unverifiedBubbleData' => [],
+                'hotspotData' => [],
                 'stats' => [
                     'total_cases' => 0,
                     'fever_cases' => 0,
@@ -83,9 +86,13 @@ class ReportsController extends Controller
 
         $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($filter, $dateRange, $symptomFilter, $barangayId) {
             // Fetch ALL verified reports from ALL barangays for the heatmap
-            $reports = $this->getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter);
+            $verifiedReports = $this->getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter);
+            $unverifiedReports = $this->getAllUnverifiedSymptomSignals($filter, $dateRange, $symptomFilter);
             $barangays = $this->getAllBarangaysWithCoordinates();
-            $heatmapData = $this->processHeatmapData($reports, $barangays);
+            $heatmapData = $this->processHeatmapData($verifiedReports, $barangays);
+            $verifiedBubbleData = $this->processVerifiedBubbleData($verifiedReports, $barangays);
+            $unverifiedBubbleData = $this->processUnverifiedBubbleData($unverifiedReports, $barangays);
+            $hotspotData = $this->buildHotspotData($verifiedBubbleData);
 
             // Determine initial map center from the current user's barangay if available
             $centerLat = 10.2456;
@@ -97,8 +104,11 @@ class ReportsController extends Controller
 
             return [
                 'heatmapData' => $heatmapData,
-                'stats' => $this->getStatistics($reports),
-                'chartData' => $this->getChartData($reports),
+                'verifiedBubbleData' => $verifiedBubbleData,
+                'unverifiedBubbleData' => $unverifiedBubbleData,
+                'hotspotData' => $hotspotData,
+                'stats' => $this->getStatistics($verifiedReports),
+                'chartData' => $this->getChartData($verifiedReports),
                 'availableSymptoms' => $this->getAvailableSymptoms($barangayId),
                 'centerLat' => $centerLat,
                 'centerLng' => $centerLng,
@@ -106,6 +116,9 @@ class ReportsController extends Controller
         });
 
         $heatmapData = $payload['heatmapData'];
+        $verifiedBubbleData = $payload['verifiedBubbleData'];
+        $unverifiedBubbleData = $payload['unverifiedBubbleData'];
+        $hotspotData = $payload['hotspotData'];
         $stats = $payload['stats'];
         $chartData = $payload['chartData'];
         $availableSymptoms = $payload['availableSymptoms'];
@@ -114,6 +127,9 @@ class ReportsController extends Controller
         
         return $this->view('reports.index', compact(
             'heatmapData', 
+            'verifiedBubbleData',
+            'unverifiedBubbleData',
+            'hotspotData',
             'stats', 
             'chartData', 
             'filter', 
@@ -581,6 +597,69 @@ class ReportsController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Error fetching all verified health reports: ' . $e->getMessage());
+        }
+
+        return $reports;
+    }
+
+    private function getAllUnverifiedSymptomSignals($filter, $dateRange, $symptomFilter)
+    {
+        $reports = [];
+
+        try {
+            $endDate = Carbon::now();
+            switch ($dateRange) {
+                case 'week':
+                    $startDate = $endDate->copy()->subWeek();
+                    break;
+                case 'month':
+                    $startDate = $endDate->copy()->subMonth();
+                    break;
+                case 'quarter':
+                    $startDate = $endDate->copy()->subQuarter();
+                    break;
+                case 'year':
+                    $startDate = $endDate->copy()->subYear();
+                    break;
+                default:
+                    $startDate = $endDate->copy()->subYear();
+            }
+
+            $documents = $this->firestore
+                ->collection("reports")
+                ->where('status', '=', 'to be reviewed')
+                ->documents();
+
+            foreach ($documents as $doc) {
+                if (!$doc->exists()) {
+                    continue;
+                }
+
+                $reportData = $doc->data();
+                $dateField = $reportData['date'] ?? $reportData['createdAt'] ?? $reportData['startDate'] ?? null;
+                if ($dateField) {
+                    try {
+                        $reportDate = Carbon::parse($dateField);
+                        if (!$reportDate->between($startDate, $endDate)) {
+                            continue;
+                        }
+                    } catch (\Exception $e) {
+                        // Keep record if date cannot be parsed.
+                    }
+                }
+
+                if ($filter !== 'all' && !$this->matchesCondition($reportData, $filter)) {
+                    continue;
+                }
+
+                if ($symptomFilter !== 'all' && !$this->hasSymptom($reportData, $symptomFilter)) {
+                    continue;
+                }
+
+                $reports[] = array_merge($reportData, ['id' => $doc->id()]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching unverified symptom signals: ' . $e->getMessage());
         }
 
         return $reports;
@@ -1128,6 +1207,203 @@ class ReportsController extends Controller
         }
 
         return $barangayNames;
+    }
+
+    private function processVerifiedBubbleData(array $reports, array $barangays): array
+    {
+        $grouped = [];
+        foreach ($reports as $report) {
+            $barangayId = $report['barangayId'] ?? null;
+            if (!$barangayId || !isset($barangays[$barangayId])) {
+                continue;
+            }
+
+            $category = $this->categorizeConfirmedDisease($report);
+            if (!isset($grouped[$barangayId])) {
+                $grouped[$barangayId] = [
+                    'barangayId' => $barangayId,
+                    'barangay' => $barangays[$barangayId]['name'],
+                    'lat' => $barangays[$barangayId]['lat'],
+                    'lng' => $barangays[$barangayId]['lng'],
+                    'totalCases' => 0,
+                    'categories' => [
+                        'dengue' => 0,
+                        'respiratory' => 0,
+                        'waterborne' => 0,
+                    ],
+                ];
+            }
+
+            $grouped[$barangayId]['totalCases']++;
+            $grouped[$barangayId]['categories'][$category]++;
+        }
+
+        $bubbles = [];
+        foreach ($grouped as $entry) {
+            arsort($entry['categories']);
+            $dominant = array_key_first($entry['categories']);
+            $bubbles[] = array_merge($entry, [
+                'diseaseCategory' => $dominant,
+                'dominantCases' => $entry['categories'][$dominant] ?? 0,
+            ]);
+        }
+
+        return array_values($bubbles);
+    }
+
+    private function processUnverifiedBubbleData(array $reports, array $barangays): array
+    {
+        $grouped = [];
+        foreach ($reports as $report) {
+            $barangayId = $report['barangayId'] ?? null;
+            if (!$barangayId || !isset($barangays[$barangayId])) {
+                continue;
+            }
+
+            $category = $this->categorizeUnverifiedSignal($report);
+            if (!isset($grouped[$barangayId])) {
+                $grouped[$barangayId] = [
+                    'barangayId' => $barangayId,
+                    'barangay' => $barangays[$barangayId]['name'],
+                    'lat' => $barangays[$barangayId]['lat'],
+                    'lng' => $barangays[$barangayId]['lng'],
+                    'totalSignals' => 0,
+                    'categories' => [
+                        'dengue' => 0,
+                        'respiratory' => 0,
+                        'waterborne' => 0,
+                    ],
+                ];
+            }
+
+            $grouped[$barangayId]['totalSignals']++;
+            $grouped[$barangayId]['categories'][$category]++;
+        }
+
+        $bubbles = [];
+        foreach ($grouped as $entry) {
+            arsort($entry['categories']);
+            $dominant = array_key_first($entry['categories']);
+            $bubbles[] = array_merge($entry, [
+                'possibleCategory' => $dominant,
+                'dominantSignals' => $entry['categories'][$dominant] ?? 0,
+            ]);
+        }
+
+        return array_values($bubbles);
+    }
+
+    private function buildHotspotData(array $verifiedBubbleData): array
+    {
+        $hotspots = [];
+        $distanceThresholdKm = 1.5;
+        $used = [];
+
+        for ($i = 0; $i < count($verifiedBubbleData); $i++) {
+            if (isset($used[$i])) {
+                continue;
+            }
+
+            $base = $verifiedBubbleData[$i];
+            $cluster = [$base];
+            for ($j = $i + 1; $j < count($verifiedBubbleData); $j++) {
+                if (isset($used[$j])) {
+                    continue;
+                }
+
+                $target = $verifiedBubbleData[$j];
+                if (($target['diseaseCategory'] ?? null) !== ($base['diseaseCategory'] ?? null)) {
+                    continue;
+                }
+
+                $distance = $this->distanceKm(
+                    $base['lat'] ?? 0,
+                    $base['lng'] ?? 0,
+                    $target['lat'] ?? 0,
+                    $target['lng'] ?? 0
+                );
+
+                if ($distance <= $distanceThresholdKm) {
+                    $cluster[] = $target;
+                    $used[$j] = true;
+                }
+            }
+
+            if (count($cluster) < 2) {
+                continue;
+            }
+
+            $count = count($cluster);
+            $lat = array_sum(array_column($cluster, 'lat')) / $count;
+            $lng = array_sum(array_column($cluster, 'lng')) / $count;
+            $cases = array_sum(array_column($cluster, 'totalCases'));
+
+            $hotspots[] = [
+                'lat' => $lat,
+                'lng' => $lng,
+                'radius' => 350 + ($cases * 35),
+                'diseaseCategory' => $base['diseaseCategory'],
+                'barangayCount' => $count,
+                'totalCases' => $cases,
+            ];
+        }
+
+        return $hotspots;
+    }
+
+    private function distanceKm($lat1, $lng1, $lat2, $lng2): float
+    {
+        $earthRadius = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) * sin($dLat / 2)
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2))
+            * sin($dLng / 2) * sin($dLng / 2);
+
+        return $earthRadius * (2 * atan2(sqrt($a), sqrt(1 - $a)));
+    }
+
+    private function categorizeConfirmedDisease(array $report): string
+    {
+        $disease = strtolower((string) ($report['confirmed_disease'] ?? $report['disease'] ?? $report['condition'] ?? ''));
+        $symptoms = array_map('strtolower', $report['symptoms'] ?? []);
+        $tokens = trim($disease . ' ' . implode(' ', $symptoms));
+
+        if (str_contains($tokens, 'dengue')) {
+            return 'dengue';
+        }
+        if (str_contains($tokens, 'cholera') || str_contains($tokens, 'diarrhea')) {
+            return 'waterborne';
+        }
+        if (
+            str_contains($tokens, 'covid') ||
+            str_contains($tokens, 'influenza') ||
+            str_contains($tokens, 'respiratory') ||
+            str_contains($tokens, 'cough')
+        ) {
+            return 'respiratory';
+        }
+
+        return 'respiratory';
+    }
+
+    private function categorizeUnverifiedSignal(array $report): string
+    {
+        $symptoms = array_map('strtolower', $report['symptoms'] ?? []);
+        $condition = strtolower((string) ($report['condition'] ?? ''));
+        $tokens = trim($condition . ' ' . implode(' ', $symptoms));
+
+        if (str_contains($tokens, 'dengue') || str_contains($tokens, 'fever') || str_contains($tokens, 'rash')) {
+            return 'dengue';
+        }
+        if (str_contains($tokens, 'diarrhea') || str_contains($tokens, 'cholera')) {
+            return 'waterborne';
+        }
+        if (str_contains($tokens, 'cough') || str_contains($tokens, 'flu') || str_contains($tokens, 'covid')) {
+            return 'respiratory';
+        }
+
+        return 'respiratory';
     }
 
     private function getStatistics($reports)

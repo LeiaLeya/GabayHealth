@@ -37,9 +37,13 @@
         </div>
     @endif
 
+    @php
+        $processedToday = ($stats['verified_today'] ?? 0) + ($stats['rejected_today'] ?? 0);
+    @endphp
+
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
@@ -54,37 +58,25 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-check-circle fs-2 text-dark"></i>
+                            <i class="bi bi-activity fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['verified_today'] }}</h4>
-                            <small class="text-muted">Approved Today</small>
+                            <h4 class="mb-0 text-dark">{{ $processedToday }}</h4>
+                            <small class="text-muted">
+                                Processed Today
+                                ({{ $stats['verified_today'] }} approved · {{ $stats['rejected_today'] }} rejected)
+                            </small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-x-circle fs-2 text-dark"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ $stats['rejected_today'] }}</h4>
-                            <small class="text-muted">Rejected Today</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">

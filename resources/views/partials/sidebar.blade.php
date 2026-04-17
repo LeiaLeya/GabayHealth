@@ -42,34 +42,35 @@
                     ['route' => 'admin.system-admin.all-rhus', 'label' => 'All RHUs', 'icon' => 'bi-building'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
-            } else {
-                // Determine route prefix based on role: bhc. for Barangay, rhu. for RHU
-                $routePrefix = ($userRole === 'rhu') ? 'rhu.' : 'bhc.';
-                
+            } elseif ($userRole === 'rhu') {
                 $navItems = [
-                    ['route' => 'rhu.reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
+                    ['route' => 'rhu.reports.index', 'label' => 'Reports', 'icon' => 'bi-file-earmark-bar-graph'],
                     ['route' => 'rhu.reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
                     ['route' => 'rhu.barangays.index', 'label' => 'Barangays', 'icon' => 'bi-geo-alt'],
-                    ['route' => 'rhu.schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
+                    ['route' => 'rhu.schedules.index', 'label' => 'Schedules', 'icon' => 'bi-calendar-event'],
                     ['route' => 'rhu.calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
-                    ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'Events.png'],
+                    ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'bi-calendar2-event'],
                     ['route' => 'rhu.notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
-                    ['route' => 'rhu.inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
+                    ['route' => 'rhu.inventory.index', 'label' => 'Inventory', 'icon' => 'bi-box-seam'],
                     ['route' => 'rhu.services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                    ['route' => 'rhu.personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
+                    ['route' => 'rhu.personnel.index', 'label' => 'Personnel', 'icon' => 'bi-people'],
                     ['route' => 'rhu.user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
                     ['route' => 'rhu.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
-                    ['route' => $routePrefix . 'reports.index', 'label' => 'Reports', 'icon' => 'Reports.png'],
-                    ['route' => $routePrefix . 'reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
-                    ['route' => $routePrefix . 'schedules.index', 'label' => 'Schedules', 'icon' => 'Schedule.png'],
-                    ['route' => $routePrefix . 'calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
-                    ['route' => $routePrefix . 'events.index', 'label' => 'Events', 'icon' => 'Events.png'],
-                    ['route' => $routePrefix . 'notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
-                    ['route' => $routePrefix . 'inventory.index', 'label' => 'Inventory', 'icon' => 'Inventory.png'],
-                    ['route' => $routePrefix . 'services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                    ['route' => $routePrefix . 'personnel.index', 'label' => 'Personnel', 'icon' => 'Personnel.png'],
-                    ['route' => $routePrefix . 'user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
-                    ['route' => $routePrefix . 'accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
+                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
+                ];
+            } else {
+                $navItems = [
+                    ['route' => 'bhc.reports.index', 'label' => 'Reports', 'icon' => 'bi-file-earmark-bar-graph'],
+                    ['route' => 'bhc.reports.verify', 'label' => 'Verify Reports', 'icon' => 'bi-patch-check'],
+                    ['route' => 'bhc.schedules.index', 'label' => 'Schedules', 'icon' => 'bi-calendar-event'],
+                    ['route' => 'bhc.calendars.index', 'label' => 'Calendars', 'icon' => 'bi-calendar3'],
+                    ['route' => 'bhc.events.index', 'label' => 'Events', 'icon' => 'bi-calendar2-event'],
+                    ['route' => 'bhc.notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
+                    ['route' => 'bhc.inventory.index', 'label' => 'Inventory', 'icon' => 'bi-box-seam'],
+                    ['route' => 'bhc.services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
+                    ['route' => 'bhc.personnel.index', 'label' => 'Personnel', 'icon' => 'bi-people'],
+                    ['route' => 'bhc.user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
+                    ['route' => 'bhc.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             }

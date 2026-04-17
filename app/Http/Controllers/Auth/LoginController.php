@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use App\Support\JwtAuth;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Socialite\Facades\Socialite;
 use Exception;
@@ -48,17 +49,26 @@ class LoginController extends Controller
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
+            $sessionUser = [
+                'id' => $user['uid'] ?? $user['id'],
+                'uid' => $user['uid'] ?? $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $user['name'],
+                'role' => $userRole,
+                'status' => $user['status'] ?? 'active',
+                'logo_url' => $user['logo_url'] ?? null,
+            ];
+
+            $authToken = JwtAuth::issue([
+                'sub' => $sessionUser['uid'],
+                'role' => $sessionUser['role'],
+                'email' => $sessionUser['email'],
+            ]);
+
             session([
-                'user' => [
-                    'id' => $user['uid'] ?? $user['id'],
-                    'uid' => $user['uid'] ?? $user['id'],
-                    'username' => $user['username'],
-                    'email' => $user['email'],
-                    'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $user['name'],
-                    'role' => $userRole,
-                    'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,
-                ]
+                'user' => $sessionUser,
+                'auth_token' => $authToken,
             ]);
 
             \Log::info('User session created after login', [
@@ -117,17 +127,26 @@ class LoginController extends Controller
                 return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
             }
 
+            $sessionUser = [
+                'id' => $userId,
+                'uid' => $userId,
+                'username' => $user['username'] ?? $googleUser->name,
+                'email' => $googleUser->email,
+                'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
+                'role' => $userRole,
+                'status' => $user['status'] ?? 'active',
+                'logo_url' => $user['logo_url'] ?? null,
+            ];
+
+            $authToken = JwtAuth::issue([
+                'sub' => $sessionUser['uid'],
+                'role' => $sessionUser['role'],
+                'email' => $sessionUser['email'],
+            ]);
+
             session([
-                'user' => [
-                    'id' => $userId,
-                    'uid' => $userId,
-                    'username' => $user['username'] ?? $googleUser->name,
-                    'email' => $googleUser->email,
-                    'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
-                    'role' => $userRole,
-                    'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,
-                ]
+                'user' => $sessionUser,
+                'auth_token' => $authToken,
             ]);
 
             \Log::info('User session created after Google login', [
