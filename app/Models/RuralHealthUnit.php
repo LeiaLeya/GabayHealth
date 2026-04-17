@@ -10,5 +10,6 @@ class RuralHealthUnit extends Model
         'name',
         'city',
         'status',
+        'tagline',
     ];
 }

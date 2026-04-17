@@ -8,14 +8,22 @@ use Illuminate\Support\Facades\Http;
 
 class AdminController extends Controller
 {
-    // List all approved RHUs
+    // List all approved and pending RHUs
     public function index(FirestoreService $firestore)
     {
         $documents = $firestore->getCollection('rhu');
         $ruralHealthUnits = [];
         foreach ($documents as $document) {
             $data = $document->data();
-            if (($data['status'] ?? '') === 'approved') {
+            $status = $data['status'] ?? 'pending';
+            if ($status === 'approved' || $status === 'pending') {
+                // Resolve location names from PSGC codes
+                if (isset($data['region']) && isset($data['province']) && isset($data['city'])) {
+                    $location = $this->getLocationFromPSGC($data['region'], $data['province'], $data['city']);
+                    if ($location) {
+                        $data['displayLocation'] = $location;
+                    }
+                }
                 $ruralHealthUnits[] = array_merge(['id' => $document->id()], $data);
             }
         }
@@ -32,6 +40,51 @@ class AdminController extends Controller
             ['path' => request()->url(), 'pageName' => 'page']
         );
         return view('admin.index', compact('ruralHealthUnits'));
+    }
+
+    // Helper to get location name with province and region from PSGC codes
+    private function getLocationFromPSGC($regionCode, $provinceCode, $cityCode)
+    {
+        try {
+            $locationParts = [];
+            
+            // Query the city/municipality
+            $cityResponse = Http::get("https://psgc.gitlab.io/api/cities/{$cityCode}.json");
+            if ($cityResponse->successful()) {
+                $cityData = $cityResponse->json();
+                $locationParts[] = $cityData['name'] ?? '';
+            }
+            
+            // Get province name
+            if ($provinceCode) {
+                try {
+                    $provinceResponse = Http::get("https://psgc.gitlab.io/api/provinces/{$provinceCode}.json");
+                    if ($provinceResponse->successful()) {
+                        $provinceData = $provinceResponse->json();
+                        $locationParts[] = $provinceData['name'] ?? '';
+                    }
+                } catch (\Exception $e) {
+                    // Continue without province
+                }
+            }
+            
+            // Get region name
+            if ($regionCode) {
+                try {
+                    $regionResponse = Http::get("https://psgc.gitlab.io/api/regions/{$regionCode}.json");
+                    if ($regionResponse->successful()) {
+                        $regionData = $regionResponse->json();
+                        $locationParts[] = $regionData['name'] ?? '';
+                    }
+                } catch (\Exception $e) {
+                    // Continue without region
+                }
+            }
+            
+            return implode(', ', array_filter($locationParts)) ?: null;
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     // List all pending RHUs for approval

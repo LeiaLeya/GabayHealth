@@ -479,29 +479,9 @@
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" name="email" class="form-control" placeholder="you@example.com" required value="{{ old('email') }}">
+                <small style="color: #9ca3af;">You will receive your credentials here after admin approval</small>
                 @error('email') <small style="color: #dc2626;">{{ $message }}</small> @enderror
             </div>
-
-            <!-- Username -->
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required value="{{ old('username') }}">
-                @error('username') <small style="color: #dc2626;">{{ $message }}</small> @enderror
-            </div>
-
-            <!-- Password Row -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="At least 8 characters" required>
-                    @error('password') <small style="color: #dc2626;">{{ $message }}</small> @enderror
-                </div>
-                <div class="form-group">
-                    <label for="password_confirmation">Confirm</label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
-                </div>
-            </div>
-            <small style="color: #9ca3af;">Must include a number and special character</small>
 
             <!-- RHU Name -->
             <div class="form-group">
@@ -674,6 +654,10 @@ document.addEventListener('DOMContentLoaded', function () {
 <!-- Mapbox Geocoding API -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const mapboxAccessToken = @json(config('mapbox.access_token'));
+    
+    if (!mapboxAccessToken) {
+        console.error('Mapbox token not configured');
     const mapboxAccessToken = @json(env('MAPBOX_ACCESS_TOKEN'));
     
     console.log('Mapbox token loaded:', mapboxAccessToken ? 'Yes (length: ' + mapboxAccessToken.length + ')' : 'No');
@@ -795,10 +779,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function searchMapbox(query) {
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-            `access_token=${mapboxAccessToken}` +
-            `&country=PH` +
-            `&proximity=120.7,15.5` +
-            `&limit=5`;
+            `access_token=${mapboxAccessToken}&` +
+            `country=PH&` +
+            `proximity=121.7740,12.8797&` +
+            `limit=8`;
 
         console.log('Searching Mapbox for:', query);
         
@@ -824,6 +808,7 @@ document.addEventListener('DOMContentLoaded', function () {
         suggestionsList.innerHTML = '';
 
         if (!features || features.length === 0) {
+            suggestionsList.innerHTML = '<div style="padding: 12px; color: #9ca3af;">No results found</div>';
             // Show "Enter full address manually" option when no results
             const manualOption = document.createElement('div');
             manualOption.className = 'manual-entry-option';
@@ -838,6 +823,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        features.forEach((feature) => {
         console.log('Displaying', features.length, 'suggestions');
         
         features.forEach((feature, index) => {
@@ -869,8 +855,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         searchInput.value = feature.place_name;
         fullAddressInput.value = feature.place_name;
-        latitudeInput.value = latitude;
-        longitudeInput.value = longitude;
+        latitudeInput.value = latitude.toFixed(6);
+        longitudeInput.value = longitude.toFixed(6);
         coordsDisplay.textContent = `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
         suggestionsList.innerHTML = '';

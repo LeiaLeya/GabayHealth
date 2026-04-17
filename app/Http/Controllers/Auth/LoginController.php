@@ -48,7 +48,6 @@ class LoginController extends Controller
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
-            // Store user in session
             session([
                 'user' => [
                     'id' => $user['uid'] ?? $user['id'],
@@ -58,8 +57,14 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $user['name'],
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
+                    'logo_url' => $user['logo_url'] ?? null,
                 ]
+            ]);
+
+            \Log::info('User session created after login', [
+                'user_id' => $user['uid'] ?? $user['id'],
+                'role' => $userRole,
+                'logo_url' => $user['logo_url'] ?? 'NOT SET',
             ]);
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');
@@ -69,18 +74,16 @@ class LoginController extends Controller
         }
     }
 
-    // Google OAuth redirect for login
     public function redirectToGoogle()
     {
         return Socialite::driver('google')->redirect();
     }
 
-    // Google OAuth callback for login
     public function handleGoogleCallback()
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-            
+
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();
 
@@ -99,9 +102,7 @@ class LoginController extends Controller
                 }
             }
 
-            // User not found - redirect to registration instead of showing error
             if (!$user) {
-                // Store Google data in session for registration
                 session([
                     'google_email' => $googleUser->email,
                     'google_name' => $googleUser->name,
@@ -112,12 +113,10 @@ class LoginController extends Controller
                 return redirect()->route('register.rhu.google')->with('info', 'Please complete your registration details.');
             }
 
-            // Check if account is approved
             if (($user['status'] ?? 'pending') !== 'approved') {
                 return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
             }
 
-            // Login successful - store in session
             session([
                 'user' => [
                     'id' => $userId,
@@ -127,8 +126,14 @@ class LoginController extends Controller
                     'name' => $user['rhuName'] ?? $user['healthCenterName'] ?? $googleUser->name,
                     'role' => $userRole,
                     'status' => $user['status'] ?? 'active',
-                    'logo_url' => $user['logo_url'] ?? null,  // Add this line
+                    'logo_url' => $user['logo_url'] ?? null,
                 ]
+            ]);
+
+            \Log::info('User session created after Google login', [
+                'user_id' => $userId,
+                'role' => $userRole,
+                'logo_url' => $user['logo_url'] ?? 'NOT SET',
             ]);
 
             return redirect()->route('dashboard')->with('success', 'Login successful!');
@@ -141,13 +146,10 @@ class LoginController extends Controller
 
     public function logout()
     {
-        // Clear all session data
         session()->flush();
         
-        // Invalidate the session
         session()->invalidate();
         
-        // Regenerate session token
         session()->regenerateToken();
         
         return redirect()->route('login')->with('success', 'You have been logged out.');
@@ -171,6 +173,19 @@ class LoginController extends Controller
 
     private function findAccount($firestore, string $field, string $value): ?array
     {
+        $adminDocs = $firestore->collection('admin')
+            ->where($field, '=', $value)
+            ->documents();
+        foreach ($adminDocs as $doc) {
+            if ($doc->exists()) {
+                return [
+                    'uid' => $doc->id(),
+                    'role' => 'admin',
+                    'collection' => 'admin',
+                ];
+            }
+        }
+
         $rhuDocs = $firestore->collection('rhu')
             ->where($field, '=', $value)
             ->documents();
