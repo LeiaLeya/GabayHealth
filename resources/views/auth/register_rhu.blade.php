@@ -302,7 +302,7 @@
     /* Mapbox Geocoder Styles */
     .location-search-container {
         position: relative;
-        z-index: 10;
+        z-index: 1000;
     }
 
     .suggestions-list {
@@ -316,9 +316,11 @@
         border-radius: 0 0 6px 6px;
         max-height: 300px;
         overflow-y: auto;
+        overflow-x: hidden;
         display: none;
-        z-index: 1000;
+        z-index: 10000;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-top: -1px;
     }
 
     .suggestions-list.show {
@@ -352,6 +354,32 @@
         font-size: 12px;
         color: #9ca3af;
         margin-top: 2px;
+    }
+
+    .manual-entry-option {
+        padding: 12px 12px;
+        font-size: 13px;
+        color: #2563eb;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.15s;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .manual-entry-option:hover {
+        background-color: #eff6ff;
+    }
+
+    .manual-mode-indicator {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+        font-style: italic;
+    }
+
+    .manual-mode-indicator.active {
+        color: #2563eb;
     }
 
     .location-coordinates {
@@ -466,13 +494,17 @@
             <div class="form-group">
                 <label for="addressSearch">Address</label>
                 <div class="location-search-container">
-                    <input type="text" id="addressSearch" class="form-control" placeholder="Search for an address..." autocomplete="off">
+                    <input type="text" id="addressSearch" class="form-control" placeholder="Search for an address..." autocomplete="off" value="{{ old('fullAddress') }}">
                     <div id="suggestionsList" class="suggestions-list"></div>
                     <input type="hidden" id="fullAddress" name="fullAddress" value="{{ old('fullAddress') }}">
                     <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude') }}">
                     <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude') }}">
+                    <input type="hidden" id="manualMode" name="manualMode" value="0">
                     <div class="location-coordinates">
                         <span id="coordsDisplay"></span>
+                    </div>
+                    <div id="manualModeIndicator" class="manual-mode-indicator" style="display: none;">
+                        Manual entry mode - Type your full address below
                     </div>
                 </div>
                 @error('fullAddress') <small style="color: #dc2626;">{{ $message }}</small> @enderror
@@ -626,6 +658,28 @@ document.addEventListener('DOMContentLoaded', function () {
     
     if (!mapboxAccessToken) {
         console.error('Mapbox token not configured');
+    const mapboxAccessToken = @json(env('MAPBOX_ACCESS_TOKEN'));
+    
+    console.log('Mapbox token loaded:', mapboxAccessToken ? 'Yes (length: ' + mapboxAccessToken.length + ')' : 'No');
+    
+    if (!mapboxAccessToken || mapboxAccessToken === null) {
+        console.error('Mapbox token not configured. Please set MAPBOX_ACCESS_TOKEN in your .env file');
+        // If Mapbox is not configured, enable manual mode by default
+        const searchInput = document.getElementById('addressSearch');
+        const fullAddressInput = document.getElementById('fullAddress');
+        const manualModeInput = document.getElementById('manualMode');
+        const manualModeIndicator = document.getElementById('manualModeIndicator');
+        
+        if (searchInput && fullAddressInput) {
+            searchInput.addEventListener('input', function() {
+                fullAddressInput.value = this.value.trim();
+            });
+            searchInput.addEventListener('blur', function() {
+                if (this.value.trim()) {
+                    fullAddressInput.value = this.value.trim();
+                }
+            });
+        }
         return;
     }
 
@@ -635,16 +689,67 @@ document.addEventListener('DOMContentLoaded', function () {
     const latitudeInput = document.getElementById('latitude');
     const longitudeInput = document.getElementById('longitude');
     const coordsDisplay = document.getElementById('coordsDisplay');
+    const manualModeInput = document.getElementById('manualMode');
+    const manualModeIndicator = document.getElementById('manualModeIndicator');
+
+    if (!searchInput || !fullAddressInput || !suggestionsList) {
+        console.error('Required form elements not found', {
+            searchInput: !!searchInput,
+            fullAddressInput: !!fullAddressInput,
+            suggestionsList: !!suggestionsList
+        });
+        return;
+    }
+
+    console.log('Mapbox geocoding initialized successfully');
+
+    // Initialize fullAddress from searchInput if it has old value
+    if (searchInput.value && !fullAddressInput.value) {
+        fullAddressInput.value = searchInput.value;
+    }
 
     let searchTimeout;
+    let isManualMode = false;
+
+    // Enable manual address entry mode
+    function enableManualMode() {
+        isManualMode = true;
+        manualModeInput.value = '1';
+        manualModeIndicator.style.display = 'block';
+        manualModeIndicator.classList.add('active');
+        searchInput.placeholder = 'Enter your full address manually...';
+        suggestionsList.innerHTML = '';
+        suggestionsList.classList.remove('show');
+        searchInput.focus();
+        
+        // Clear coordinates since we don't have them in manual mode
+        latitudeInput.value = '';
+        longitudeInput.value = '';
+        coordsDisplay.textContent = '';
+    }
 
     // Search as user types
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
         
+        // Always update fullAddress when user types (as fallback)
+        // This ensures the field is populated even if user doesn't select a suggestion
+        if (query.length > 0) {
+            fullAddressInput.value = query;
+        }
+        
+        // In manual mode, we're done - just update the value
+        if (isManualMode) {
+            return;
+        }
+        
         if (query.length < 2) {
             suggestionsList.innerHTML = '';
             suggestionsList.classList.remove('show');
+            // Don't clear fullAddress if user has typed something
+            if (query.length === 0) {
+                fullAddressInput.value = '';
+            }
             return;
         }
 
@@ -654,6 +759,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 300);
     });
 
+    // Ensure address is saved when user leaves the field
+    searchInput.addEventListener('blur', function() {
+        const query = this.value.trim();
+        if (query.length > 0) {
+            fullAddressInput.value = query;
+            console.log('Address saved on blur:', query);
+        }
+    });
+
+    // Also sync on change event
+    searchInput.addEventListener('change', function() {
+        const query = this.value.trim();
+        if (query.length > 0) {
+            fullAddressInput.value = query;
+            console.log('Address saved on change:', query);
+        }
+    });
+
     function searchMapbox(query) {
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
             `access_token=${mapboxAccessToken}&` +
@@ -661,12 +784,24 @@ document.addEventListener('DOMContentLoaded', function () {
             `proximity=121.7740,12.8797&` +
             `limit=8`;
 
+        console.log('Searching Mapbox for:', query);
+        
         fetch(url)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Mapbox API error: ${res.status} ${res.statusText}`);
+                }
+                return res.json();
+            })
             .then(data => {
+                console.log('Mapbox results:', data.features?.length || 0, 'suggestions found');
                 displaySuggestions(data.features || []);
             })
-            .catch(error => console.error('Geocoding error:', error));
+            .catch(error => {
+                console.error('Geocoding error:', error);
+                // Show manual entry option on error
+                displaySuggestions([]);
+            });
     }
 
     function displaySuggestions(features) {
@@ -674,11 +809,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!features || features.length === 0) {
             suggestionsList.innerHTML = '<div style="padding: 12px; color: #9ca3af;">No results found</div>';
+            // Show "Enter full address manually" option when no results
+            const manualOption = document.createElement('div');
+            manualOption.className = 'manual-entry-option';
+            manualOption.textContent = 'Enter full address manually';
+            manualOption.addEventListener('click', (e) => {
+                e.preventDefault();
+                enableManualMode();
+            });
+            suggestionsList.appendChild(manualOption);
             suggestionsList.classList.add('show');
+            console.log('No suggestions found, showing manual entry option');
             return;
         }
 
         features.forEach((feature) => {
+        console.log('Displaying', features.length, 'suggestions');
+        
+        features.forEach((feature, index) => {
             const item = document.createElement('div');
             item.className = 'suggestion-item';
             
@@ -691,6 +839,7 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
 
             item.addEventListener('click', () => {
+                console.log('Selected address:', feature.place_name);
                 selectAddress(feature);
             });
 
@@ -698,6 +847,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         suggestionsList.classList.add('show');
+        console.log('Suggestions list shown, element:', suggestionsList);
     }
 
     function selectAddress(feature) {
@@ -711,22 +861,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
         suggestionsList.innerHTML = '';
         suggestionsList.classList.remove('show');
+        isManualMode = false;
+        manualModeInput.value = '0';
+        manualModeIndicator.style.display = 'none';
+        searchInput.placeholder = 'Search for an address...';
     }
 
     // Close suggestions when clicking outside
     document.addEventListener('click', function(e) {
-        if (e.target !== searchInput) {
+        if (e.target !== searchInput && !suggestionsList.contains(e.target)) {
             suggestionsList.classList.remove('show');
         }
     });
 
-    // Form validation
+    // Form validation - ensure address is set before submit
     document.querySelector('form').addEventListener('submit', function(e) {
-        if (!fullAddressInput.value) {
-            e.preventDefault();
-            alert('Please select an address from the search results');
-            searchInput.focus();
+        // Always sync searchInput to fullAddress before submit
+        const searchValue = searchInput.value.trim();
+        if (searchValue.length > 0) {
+            fullAddressInput.value = searchValue;
         }
+        
+        const addressValue = fullAddressInput.value.trim();
+        
+        if (!addressValue) {
+            e.preventDefault();
+            alert('Please enter or select an address');
+            searchInput.focus();
+            return false;
+        }
+        
+        // Log for debugging
+        console.log('Submitting form with address:', addressValue);
     });
 });
 </script>

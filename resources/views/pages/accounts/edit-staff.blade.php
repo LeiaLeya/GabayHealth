@@ -2,11 +2,34 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="fw-bold text-dark mb-0">Edit Staff Member</h2>
+            <a href="{{ route('accounts.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-left"></i>
+                Back to Account Management
+            </a>
+        </div>
+    </div>
+
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title">Edit Staff Member</h4>
+                    <h5 class="card-title mb-0">Staff Information</h5>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('accounts.staff.update', $staff['id']) }}" method="POST">
@@ -52,6 +75,7 @@
                                         <option value="doctor" {{ (old('role', $staff['role']) === 'doctor') ? 'selected' : '' }}>Doctor</option>
                                         <option value="midwife" {{ (old('role', $staff['role']) === 'midwife') ? 'selected' : '' }}>Midwife</option>
                                         <option value="nurse" {{ (old('role', $staff['role']) === 'nurse') ? 'selected' : '' }}>Nurse</option>
+                                        <option value="bhw" {{ (old('role', $staff['role']) === 'bhw') ? 'selected' : '' }}>Barangay Health Worker</option>
                                     </select>
                                     @error('role')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -85,12 +109,10 @@
                         
 
                         
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('accounts.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Account Management
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Update Staff Member
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle"></i>
+                                Update Staff Member
                             </button>
                         </div>
                     </form>

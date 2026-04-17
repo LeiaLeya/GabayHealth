@@ -126,7 +126,7 @@ class AccountController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'role' => 'required|in:doctor,midwife,nurse',
+            'role' => 'required|in:doctor,midwife,nurse,bhw',
             'contact_number' => 'required|string|max:20',
             'password' => 'required|string|min:6',
             'specialization' => 'nullable|string|max:255',
@@ -144,16 +144,29 @@ class AccountController extends Controller
             return back()->withErrors(['email' => 'Email already exists.'])->withInput();
         }
 
+        $uid = null;
+        $auth = $this->firestore->getAuth();
+
         try {
+            // Create Firebase Auth user
+            $authUser = $auth->createUser([
+                'email' => $validated['email'],
+                'password' => $validated['password'],
+                'displayName' => $validated['name'],
+                'emailVerified' => false,
+            ]);
+            
+            $uid = $authUser->uid;
+
             // Prepare staff data
             $staffData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'role' => $validated['role'],
                 'contact_number' => $validated['contact_number'],
-                'password' => Hash::make($validated['password']),
                 'specialization' => $validated['specialization'] ?? '',
                 'status' => 'active',
+                'uid' => $uid, // Store Firebase UID
                 'created_at' => now()->toDateTimeString(),
                 'updated_at' => now()->toDateTimeString(),
             ];
@@ -165,8 +178,40 @@ class AccountController extends Controller
                 ->collection('accounts')
                 ->add($staffData);
 
+            $this->firestore->getFirestore()
+                ->collection('users')
+                ->document($uid)
+                ->set([
+                    'uid' => $uid,
+                    'email' => $validated['email'],
+                    'role' => $validated['role'],
+                    'barangay_id' => $user['barangayId'] ?? $user['id'],
+                    'barangay_name' => $user['name'] ?? $user['healthCenterName'] ?? '',
+                    'created_at' => now()->toDateTimeString(),
+                    'updated_at' => now()->toDateTimeString(),
+                ], ['merge' => true]);
+
             return redirect()->route('rhu.accounts.index')->with('success', 'Staff account created successfully!');
+        } catch (\Kreait\Firebase\Auth\Exception\AuthException $e) {
+            \Log::error('Firebase Auth error when creating staff: ' . $e->getMessage());
+            
+            $message = 'Failed to create staff account.';
+            if (str_contains($e->getMessage(), 'EMAIL_EXISTS')) {
+                $message = 'The email address is already registered.';
+            }
+            
+            return back()->withErrors(['email' => $message])->withInput();
         } catch (\Exception $e) {
+            // If Firestore save fails but Auth user was created, try to clean up
+            if ($uid) {
+                try {
+                    $auth->deleteUser($uid);
+                } catch (\Throwable $cleanupException) {
+                    \Log::warning('Failed to cleanup auth user after Firestore error: ' . $cleanupException->getMessage());
+                }
+            }
+            
+            \Log::error('Error creating staff account: ' . $e->getMessage());
             return back()->withErrors(['error' => 'Failed to create staff account: ' . $e->getMessage()])->withInput();
         }
     }

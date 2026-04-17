@@ -43,9 +43,9 @@
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex align-items-center mb-3">
                             @if(isset($event['image_url']))
-                                <img src="{{ $event['image_url'] }}" alt="Event Image" class="rounded me-3" style="width:60px;height:60px;object-fit:cover;">
+                                <img src="{{ $event['image_url'] }}" alt="Event Image" class="rounded me-3" style="width:80px;height:80px;object-fit:contain;background-color:#f3f4f6;border:1px solid #e5e7eb;">
                             @else
-                                <div class="bg-light rounded d-flex align-items-center justify-content-center me-3" style="width:60px;height:60px;">
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center me-3" style="width:80px;height:80px;">
                                     <i class="bi bi-calendar-event display-6 text-secondary"></i>
                                 </div>
                             @endif
@@ -167,7 +167,6 @@
                                 <input type="text" name="location" id="edit_location" class="form-control" value="{{ $event['location'] ?? '' }}" style="display: none;">
                                 <input type="hidden" name="latitude" id="edit_latitude" value="{{ $event['latitude'] ?? '' }}">
                                 <input type="hidden" name="longitude" id="edit_longitude" value="{{ $event['longitude'] ?? '' }}">
-                                <div id="editMapPreview" class="mt-2" style="display: none; height: 200px; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6;"></div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Description</label>
@@ -175,7 +174,22 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Event Image</label>
-                                <input type="file" name="image" class="form-control" accept="image/*">
+                                <div class="event-image-upload-section" id="editEventImageUploadSection{{ $event['id'] }}">
+                                    <div id="editEventImageUploadArea{{ $event['id'] }}" style="{{ isset($event['image_url']) && $event['image_url'] ? 'display: none;' : 'display: flex; flex-direction: column; align-items: center; gap: 8px;' }}">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                        <p>Upload event image</p>
+                                        <p>PNG or JPG, up to 5MB</p>
+                                    </div>
+                                    <div id="editEventImagePreview{{ $event['id'] }}" style="{{ isset($event['image_url']) && $event['image_url'] ? 'display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;' : 'display: none;' }}">
+                                        <img id="editEventImagePreviewImg{{ $event['id'] }}" src="{{ $event['image_url'] ?? '' }}" alt="Event Image Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto 12px auto; object-fit: contain; background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: 8px; display: block;">
+                                        <button type="button" class="btn btn-sm btn-secondary edit-event-image-change-btn" data-event-id="{{ $event['id'] }}">Change Image</button>
+                                    </div>
+                                </div>
+                                <input type="file" id="editEventImageUpload{{ $event['id'] }}" name="image" accept="image/*" style="display: none;">
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -324,7 +338,6 @@
                     <input type="hidden" name="latitude" id="latitude">
                     <input type="hidden" name="longitude" id="longitude">
                     <small class="text-muted">Search with Mapbox or enter address manually</small>
-                    <div id="mapPreview" class="mt-2" style="display: none; height: 200px; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6;"></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Description</label>
@@ -332,7 +345,22 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Event Image</label>
-                    <input type="file" name="image" class="form-control" accept="image/*">
+                    <div class="event-image-upload-section" id="eventImageUploadSection">
+                        <div id="eventImageUploadArea">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Upload event image</p>
+                            <p>PNG or JPG, up to 5MB</p>
+                        </div>
+                        <div id="eventImagePreview">
+                            <img id="eventImagePreviewImg" src="" alt="Event Image Preview">
+                            <button type="button" class="btn btn-sm btn-secondary mt-2 event-image-change-btn">Change Image</button>
+                        </div>
+                    </div>
+                    <input type="file" id="eventImageUpload" name="image" accept="image/*" style="display: none;">
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -421,6 +449,85 @@
 }
 .multi-select-dropdown.dropdown-disabled .multi-select-label {
     color: #6c757d;
+}
+
+/* Event Image Upload Styles */
+.event-image-upload-section {
+    background: #f3f4f6;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+}
+
+.event-image-upload-section:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.event-image-upload-section.dragging {
+    border-color: #2563eb;
+    background: #dbeafe;
+}
+
+#eventImageUploadArea, [id^="editEventImageUploadArea"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+#eventImageUploadArea svg, [id^="editEventImageUploadArea"] svg {
+    color: #9ca3af;
+}
+
+#eventImageUploadArea p, [id^="editEventImageUploadArea"] p {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 0;
+}
+
+#eventImageUploadArea p:first-child, [id^="editEventImageUploadArea"] p:first-child {
+    font-weight: 600;
+    color: #374151;
+}
+
+#eventImagePreview, [id^="editEventImagePreview"] {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+#eventImagePreviewImg, [id^="editEventImagePreviewImg"], [id^="editEventImageNewPreviewImg"] {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    margin: 0 auto 12px auto;
+    object-fit: contain;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    padding: 8px;
+    display: block;
+}
+
+.event-image-change-btn, .edit-event-image-change-btn {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.event-image-change-btn:hover, .edit-event-image-change-btn:hover {
+    background: #e5e7eb;
 }
 </style>
 
@@ -538,6 +645,182 @@ document.addEventListener('DOMContentLoaded', function() {
             endTimeField.addEventListener('input', validateEditTime);
         }
     });
+
+    // Event Image Upload - Add Event Modal
+    const eventImageUploadSection = document.getElementById('eventImageUploadSection');
+    const eventImageUpload = document.getElementById('eventImageUpload');
+    const eventImageUploadArea = document.getElementById('eventImageUploadArea');
+    const eventImagePreview = document.getElementById('eventImagePreview');
+    const eventImagePreviewImg = document.getElementById('eventImagePreviewImg');
+
+    if (eventImageUploadSection && eventImageUpload) {
+        // Click to upload
+        eventImageUploadSection.addEventListener('click', () => eventImageUpload.click());
+
+        // File selected
+        eventImageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file type
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+                
+                // Validate file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    eventImagePreviewImg.src = e.target.result;
+                    eventImagePreviewImg.style.display = 'block';
+                    eventImageUploadArea.style.display = 'none';
+                    eventImagePreview.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Change image button
+        const changeBtn = eventImagePreview.querySelector('.event-image-change-btn');
+        if (changeBtn) {
+            changeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                eventImageUpload.value = '';
+                eventImageUploadArea.style.display = 'flex';
+                eventImagePreview.style.display = 'none';
+                eventImageUpload.click();
+            });
+        }
+        
+        // Drag and drop
+        eventImageUploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            eventImageUploadSection.classList.add('dragging');
+        });
+        
+        eventImageUploadSection.addEventListener('dragleave', () => {
+            eventImageUploadSection.classList.remove('dragging');
+        });
+        
+        eventImageUploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            eventImageUploadSection.classList.remove('dragging');
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (!file.type.match('image.*')) {
+                    alert('Please drop an image file.');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB.');
+                    return;
+                }
+                eventImageUpload.files = e.dataTransfer.files;
+                const event = new Event('change', { bubbles: true });
+                eventImageUpload.dispatchEvent(event);
+            }
+        });
+        
+        // Reset preview when modal is closed
+        const addEventModal = document.getElementById('addEventModal');
+        if (addEventModal) {
+            addEventModal.addEventListener('hidden.bs.modal', function() {
+                eventImageUpload.value = '';
+                eventImageUploadArea.style.display = 'flex';
+                eventImagePreview.style.display = 'none';
+                eventImagePreviewImg.src = '';
+            });
+        }
+    }
+
+    // Event Image Upload - Edit Event Modals
+    document.querySelectorAll('[id^="editEventImageUploadSection"]').forEach(section => {
+        const eventId = section.id.replace('editEventImageUploadSection', '');
+        const uploadInput = document.getElementById(`editEventImageUpload${eventId}`);
+        const uploadArea = document.getElementById(`editEventImageUploadArea${eventId}`);
+        const preview = document.getElementById(`editEventImagePreview${eventId}`);
+
+        if (!uploadInput || !section) return;
+
+        // Click to upload
+        section.addEventListener('click', () => uploadInput.click());
+
+        // File selected
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file type
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+                
+                // Validate file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewImg = document.getElementById(`editEventImagePreviewImg${eventId}`);
+                    if (previewImg) {
+                        previewImg.src = e.target.result;
+                        previewImg.style.display = 'block';
+                    }
+                    if (uploadArea) uploadArea.style.display = 'none';
+                    if (preview) preview.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Change image buttons
+        document.querySelectorAll(`.edit-event-image-change-btn[data-event-id="${eventId}"]`).forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadInput.value = '';
+                uploadArea.style.display = 'flex';
+                preview.style.display = 'none';
+                uploadInput.click();
+            });
+        });
+        
+        // Drag and drop
+        section.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            section.classList.add('dragging');
+        });
+        
+        section.addEventListener('dragleave', () => {
+            section.classList.remove('dragging');
+        });
+        
+        section.addEventListener('drop', (e) => {
+            e.preventDefault();
+            section.classList.remove('dragging');
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (!file.type.match('image.*')) {
+                    alert('Please drop an image file.');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB.');
+                    return;
+                }
+                uploadInput.files = e.dataTransfer.files;
+                const event = new Event('change', { bubbles: true });
+                uploadInput.dispatchEvent(event);
+            }
+        });
+    });
     });
 </script>
 
@@ -549,6 +832,8 @@ document.addEventListener('DOMContentLoaded', function() {
         width: 100%;
         max-width: 100%;
         border-radius: 4px;
+        position: relative;
+        z-index: 1;
     }
     .mapboxgl-ctrl-geocoder input {
         padding: 8px 12px;
@@ -559,9 +844,19 @@ document.addEventListener('DOMContentLoaded', function() {
     .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--pin-right {
         right: 10px;
     }
-    #mapPreview, #editMapPreview {
-        margin-top: 10px;
+    /* Ensure suggestions dropdown appears above modal content */
+    .mapboxgl-ctrl-geocoder .suggestions {
+        z-index: 1050 !important;
+        position: absolute !important;
     }
+    /* Hide suggestions initially only in edit modal to prevent auto-opening */
+    #editLocationGeocoderContainer .mapboxgl-ctrl-geocoder .suggestions {
+        display: none !important;
+    }
+    #editLocationGeocoderContainer .mapboxgl-ctrl-geocoder .suggestions.active {
+        display: block !important;
+    }
+    /* Don't interfere with suggestions in add modal - let Mapbox control visibility */
 </style>
 @endpush
 
@@ -577,9 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mapboxgl.accessToken = mapboxToken;
         
         let addGeocoder = null;
-        let addMap = null;
         let editGeocoder = null;
-        let editMap = null;
         
         // Toggle between Mapbox search and manual input
         window.toggleLocationInput = function(mode) {
@@ -615,13 +908,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (isAdd) {
                     document.getElementById('latitude').value = '';
                     document.getElementById('longitude').value = '';
-                    const mapPreview = document.getElementById('mapPreview');
-                    if (mapPreview) mapPreview.style.display = 'none';
                 } else {
                     document.getElementById('edit_latitude').value = '';
                     document.getElementById('edit_longitude').value = '';
-                    const editMapPreview = document.getElementById('editMapPreview');
-                    if (editMapPreview) editMapPreview.style.display = 'none';
                 }
             }
         };
@@ -652,8 +941,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             addGeocoder.addTo(geocoderContainer);
             
-            const mapPreview = document.getElementById('mapPreview');
-            
             addGeocoder.on('result', function(e) {
                 const result = e.result;
                 const coordinates = result.geometry.coordinates;
@@ -662,38 +949,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 locationInput.value = address;
                 document.getElementById('latitude').value = coordinates[1];
                 document.getElementById('longitude').value = coordinates[0];
-                
-                if (!addMap) {
-                    addMap = new mapboxgl.Map({
-                        container: 'mapPreview',
-                        style: 'mapbox://styles/mapbox/streets-v11',
-                        center: coordinates,
-                        zoom: 15
-                    });
-                    
-                    new mapboxgl.Marker()
-                        .setLngLat(coordinates)
-                        .addTo(addMap);
-                    
-                    mapPreview.style.display = 'block';
-                } else {
-                    addMap.setCenter(coordinates);
-                    // Remove existing markers
-                    const markers = addMap._markers || [];
-                    markers.forEach(m => m.remove());
-                    new mapboxgl.Marker()
-                        .setLngLat(coordinates)
-                        .addTo(addMap);
-                }
             });
             
             addGeocoder.on('clear', function() {
                 locationInput.value = '';
                 document.getElementById('latitude').value = '';
                 document.getElementById('longitude').value = '';
-                if (mapPreview && addMap) {
-                    mapPreview.style.display = 'none';
-                }
             });
         }
         
@@ -747,10 +1008,42 @@ document.addEventListener('DOMContentLoaded', function() {
             
             editGeocoder.addTo(editGeocoderContainer);
             
-            // Set initial value if editing
+            // Prevent suggestions from auto-opening when setting initial value
+            let isSettingInitialValue = false;
+            
+            // Set initial value if editing (without triggering suggestions)
             const existingLocation = editLocationInput.value;
             if (existingLocation) {
-                editGeocoder.setInput(existingLocation);
+                isSettingInitialValue = true;
+                // Wait for geocoder to be fully initialized, then set value without triggering suggestions
+                setTimeout(() => {
+                    const geocoderInput = editGeocoderContainer.querySelector('input[type="text"]');
+                    if (geocoderInput) {
+                        // Prevent focus event from triggering suggestions
+                        geocoderInput.addEventListener('focus', function(e) {
+                            if (isSettingInitialValue) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                this.blur();
+                            }
+                        }, { once: true });
+                        
+                        // Set value without triggering input events
+                        geocoderInput.value = existingLocation;
+                        
+                        // Ensure suggestions are closed
+                        setTimeout(() => {
+                            const suggestions = editGeocoderContainer.querySelector('.suggestions');
+                            if (suggestions) {
+                                suggestions.style.display = 'none';
+                                suggestions.classList.remove('active');
+                            }
+                            // Blur the input to ensure suggestions are closed
+                            geocoderInput.blur();
+                            isSettingInitialValue = false;
+                        }, 100);
+                    }
+                }, 200);
             }
             
             // Check if coordinates exist - if not, show manual input by default
@@ -765,24 +1058,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 editLocationInput.style.display = 'none';
             }
             
-            const editMapPreview = modal.querySelector('#editMapPreview');
-            
-            // If editing and coordinates exist, show map
-            if (existingLat && existingLng) {
-                editMap = new mapboxgl.Map({
-                    container: 'editMapPreview',
-                    style: 'mapbox://styles/mapbox/streets-v11',
-                    center: [parseFloat(existingLng), parseFloat(existingLat)],
-                    zoom: 15
-                });
-                
-                new mapboxgl.Marker()
-                    .setLngLat([parseFloat(existingLng), parseFloat(existingLat)])
-                    .addTo(editMap);
-                
-                editMapPreview.style.display = 'block';
-            }
-            
             editGeocoder.on('result', function(e) {
                 const result = e.result;
                 const coordinates = result.geometry.coordinates;
@@ -791,37 +1066,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 editLocationInput.value = address;
                 modal.querySelector('#edit_latitude').value = coordinates[1];
                 modal.querySelector('#edit_longitude').value = coordinates[0];
-                
-                if (!editMap) {
-                    editMap = new mapboxgl.Map({
-                        container: 'editMapPreview',
-                        style: 'mapbox://styles/mapbox/streets-v11',
-                        center: coordinates,
-                        zoom: 15
-                    });
-                    
-                    new mapboxgl.Marker()
-                        .setLngLat(coordinates)
-                        .addTo(editMap);
-                    
-                    editMapPreview.style.display = 'block';
-                } else {
-                    editMap.setCenter(coordinates);
-                    const markers = editMap._markers || [];
-                    markers.forEach(m => m.remove());
-                    new mapboxgl.Marker()
-                        .setLngLat(coordinates)
-                        .addTo(editMap);
-                }
             });
             
             editGeocoder.on('clear', function() {
                 editLocationInput.value = '';
                 modal.querySelector('#edit_latitude').value = '';
                 modal.querySelector('#edit_longitude').value = '';
-                if (editMapPreview && editMap) {
-                    editMapPreview.style.display = 'none';
-                }
             });
         }
         
@@ -832,6 +1082,24 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (editLocationInput && !editGeocoder) {
                 initializeEditGeocoder(modal);
+                
+                // Close suggestions dropdown after a short delay to prevent auto-opening
+                setTimeout(() => {
+                    const editGeocoderContainer = modal.querySelector('#editLocationGeocoderContainer');
+                    if (editGeocoderContainer) {
+                        const geocoderInput = editGeocoderContainer.querySelector('input[type="text"]');
+                        if (geocoderInput) {
+                            // Ensure input is not focused to prevent suggestions
+                            geocoderInput.blur();
+                        }
+                        // Close any suggestions that might have opened
+                        const suggestions = editGeocoderContainer.querySelector('.suggestions');
+                        if (suggestions) {
+                            suggestions.style.display = 'none';
+                            suggestions.classList.remove('active');
+                        }
+                    }
+                }, 300);
             }
         });
         
@@ -839,7 +1107,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('hidden.bs.modal', function(e) {
             if (e.target.querySelector('#edit_location')) {
                 editGeocoder = null;
-                editMap = null;
             }
         });
     } else {

@@ -2,6 +2,36 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="fw-bold text-dark mb-0">Edit Health Center Profile</h2>
+            <a href="{{ route('accounts.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-left"></i>
+                Back to Account Management
+            </a>
+        </div>
+    </div>
+
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -123,8 +153,9 @@
 
                         
                         <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Update Profile
+                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle"></i>
+                                Update Profile
                             </button>
                         </div>
                     </form>
@@ -200,7 +231,7 @@
             <!-- Change Password Section -->
             <div class="card mt-4">
                 <div class="card-header">
-                    <h5 class="card-title">Change Password</h5>
+                    <h5 class="card-title mb-0">Change Password</h5>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('rhu.accounts.password.update') }}" method="POST">
@@ -227,8 +258,9 @@
                             </div>
                         </div>
                         <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-key me-2"></i>Change Password
+                            <button type="submit" class="btn btn-warning d-flex align-items-center gap-2">
+                                <i class="bi bi-key"></i>
+                                Change Password
                             </button>
                         </div>
                     </form>

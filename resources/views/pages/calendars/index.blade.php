@@ -28,76 +28,46 @@
     <!-- Quick Stats -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-event fs-2"></i>
+                            <i class="bi bi-calendar-event fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0" id="totalEvents">0</h4>
-                            <small>Total Events</small>
+                            <h4 class="mb-0 text-dark" id="totalEvents">0</h4>
+                            <small class="text-muted">Total Events</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card border">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-person-check fs-2"></i>
+                            <i class="bi bi-person-check fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0" id="totalAppointments">0</h4>
-                            <small>Appointments</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="bi bi-calendar-week fs-2"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0" id="thisWeekEvents">0</h4>
-                            <small>This Week</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Legend -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body py-3">
-                    <div class="d-flex align-items-center gap-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="badge bg-primary rounded-circle" style="width: 12px; height: 12px;"></div>
-                            <small class="text-muted">Upcoming Events</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="badge bg-secondary rounded-circle" style="width: 12px; height: 12px;"></div>
-                            <small class="text-muted">Completed Events</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="badge bg-success rounded-circle" style="width: 12px; height: 12px;"></div>
+                            <h4 class="mb-0 text-dark" id="totalAppointments">0</h4>
                             <small class="text-muted">Appointments</small>
                         </div>
-                        <div class="ms-auto">
-                            <small class="text-muted">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Click on any event to view details
-                            </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-calendar-week fs-2 text-dark"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="mb-0 text-dark" id="thisWeekEvents">0</h4>
+                            <small class="text-muted">This Week</small>
                         </div>
                     </div>
                 </div>
@@ -863,7 +833,8 @@ function loadMonthData(month) {
     // Show loading state
     document.getElementById('calendarBody').innerHTML = '<div class="calendar-loading"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
     
-    fetch(`/calendars/data?month=${month}`)
+    // Use relative path so it works for both /calendars, /bhc/calendars, /rhu/calendars
+    fetch(`data?month=${month}`)
         .then(response => {
             console.log('Response status:', response.status);
             if (!response.ok) {
@@ -927,6 +898,11 @@ if (todayBtn) {
         loadMonthData(todayMonth);
     });
 }
+
+// Always refresh data on initial load to ensure latest appointments/events
+document.addEventListener('DOMContentLoaded', () => {
+    loadMonthData(currentMonth);
+});
 
 // Schedule Form Functions
 function formatTime12Hour(time24Hour) {

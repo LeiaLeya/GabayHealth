@@ -61,6 +61,10 @@ class CalendarController extends Controller
         
         // Get RHU ID
         $rhuId = $this->getBarangayId();
+        // Determine barangayId: barangay users use their own id; others use assigned barangayId
+        $this->barangayId = $user['role'] === 'barangay'
+            ? ($user['id'] ?? null)
+            : ($user['barangayId'] ?? null);
         
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
@@ -86,10 +90,13 @@ class CalendarController extends Controller
         try {
             \Log::info('CalendarController - Fetching calendar data for user: ' . $user['id'] . ' with role: ' . $user['role']);
             
-            // Get events from user's sub-collection
+            // Get events; for barangay users, always use the resolved barangayId
+            $eventCollection = $user['role'];
+            $eventDocId = $user['role'] === 'barangay' ? $this->barangayId : $user['id'];
+
             $eventsQuery = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
+                ->collection($eventCollection)
+                ->document($eventDocId)
                 ->collection('events')
                 ->limit(30) // Limit results to prevent timeout
                 ->documents();
@@ -541,6 +548,10 @@ class CalendarController extends Controller
         
         // Get RHU ID
         $rhuId = $this->getBarangayId();
+        // Get barangayId from user session
+        $this->barangayId = $user['role'] === 'barangay'
+            ? ($user['id'] ?? null)
+            : ($user['barangayId'] ?? null);
         
         if (!$rhuId) {
             return response()->json(['error' => 'RHU ID not found'], 400);
@@ -555,10 +566,13 @@ class CalendarController extends Controller
         try {
             \Log::info('Calendar - AJAX request for month: ' . $month);
             
-            // Get events from user's sub-collection (same logic as index method)
+            // Get events; for barangay users, always use the resolved barangayId (same logic as index method)
+            $eventCollection = $user['role'];
+            $eventDocId = $user['role'] === 'barangay' ? $this->barangayId : $user['id'];
+
             $eventsQuery = $this->firestore
-                ->collection($user['role'])
-                ->document($user['id'])
+                ->collection($eventCollection)
+                ->document($eventDocId)
                 ->collection('events')
                 ->limit(30)
                 ->documents();
@@ -643,6 +657,8 @@ class CalendarController extends Controller
             }
 
             // Fetch appointments for RHU's barangays
+            $appointments = [];
+            $appointmentCount = 0;
             foreach ($barangays as $barangay) {
                 $appointmentsQuery = $this->firestore
                     ->collection('appointments')
@@ -679,10 +695,13 @@ class CalendarController extends Controller
                                 ],
                             ];
 
+                            $appointments[] = $appointmentData;
+
                             if (!isset($groupedItems[$appointmentDate])) {
                                 $groupedItems[$appointmentDate] = [];
                             }
                             $groupedItems[$appointmentDate][] = $appointmentData;
+                            $appointmentCount++;
                         }
                     }
                 }

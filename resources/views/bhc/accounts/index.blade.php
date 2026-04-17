@@ -60,14 +60,36 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="fw-bold text-dark mb-0">Account Management</h2>
+        </div>
+    </div>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-12">
             <!-- Health Center Profile Section -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Health Center Profile</h4>
-                    <a href="{{ route('accounts.profile.edit') }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-edit me-2"></i>Edit Profile
+                    <a href="{{ route('accounts.profile.edit') }}" class="btn btn-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-pencil"></i>
+                        Edit Profile
                     </a>
                 </div>
                 <div class="card-body">
@@ -132,8 +154,9 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">Staff Accounts Management</h4>
-                    <a href="{{ route('accounts.staff.create') }}" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus me-2"></i>Add Staff
+                    <a href="{{ route('bhc.accounts.staff.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-plus-circle"></i>
+                        Add Staff
                     </a>
                 </div>
                 <div class="card-body">
@@ -158,8 +181,21 @@
                                         <td>{{ $staff['name'] }}</td>
                                         <td>{{ $staff['email'] }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $staff['role'] === 'doctor' ? 'primary' : ($staff['role'] === 'midwife' ? 'success' : 'info') }}">
-                                                {{ ucfirst($staff['role']) }}
+                                            @php
+                                                $roleBadge = match($staff['role']) {
+                                                    'doctor' => 'primary',
+                                                    'midwife' => 'success',
+                                                    'nurse' => 'info',
+                                                    'bhw' => 'secondary',
+                                                    default => 'secondary'
+                                                };
+                                                $roleDisplay = match($staff['role']) {
+                                                    'bhw' => 'Barangay Health Worker',
+                                                    default => ucfirst($staff['role'])
+                                                };
+                                            @endphp
+                                            <span class="badge bg-{{ $roleBadge }}">
+                                                {{ $roleDisplay }}
                                             </span>
                                         </td>
                                         <td>{{ $staff['contact_number'] }}</td>
@@ -191,12 +227,13 @@
                             </table>
                         </div>
                     @else
-                        <div class="text-center py-4">
-                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <div class="text-center py-5">
+                            <i class="bi bi-people display-4 text-muted d-block mb-3"></i>
                             <h5 class="text-muted">No Staff Accounts Found</h5>
-                            <p class="text-muted">Start by adding staff members to your health center.</p>
-                            <a href="{{ route('accounts.staff.create') }}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Add First Staff Member
+                            <p class="text-muted mb-0">Start by adding staff members to your health center.</p>
+                            <a href="{{ route('bhc.accounts.staff.create') }}" class="btn btn-primary mt-3 d-flex align-items-center gap-2 mx-auto" style="width: fit-content;">
+                                <i class="bi bi-plus-circle"></i>
+                                Add First Staff Member
                             </a>
                         </div>
                     @endif
@@ -234,18 +271,6 @@
 
 @push('scripts')
 <script>
-    // Password confirmation validation
-    document.getElementById('confirm_password').addEventListener('input', function() {
-        const newPassword = document.getElementById('new_password').value;
-        const confirmPassword = this.value;
-        
-        if (newPassword !== confirmPassword) {
-            this.setCustomValidity('Passwords do not match');
-        } else {
-            this.setCustomValidity('');
-        }
-    });
-
     // Delete staff function
     function deleteStaff(staffId, staffName) {
         document.getElementById('staffName').textContent = staffName;

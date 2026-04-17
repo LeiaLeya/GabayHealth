@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Socialite\Facades\Socialite;
 use Exception;
 
@@ -92,6 +93,24 @@ class LoginController extends Controller
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             } catch (\Kreait\Firebase\Exception\Auth\UserNotFound $e) {
                 \Log::warning('Login failed: User not found in Firebase Auth', ['username' => $request->username, 'email' => $email]);
+            $account = $this->resolveAccountByUsername($firestore, $request->username);
+            if (!$account) {
+                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+            }
+
+            $userDoc = $firestore->collection($account['collection'])->document($account['uid'])->snapshot();
+            if (!$userDoc->exists()) {
+                Cache::forget('auth_lookup_username:' . strtolower(trim($request->username)));
+                return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+            }
+
+            $user = $userDoc->data();
+            $user['id'] = $account['uid'];
+            $user['uid'] = $account['uid'];
+            $userRole = $account['role'];
+
+            // Verify password
+            if (!password_verify($request->password, $user['password'] ?? '')) {
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
@@ -163,6 +182,18 @@ class LoginController extends Controller
                         $userRole = 'barangay';
                         break;
                     }
+            $account = $this->resolveAccountByEmail($firestore, $googleUser->email);
+            $user = null;
+            $userRole = null;
+            $userId = null;
+            if ($account) {
+                $userDoc = $firestore->collection($account['collection'])->document($account['uid'])->snapshot();
+                if ($userDoc->exists()) {
+                    $user = $userDoc->data();
+                    $userRole = $account['role'];
+                    $userId = $account['uid'];
+                } else {
+                    Cache::forget('auth_lookup_email:' . strtolower(trim($googleUser->email)));
                 }
             }
 
@@ -218,4 +249,52 @@ class LoginController extends Controller
         
         return redirect()->route('login')->with('success', 'You have been logged out.');
     }
+
+    private function resolveAccountByUsername($firestore, string $username): ?array
+    {
+        $cacheKey = 'auth_lookup_username:' . strtolower(trim($username));
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($firestore, $username) {
+            return $this->findAccount($firestore, 'username', $username);
+        });
+    }
+
+    private function resolveAccountByEmail($firestore, string $email): ?array
+    {
+        $cacheKey = 'auth_lookup_email:' . strtolower(trim($email));
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($firestore, $email) {
+            return $this->findAccount($firestore, 'email', $email);
+        });
+    }
+
+    private function findAccount($firestore, string $field, string $value): ?array
+    {
+        $rhuDocs = $firestore->collection('rhu')
+            ->where($field, '=', $value)
+            ->documents();
+        foreach ($rhuDocs as $doc) {
+            if ($doc->exists()) {
+                return [
+                    'uid' => $doc->id(),
+                    'role' => 'rhu',
+                    'collection' => 'rhu',
+                ];
+            }
+        }
+
+        $barangayDocs = $firestore->collection('barangay')
+            ->where($field, '=', $value)
+            ->documents();
+        foreach ($barangayDocs as $doc) {
+            if ($doc->exists()) {
+                return [
+                    'uid' => $doc->id(),
+                    'role' => 'barangay',
+                    'collection' => 'barangay',
+                ];
+            }
+        }
+
+        return null;
+    }
+
 }

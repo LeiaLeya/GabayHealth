@@ -11,6 +11,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Cloudinary\Cloudinary;
+use Cloudinary\Uploader;
 
 class EventController extends Controller
 {
@@ -294,15 +296,22 @@ class EventController extends Controller
 
         $imageUrl = null;
         if ($request->hasFile('image')) {
-            $bucket = $this->storage->getBucket();
-            $file = $request->file('image');
-            $fileName = 'events/' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                ['name' => $fileName]
-            );
-            $projectId = env('FIREBASE_PROJECT_ID');
-            $imageUrl = "https://firebasestorage.googleapis.com/v0/b/{$projectId}.appspot.com/o/" . rawurlencode($fileName) . "?alt=media";
+            try {
+                $cloudinary = new Cloudinary([
+                    'cloud' => [
+                        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                        'api_key' => env('CLOUDINARY_API_KEY'),
+                        'api_secret' => env('CLOUDINARY_API_SECRET'),
+                    ]
+                ]);
+                $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                    'folder' => "gabayhealth/events/rhu/{$rhuId}",
+                    'resource_type' => 'auto',
+                ]);
+                $imageUrl = $result['secure_url'];
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary upload error: ' . $e->getMessage());
+            }
         }
 
         $computedStatus = $this->computeStatus($request->date, $request->start_time, $request->end_time, $request->status);
@@ -473,16 +482,22 @@ class EventController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $bucket = $this->storage->getBucket();
-            $file = $request->file('image');
-            $fileName = 'events/' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                ['name' => $fileName]
-            );
-            $projectId = env('FIREBASE_PROJECT_ID');
-            $imageUrl = "https://firebasestorage.googleapis.com/v0/b/{$projectId}.appspot.com/o/" . rawurlencode($fileName) . "?alt=media";
-            $eventData['image_url'] = $imageUrl;
+            try {
+                $cloudinary = new Cloudinary([
+                    'cloud' => [
+                        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                        'api_key' => env('CLOUDINARY_API_KEY'),
+                        'api_secret' => env('CLOUDINARY_API_SECRET'),
+                    ]
+                ]);
+                $result = $cloudinary->uploadApi()->upload($request->file('image')->getRealPath(), [
+                    'folder' => "gabayhealth/events/rhu/{$rhuId}",
+                    'resource_type' => 'auto',
+                ]);
+                $eventData['image_url'] = $result['secure_url'];
+            } catch (\Exception $e) {
+                \Log::error('Cloudinary upload error: ' . $e->getMessage());
+            }
         }
 
         $this->firestore

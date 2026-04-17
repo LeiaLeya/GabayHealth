@@ -99,9 +99,40 @@
         font-size: 0.9rem;
         font-weight: 500;
     }
+    .register-card {
+        background: #2563eb;
+        color: #fff;
+        border-radius: 2rem;
+        box-shadow: 0 8px 32px rgba(37,99,235,0.15);
+        max-width: 420px;
+        width: 100%;
+        padding: 2.5rem 2.2rem 2rem 2.2rem;
+    }
+    .register-card .btn {
+        font-weight: 600;
+        font-size: 1.05rem;
+        border-radius: 0.75rem;
+    }
+    .register-card .btn-primary {
+        background: #fff;
+        color: #2563eb;
+        border: none;
+    }
+    .register-card .btn-blue-alt {
+        background: #60a5fa;
+        color: #fff;
+        border: none;
+    }
+    .register-card .btn-blue-alt:hover {
+        background: #1d4ed8;
+        color: #fff;
+    }
+    .auth-panel-hidden {
+        display: none !important;
+    }
 </style>
 <div class="d-flex align-items-center justify-content-center" style="min-height: 100vh; background: #f9f9f9;">
-    <div class="login-card">
+    <div id="loginPanel" class="login-card">
         <img src="{{ asset('images/gabayhealth_logo.png') }}" alt="GabayHealth Logo" style="width: 60px; height: 60px; margin-bottom: 10px;">
         <h2 class="fw-bold mb-2 text-center" style="color: #fff;">Login to GabayHealth</h2>
         <div class="mb-3" style="color: #e0e7ff; text-align: center; font-size: 1.08rem;">Enter your credentials to access your account.</div>
@@ -137,8 +168,60 @@
         </form>
         <div class="register-link text-center">
             Don't have an account?
-            <a href="{{ route('register.landing') }}">Register here</a>
+            <a href="{{ route('register.landing') }}" id="showRegisterPanel">Register here</a>
+        </div>
+    </div>
+
+    <div id="registerPanel" class="register-card auth-panel-hidden">
+        <div class="text-center mb-4">
+            <img src="{{ asset('images/gabayhealth_logo.png') }}" alt="GabayHealth Logo" style="width: 60px; height: 60px;">
+            <h2 class="fw-bold mt-3 mb-2" style="color: #fff;">Register to GabayHealth</h2>
+            <div class="mb-2" style="font-size: 1.05rem; color: #e0e7ff;">What are you registering as?</div>
+        </div>
+        <div class="d-flex flex-column gap-3">
+            <a href="{{ route('register.bhw') }}" class="btn btn-lg btn-primary">Barangay Health Center</a>
+            <a href="{{ route('register.rhu') }}" class="btn btn-lg btn-blue-alt">Rural Health Unit</a>
+        </div>
+        <div class="text-center mt-4">
+            <span style="color:#fff; font-weight:500;">Already have an account?</span>
+            <a href="{{ route('login') }}" id="showLoginPanel" style="color:#e0e7ff; font-weight:600; text-decoration:none;">Login here</a>
         </div>
     </div>
 </div>
+<script>
+    (function () {
+        const loginPanel = document.getElementById('loginPanel');
+        const registerPanel = document.getElementById('registerPanel');
+        const showRegister = document.getElementById('showRegisterPanel');
+        const showLogin = document.getElementById('showLoginPanel');
+
+        if (!loginPanel || !registerPanel || !showRegister || !showLogin) return;
+
+        const openRegister = () => {
+            loginPanel.classList.add('auth-panel-hidden');
+            registerPanel.classList.remove('auth-panel-hidden');
+            history.replaceState(null, '', '#register');
+        };
+
+        const openLogin = () => {
+            registerPanel.classList.add('auth-panel-hidden');
+            loginPanel.classList.remove('auth-panel-hidden');
+            history.replaceState(null, '', '#login');
+        };
+
+        showRegister.addEventListener('click', function (e) {
+            e.preventDefault();
+            openRegister();
+        });
+
+        showLogin.addEventListener('click', function (e) {
+            e.preventDefault();
+            openLogin();
+        });
+
+        if (window.location.hash === '#register') {
+            openRegister();
+        }
+    })();
+</script>
 @endsection
