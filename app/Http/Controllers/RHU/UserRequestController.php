@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class UserRequestController extends Controller
 {
@@ -29,6 +30,10 @@ class UserRequestController extends Controller
         }
         
         $requests = [];
+        $totalRequests = 0;
+        $pendingCount = 0;
+        $approvedCount = 0;
+        $declinedCount = 0;
         
         try {
             \Log::info('RHU UserRequestController - Fetching user requests for user: ' . $user['id'] . ' with role: ' . $user['role']);
@@ -50,10 +55,41 @@ class UserRequestController extends Controller
             
             \Log::info('RHU UserRequestController - Found ' . $count . ' user requests');
 
-            return $this->view('user-requests.index', compact('requests'));
+            $totalRequests = count($requests);
+            $pendingCount = count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'pending'));
+            $approvedCount = count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'approved'));
+            $declinedCount = count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'declined'));
+
+            $perPage = 7;
+            $currentPage = LengthAwarePaginator::resolveCurrentPage();
+            $requestsCollection = collect($requests);
+            $requests = new LengthAwarePaginator(
+                $requestsCollection->forPage($currentPage, $perPage)->values(),
+                $requestsCollection->count(),
+                $perPage,
+                $currentPage,
+                [
+                    'path' => request()->url(),
+                    'query' => request()->query(),
+                ]
+            );
+
+            return $this->view('user-requests.index', compact(
+                'requests',
+                'totalRequests',
+                'pendingCount',
+                'approvedCount',
+                'declinedCount'
+            ));
         } catch (\Exception $e) {
             \Log::error('Error fetching user requests: ' . $e->getMessage());
-            return $this->view('user-requests.index', compact('requests'))->with('error', 'Error loading user requests data. Please try again.');
+            return $this->view('user-requests.index', compact(
+                'requests',
+                'totalRequests',
+                'pendingCount',
+                'approvedCount',
+                'declinedCount'
+            ))->with('error', 'Error loading user requests data. Please try again.');
         }
     }
 

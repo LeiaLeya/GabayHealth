@@ -7,6 +7,7 @@ use App\Http\Controllers\Traits\HasRoleContext;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 
 class ReportsController extends Controller
@@ -170,9 +171,22 @@ class ReportsController extends Controller
         }
         
         $pendingReports = $this->getPendingReports($barangayId);
+        $perPage = 6;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pendingReportsCollection = collect($pendingReports);
+        $pendingReports = new LengthAwarePaginator(
+            $pendingReportsCollection->forPage($currentPage, $perPage)->values(),
+            $pendingReportsCollection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
         $stats = $this->getVerificationStats($barangayId);
         $staffAccounts = $this->getStaffAccounts($user['id'], $user['role']);
-        $barangayNames = $this->getBarangayNamesForReports($pendingReports);
+        $barangayNames = $this->getBarangayNamesForReports($pendingReportsCollection->all());
         
         return $this->view('reports.verify', compact('pendingReports', 'stats', 'staffAccounts', 'barangayNames'));
     }
@@ -1240,12 +1254,22 @@ class ReportsController extends Controller
 
         $bubbles = [];
         foreach ($grouped as $entry) {
-            arsort($entry['categories']);
-            $dominant = array_key_first($entry['categories']);
-            $bubbles[] = array_merge($entry, [
-                'diseaseCategory' => $dominant,
-                'dominantCases' => $entry['categories'][$dominant] ?? 0,
-            ]);
+            foreach ($entry['categories'] as $category => $count) {
+                if ($count <= 0) {
+                    continue;
+                }
+
+                $bubbles[] = [
+                    'barangayId' => $entry['barangayId'],
+                    'barangay' => $entry['barangay'],
+                    'lat' => $entry['lat'],
+                    'lng' => $entry['lng'],
+                    'totalCases' => $count,
+                    'barangayTotalCases' => $entry['totalCases'],
+                    'diseaseCategory' => $category,
+                    'categories' => $entry['categories'],
+                ];
+            }
         }
 
         return array_values($bubbles);

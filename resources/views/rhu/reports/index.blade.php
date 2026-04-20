@@ -39,10 +39,10 @@
 
     <!-- KPI + Controls -->
     <div class="row mb-4 g-3">
-        <div class="col-lg-8">
-            <div class="row g-3">
+        <div class="col-lg-7 h-100">
+            <div class="row g-3 h-100">
                 <div class="col-md-4">
-                    <div class="card border h-100 kpi-card">
+                    <div class="card border kpi-card">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-shrink-0">
@@ -57,7 +57,7 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card border h-100 kpi-card">
+                    <div class="card border kpi-card">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-shrink-0">
@@ -72,7 +72,7 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card border h-100 kpi-card">
+                    <div class="card border kpi-card">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-shrink-0">
@@ -88,7 +88,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-5">
             <div class="card border controls-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0"><i class="bi bi-sliders me-2"></i>Layer and Time Controls</h5>
@@ -132,7 +132,7 @@
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="card-title mb-0">
-                            <i class="bi bi-map me-2"></i>Verified Disease Bubble Map
+                            Verified Disease Bubble Map
                         </h5>
                         <small class="text-white-50">Verified (solid) + possible (faded) layers</small>
                     </div>
@@ -204,11 +204,68 @@
 }
 
 .kpi-card .card-body {
-    padding: 1rem 1.1rem;
+    padding: 0.9rem 1rem 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    position: relative;
+}
+
+.kpi-card .card-body .d-flex {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    width: 100%;
+    height: 100%;
+}
+
+.kpi-card .card-body .flex-grow-1 {
+    margin-left: 0 !important;
+}
+
+.kpi-card .card-body .flex-shrink-0 {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.8rem;
+}
+
+.kpi-card {
+    aspect-ratio: auto;
+    min-height: 145px;
+}
+
+.kpi-card h4 {
+    font-size: clamp(2rem, 2.3vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.kpi-card small {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.kpi-card .bi {
+    font-size: 1.35rem !important;
+    opacity: 0.75;
 }
 
 .controls-card .card-body {
-    min-height: 170px;
+    min-height: 105px;
+    padding: 0.65rem 0.9rem;
+}
+
+.controls-card .form-check {
+    margin-bottom: 0.35rem !important;
+}
+
+.controls-card .form-check-label,
+.controls-card .form-label,
+.controls-card .small {
+    font-size: 0.82rem;
 }
 
 .map-wrapper {
@@ -316,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleConfirmedOnly = document.getElementById('toggleConfirmedOnly');
     const toggleHotspots = document.getElementById('toggleHotspots');
     loadToggleStates();
+    syncToggleDependencies();
     if (toggleUnverified) {
         toggleUnverified.addEventListener('change', function() {
             saveToggleStates();
@@ -324,6 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (toggleConfirmedOnly) {
         toggleConfirmedOnly.addEventListener('change', function() {
+            syncToggleDependencies();
             saveToggleStates();
             renderLayerVisibility();
         });
@@ -378,11 +437,24 @@ function initializeMap() {
         hotspotLayers.push(layer);
     });
     
+    const verifiedCoordinateTotals = countPointsByCoordinate(verifiedBubbleData);
+    const verifiedCoordinateIndex = new Map();
+
     verifiedBubbleData.forEach(point => {
         const color = getCategoryColor(point.diseaseCategory);
         const radius = getBubbleRadius(point.totalCases, 140, 18);
+        const coordinateKey = getCoordinateKey(point.lat, point.lng);
+        const totalAtCoordinate = verifiedCoordinateTotals.get(coordinateKey) || 1;
+        const indexAtCoordinate = verifiedCoordinateIndex.get(coordinateKey) || 0;
+        verifiedCoordinateIndex.set(coordinateKey, indexAtCoordinate + 1);
+        const [markerLat, markerLng] = offsetCoordinate(
+            point.lat,
+            point.lng,
+            indexAtCoordinate,
+            totalAtCoordinate
+        );
 
-        const verified = L.circleMarker([point.lat, point.lng], {
+        const verified = L.circleMarker([markerLat, markerLng], {
             pane: 'verifiedPane',
             radius: radius,
             color: color,
@@ -397,6 +469,7 @@ function initializeMap() {
                 <div class="fw-bold mb-1">${point.barangay}</div>
                 <div><span class="text-muted">Confirmed disease category:</span> <strong>${formatCategory(point.diseaseCategory)}</strong></div>
                 <div><span class="text-muted">Confirmed cases:</span> <strong>${point.totalCases}</strong></div>
+                <div><span class="text-muted">Total confirmed in barangay:</span> <strong>${point.barangayTotalCases ?? point.totalCases}</strong></div>
             </div>
         `);
         verifiedLayers.push(verified);
@@ -462,6 +535,35 @@ function formatCategory(category) {
     return labels[category] || 'Other';
 }
 
+function getCoordinateKey(lat, lng) {
+    return `${Number(lat).toFixed(6)},${Number(lng).toFixed(6)}`;
+}
+
+function countPointsByCoordinate(points) {
+    const counts = new Map();
+    points.forEach((point) => {
+        const key = getCoordinateKey(point.lat, point.lng);
+        counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+}
+
+function offsetCoordinate(lat, lng, index, total) {
+    const baseLat = Number(lat);
+    const baseLng = Number(lng);
+    if (!Number.isFinite(baseLat) || !Number.isFinite(baseLng) || total <= 1) {
+        return [baseLat, baseLng];
+    }
+
+    // Small radial offset so same-location categories remain visible.
+    const offsetStep = 0.00045;
+    const angle = (2 * Math.PI * index) / total;
+    return [
+        baseLat + (Math.sin(angle) * offsetStep),
+        baseLng + (Math.cos(angle) * offsetStep),
+    ];
+}
+
 function getBubbleRadius(count, maxRadius = 140, scale = 16) {
     const safe = Math.max(1, Number(count || 0));
     return Math.min(maxRadius, Math.max(10, Math.sqrt(safe) * scale));
@@ -488,6 +590,19 @@ function renderLayerVisibility() {
         if (showHotspotLayer && !map.hasLayer(layer)) map.addLayer(layer);
         if (!showHotspotLayer && map.hasLayer(layer)) map.removeLayer(layer);
     });
+}
+
+function syncToggleDependencies() {
+    const confirmedOnly = document.getElementById('toggleConfirmedOnly')?.checked ?? false;
+    const unverifiedToggle = document.getElementById('toggleUnverified');
+    const hotspotsToggle = document.getElementById('toggleHotspots');
+
+    if (unverifiedToggle) {
+        unverifiedToggle.disabled = confirmedOnly;
+    }
+    if (hotspotsToggle) {
+        hotspotsToggle.disabled = confirmedOnly;
+    }
 }
 
 function setupTimeWindowSlider() {

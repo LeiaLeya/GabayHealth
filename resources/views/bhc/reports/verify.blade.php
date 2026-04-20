@@ -39,6 +39,26 @@
 
     @php
         $processedToday = ($stats['verified_today'] ?? 0) + ($stats['rejected_today'] ?? 0);
+        $symptomCategory = static function ($symptom) {
+            $token = strtolower((string) $symptom);
+
+            if (str_contains($token, 'dengue') || str_contains($token, 'fever') || str_contains($token, 'rash')) {
+                return 'dengue';
+            }
+            if (str_contains($token, 'diarrhea') || str_contains($token, 'cholera')) {
+                return 'waterborne';
+            }
+            if (
+                str_contains($token, 'cough') ||
+                str_contains($token, 'flu') ||
+                str_contains($token, 'covid') ||
+                str_contains($token, 'respiratory')
+            ) {
+                return 'respiratory';
+            }
+
+            return 'respiratory';
+        };
     @endphp
 
     <!-- Statistics Cards -->
@@ -99,7 +119,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-list-check me-2"></i>Mobile App Reports Pending Verification
+                        Mobile App Reports Pending Verification
                     </h5>
                 </div>
                 <div class="card-body">
@@ -110,7 +130,7 @@
                                     <tr>
                                         <th>Barangay</th>
                                         <th>Symptoms</th>
-                                        <th>Affected Person</th>
+                                        <th class="text-start">Affected Person</th>
                                         <th>Start Date</th>
                                         <th>Additional Info</th>
                                         <th>Actions</th>
@@ -129,14 +149,18 @@
                                             </td>
                                             <td>
                                                 @if(isset($report['symptoms']) && is_array($report['symptoms']))
-                                                    @foreach($report['symptoms'] as $symptom)
-                                                        <span class="badge bg-dark text-white me-1">{{ ucfirst($symptom) }}</span>
+                                                    @foreach(array_chunk($report['symptoms'], 4) as $symptomRow)
+                                                        <div class="mb-1">
+                                                            @foreach($symptomRow as $symptom)
+                                                                <span class="badge symptom-badge symptom-{{ $symptomCategory($symptom) }} me-1">{{ ucfirst($symptom) }}</span>
+                                                            @endforeach
+                                                        </div>
                                                     @endforeach
                                                 @else
                                                     <span class="text-muted">No symptoms listed</span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td class="text-start">
                                                 <span class="fw-semibold">{{ ucfirst($report['affectedPerson'] ?? 'Unknown') }}</span>
                                             </td>
                                             <td>
@@ -190,6 +214,9 @@
                                     @endforeach
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="mt-3 d-flex justify-content-center verify-pagination">
+                            {{ $pendingReports->onEachSide(1)->links('pagination::bootstrap-5') }}
                         </div>
                     @else
                         <div class="text-center py-5">
@@ -337,6 +364,22 @@
     font-weight: 500;
 }
 
+.symptom-badge {
+    color: #fff;
+}
+
+.symptom-dengue {
+    background-color: #dc3545;
+}
+
+.symptom-respiratory {
+    background-color: #0d6efd;
+}
+
+.symptom-waterborne {
+    background-color: #198754;
+}
+
 .table-hover tbody tr:hover {
     background-color: #f8f9fa;
 }
@@ -361,13 +404,17 @@
     border-radius: 0.5rem;
     border: 1px solid #dee2e6;
 }
+
+.verify-pagination p.small.text-muted {
+    display: none;
+}
 </style>
 
 <script>
 
 const reportsData = (() => {
     try {
-        const arr = @json($pendingReports);
+        const arr = @json(method_exists($pendingReports, 'items') ? $pendingReports->items() : $pendingReports);
         const map = {};
         (arr || []).forEach(r => { if (r && r.id) map[r.id] = r; });
         return map;
@@ -376,6 +423,20 @@ const reportsData = (() => {
     }
 })();
 let currentRejectReportId = null;
+
+function getSymptomBadgeClass(symptom) {
+    const token = String(symptom || '').toLowerCase();
+    if (token.includes('dengue') || token.includes('fever') || token.includes('rash')) {
+        return 'symptom-dengue';
+    }
+    if (token.includes('diarrhea') || token.includes('cholera')) {
+        return 'symptom-waterborne';
+    }
+    if (token.includes('cough') || token.includes('flu') || token.includes('covid') || token.includes('respiratory')) {
+        return 'symptom-respiratory';
+    }
+    return 'symptom-respiratory';
+}
 
 function approveReport(reportId) {
     const form = document.getElementById('approveForm');
@@ -446,7 +507,8 @@ function viewReportDetails(reportId) {
     const symptoms = Array.isArray(r.symptoms) ? r.symptoms : [];
     const symptomsHtml = symptoms.length
         ? symptoms.map(s => {
-            return `<span class="badge bg-dark text-white me-1">${String(s).charAt(0).toUpperCase()+String(s).slice(1)}</span>`;
+            const label = String(s).charAt(0).toUpperCase() + String(s).slice(1);
+            return `<span class="badge symptom-badge ${getSymptomBadgeClass(s)} me-1">${label}</span>`;
           }).join('')
         : '<span class="text-muted">No symptoms listed</span>';
 

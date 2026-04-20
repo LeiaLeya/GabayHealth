@@ -33,7 +33,7 @@
                             <i class="bi bi-people fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ count($requests) }}</h4>
+                            <h4 class="mb-0 text-dark">{{ $totalRequests ?? count($requests) }}</h4>
                             <small class="text-muted">Total Requests</small>
                         </div>
                     </div>
@@ -48,7 +48,7 @@
                             <i class="bi bi-clock fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'pending')) }}</h4>
+                            <h4 class="mb-0 text-dark">{{ $pendingCount ?? count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'pending')) }}</h4>
                             <small class="text-muted">Pending</small>
                         </div>
                     </div>
@@ -63,7 +63,7 @@
                             <i class="bi bi-check-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'approved')) }}</h4>
+                            <h4 class="mb-0 text-dark">{{ $approvedCount ?? count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'approved')) }}</h4>
                             <small class="text-muted">Approved</small>
                         </div>
                     </div>
@@ -78,7 +78,7 @@
                             <i class="bi bi-x-circle fs-2 text-dark"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h4 class="mb-0 text-dark">{{ count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'declined')) }}</h4>
+                            <h4 class="mb-0 text-dark">{{ $declinedCount ?? count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'declined')) }}</h4>
                             <small class="text-muted">Declined</small>
                         </div>
                     </div>
@@ -91,7 +91,7 @@
     <div class="card">
         <div class="card-header">
             <h5 class="card-title mb-0">
-                <i class="bi bi-list-ul me-2"></i>All Requests
+                All Requests
             </h5>
         </div>
         <div class="card-body">
@@ -158,6 +158,11 @@
                         </tbody>
                     </table>
                 </div>
+                @if(method_exists($requests, 'links'))
+                    <div class="mt-3 d-flex justify-content-center user-requests-pagination">
+                        {{ $requests->onEachSide(1)->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
             @else
                 <div class="text-center py-5">
                     <i class="bi bi-inbox display-4 text-muted mb-3"></i>
@@ -248,6 +253,10 @@
     width: 32px;
     height: 32px;
     font-size: 14px;
+}
+
+.user-requests-pagination p.small.text-muted {
+    display: none;
 }
 </style>
 

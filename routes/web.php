@@ -483,8 +483,8 @@ Route::middleware('auth.check')->group(function () {
         $user = session('user');
         if (!$user) return redirect()->route('login');
         $role = $user['role'] ?? null;
-        if ($role === 'rhu') return app(RHUReportsController::class)->approve($id);
-        elseif ($role === 'barangay') return app(BHCReportsController::class)->approve($id);
+        if ($role === 'rhu') return app(RHUReportsController::class)->approve(request(), $id);
+        elseif ($role === 'barangay') return app(BHCReportsController::class)->approve(request(), $id);
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('reports.approve');
     
@@ -492,8 +492,8 @@ Route::middleware('auth.check')->group(function () {
         $user = session('user');
         if (!$user) return redirect()->route('login');
         $role = $user['role'] ?? null;
-        if ($role === 'rhu') return app(RHUReportsController::class)->reject($id);
-        elseif ($role === 'barangay') return app(BHCReportsController::class)->reject($id);
+        if ($role === 'rhu') return app(RHUReportsController::class)->reject(request(), $id);
+        elseif ($role === 'barangay') return app(BHCReportsController::class)->reject(request(), $id);
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('reports.reject');
 
