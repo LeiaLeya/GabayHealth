@@ -289,7 +289,7 @@ class SystemAdminController extends Controller
 
             // Sort by status and created date
             usort($rhus, function ($a, $b) {
-                $statusOrder = ['pending' => 1, 'credentials_sent' => 2, 'active' => 3, 'rejected' => 4];
+                $statusOrder = ['pending' => 1, 'pending_setup' => 2, 'credentials_sent' => 3, 'approved' => 4, 'active' => 4, 'rejected' => 5];
                 $aStatus = $statusOrder[$a['status'] ?? 'pending'] ?? 5;
                 $bStatus = $statusOrder[$b['status'] ?? 'pending'] ?? 5;
                 

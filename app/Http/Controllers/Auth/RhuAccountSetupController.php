@@ -95,9 +95,11 @@ class RhuAccountSetupController extends Controller
                 'password' => $request->password,
             ]);
 
-            // Update RHU status to active in Firestore
+            // Update Firestore with bcrypt hash (used by LoginController::password_verify),
+            // status, and setup timestamp
             $firestore->collection('rhu')->document($setupToken->rhu_id)->update([
-                ['path' => 'status', 'value' => 'active'],
+                ['path' => 'password', 'value' => bcrypt($request->password)],
+                ['path' => 'status', 'value' => 'approved'],
                 ['path' => 'password_setup_at', 'value' => now()->toDateTimeString()],
             ]);
 

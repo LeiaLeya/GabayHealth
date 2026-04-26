@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 use App\Services\FirebaseService;
+use App\Mail\RhuRegistrationReceivedEmail;
 use Laravel\Socialite\Facades\Socialite;
 use Cloudinary\Cloudinary;
-use Cloudinary\Uploader;
 use Exception;
 
 class RegisterController extends Controller
@@ -279,7 +280,7 @@ class RegisterController extends Controller
             $this->saveUserProfile(
                 $firestore,
                 $uid,
-                $email,
+                $request->email,
                 'rhu',
                 $uid,
                 $request->rhuName,
@@ -292,10 +293,13 @@ class RegisterController extends Controller
                 'logo_url' => $logoUrl,
             ]);
 
-            return back()->with('success', 'RHU registration submitted successfully! Please wait for admin approval and credentials via email.');
-            $this->saveUserProfile($firestore, $uid, $email, 'rhu', $uid, $request->rhuName);
+            try {
+                Mail::to($request->email)->send(new RhuRegistrationReceivedEmail($request->rhuName));
+            } catch (\Exception $mailException) {
+                \Log::error('Failed to send registration confirmation email: ' . $mailException->getMessage());
+            }
 
-            return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
+            return back()->with('success', 'RHU registration submitted successfully! Please check your email and wait for admin approval.');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
             return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
