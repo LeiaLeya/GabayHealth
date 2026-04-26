@@ -212,15 +212,13 @@ class RegisterController extends Controller
                         'tmp_path' => $logo->getRealPath(),
                     ]);
 
-                    $cloudinaryUrl = env('CLOUDINARY_URL');
-                    \Log::info('Cloudinary environment check', [
-                        'CLOUDINARY_URL_set' => !empty($cloudinaryUrl),
-                        'CLOUDINARY_CLOUD_NAME' => env('CLOUDINARY_CLOUD_NAME'),
-                        'CLOUDINARY_API_KEY' => env('CLOUDINARY_API_KEY') ? 'SET' : 'NOT SET',
+                    $cloudinary = new Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                            'api_key'    => env('CLOUDINARY_API_KEY'),
+                            'api_secret' => env('CLOUDINARY_API_SECRET'),
+                        ]
                     ]);
-
-                    $cloudinary = new Cloudinary();
-                    \Log::info('Cloudinary instance created');
                     
                     $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
                         'folder' => "gabayhealth/rhu/{$uid}",
