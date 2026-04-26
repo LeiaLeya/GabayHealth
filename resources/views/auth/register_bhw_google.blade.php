@@ -251,6 +251,114 @@
         background: #e5e7eb;
     }
 
+    /* Mapbox Geocoder Styles */
+    .location-search-container {
+        position: relative;
+        z-index: 1000;
+    }
+
+    .suggestions-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: none;
+        z-index: 10000;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-top: -1px;
+    }
+
+    .suggestions-list.show {
+        display: block;
+    }
+
+    .suggestion-item {
+        padding: 12px;
+        font-size: 13px;
+        color: #1f2937;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+        background-color: #f3f4f6;
+        color: #2563eb;
+    }
+
+    .suggestion-item .suggestion-title {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .suggestion-item .suggestion-subtitle {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .manual-entry-option {
+        padding: 12px;
+        font-size: 13px;
+        color: #2563eb;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.15s;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .manual-entry-option:hover {
+        background-color: #eff6ff;
+    }
+
+    .manual-mode-indicator {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+        font-style: italic;
+    }
+
+    .manual-mode-indicator.active {
+        color: #2563eb;
+    }
+
+    .location-coordinates {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 8px;
+        padding: 8px 0;
+    }
+
+    #addressSearch {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background-color: #f9fafb;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    #addressSearch:focus {
+        outline: none;
+        border-color: #2563eb;
+        background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
     @media (max-width: 600px) {
         .registration-wrapper {
             padding: 24px;
@@ -346,8 +454,19 @@
 
             <!-- Address -->
             <div class="form-group">
-                <label for="fullAddress">Full Address</label>
-                <input type="text" id="fullAddress" name="fullAddress" class="form-control" placeholder="Enter full address" required value="{{ old('fullAddress') }}">
+                <label for="addressSearch">Address</label>
+                <div class="location-search-container">
+                    <input type="text" id="addressSearch" class="form-control" placeholder="Search for an address..." autocomplete="off" value="{{ old('fullAddress') }}">
+                    <div id="suggestionsList" class="suggestions-list"></div>
+                    <input type="hidden" id="fullAddress" name="fullAddress" value="{{ old('fullAddress') }}">
+                    <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude') }}">
+                    <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude') }}">
+                    <input type="hidden" id="manualMode" name="manualMode" value="0">
+                    <div class="location-coordinates"><span id="coordsDisplay"></span></div>
+                    <div id="manualModeIndicator" class="manual-mode-indicator" style="display: none;">
+                        Manual entry mode — Type your full address below
+                    </div>
+                </div>
                 @error('fullAddress') <small style="color: #dc2626;">{{ $message }}</small> @enderror
             </div>
 
@@ -529,6 +648,143 @@ document.addEventListener('DOMContentLoaded', function () {
         logoUpload.files = e.dataTransfer.files;
         const event = new Event('change', { bubbles: true });
         logoUpload.dispatchEvent(event);
+    });
+});
+</script>
+<!-- Mapbox Geocoding -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const mapboxAccessToken = @json(env('MAPBOX_ACCESS_TOKEN'));
+
+    const searchInput         = document.getElementById('addressSearch');
+    const suggestionsList     = document.getElementById('suggestionsList');
+    const fullAddressInput    = document.getElementById('fullAddress');
+    const latitudeInput       = document.getElementById('latitude');
+    const longitudeInput      = document.getElementById('longitude');
+    const coordsDisplay       = document.getElementById('coordsDisplay');
+    const manualModeInput     = document.getElementById('manualMode');
+    const manualModeIndicator = document.getElementById('manualModeIndicator');
+
+    if (!mapboxAccessToken) {
+        if (searchInput && fullAddressInput) {
+            searchInput.addEventListener('input', function () {
+                fullAddressInput.value = this.value.trim();
+            });
+            searchInput.addEventListener('blur', function () {
+                if (this.value.trim()) fullAddressInput.value = this.value.trim();
+            });
+        }
+        return;
+    }
+
+    if (searchInput.value && !fullAddressInput.value) {
+        fullAddressInput.value = searchInput.value;
+    }
+
+    let searchTimeout;
+    let isManualMode = false;
+
+    function enableManualMode() {
+        isManualMode = true;
+        manualModeInput.value = '1';
+        manualModeIndicator.style.display = 'block';
+        manualModeIndicator.classList.add('active');
+        searchInput.placeholder = 'Enter your full address manually...';
+        suggestionsList.innerHTML = '';
+        suggestionsList.classList.remove('show');
+        searchInput.focus();
+        latitudeInput.value = '';
+        longitudeInput.value = '';
+        coordsDisplay.textContent = '';
+    }
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.trim();
+        if (query.length > 0) fullAddressInput.value = query;
+        if (isManualMode) return;
+        if (query.length < 2) {
+            suggestionsList.innerHTML = '';
+            suggestionsList.classList.remove('show');
+            if (query.length === 0) fullAddressInput.value = '';
+            return;
+        }
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => searchMapbox(query), 300);
+    });
+
+    searchInput.addEventListener('blur', function () {
+        if (this.value.trim()) fullAddressInput.value = this.value.trim();
+    });
+
+    searchInput.addEventListener('change', function () {
+        if (this.value.trim()) fullAddressInput.value = this.value.trim();
+    });
+
+    function searchMapbox(query) {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+            `access_token=${mapboxAccessToken}&country=PH&proximity=120.7,15.5&limit=5`;
+
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`Mapbox error: ${res.status}`);
+                return res.json();
+            })
+            .then(data => displaySuggestions(data.features || []))
+            .catch(() => displaySuggestions([]));
+    }
+
+    function displaySuggestions(features) {
+        suggestionsList.innerHTML = '';
+        if (!features.length) {
+            const opt = document.createElement('div');
+            opt.className = 'manual-entry-option';
+            opt.textContent = 'Enter full address manually';
+            opt.addEventListener('click', (e) => { e.preventDefault(); enableManualMode(); });
+            suggestionsList.appendChild(opt);
+            suggestionsList.classList.add('show');
+            return;
+        }
+        features.forEach(feature => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            const title    = feature.place_name.split(',')[0];
+            const subtitle = feature.place_name.split(',').slice(1).join(',').trim();
+            item.innerHTML = `<div class="suggestion-title">${title}</div><div class="suggestion-subtitle">${subtitle}</div>`;
+            item.addEventListener('click', () => selectAddress(feature));
+            suggestionsList.appendChild(item);
+        });
+        suggestionsList.classList.add('show');
+    }
+
+    function selectAddress(feature) {
+        const [lng, lat] = feature.geometry.coordinates;
+        searchInput.value      = feature.place_name;
+        fullAddressInput.value = feature.place_name;
+        latitudeInput.value    = lat.toFixed(6);
+        longitudeInput.value   = lng.toFixed(6);
+        coordsDisplay.textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        suggestionsList.innerHTML = '';
+        suggestionsList.classList.remove('show');
+        isManualMode = false;
+        manualModeInput.value = '0';
+        manualModeIndicator.style.display = 'none';
+        searchInput.placeholder = 'Search for an address...';
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target !== searchInput && !suggestionsList.contains(e.target)) {
+            suggestionsList.classList.remove('show');
+        }
+    });
+
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const searchValue = searchInput.value.trim();
+        if (searchValue) fullAddressInput.value = searchValue;
+        if (!fullAddressInput.value.trim()) {
+            e.preventDefault();
+            searchInput.focus();
+            return false;
+        }
     });
 });
 </script>
