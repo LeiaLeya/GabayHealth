@@ -44,11 +44,7 @@ class ServicesController extends Controller
             $count = 0;
             foreach ($servicesQuery as $doc) {
                 if ($doc->exists()) {
-                    $data = $doc->data();
-                    if (($data['_meta'] ?? false) === true) {
-                        continue;
-                    }
-                    $currentServices[] = array_merge($data, ['id' => $doc->id()]);
+                    $currentServices[] = array_merge($doc->data(), ['id' => $doc->id()]);
                     $count++;
                 }
             }

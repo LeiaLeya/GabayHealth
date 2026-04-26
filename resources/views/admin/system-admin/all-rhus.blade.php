@@ -1,121 +1,151 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <a href="{{ route('admin.system-admin.dashboard') }}" class="btn btn-sm btn-outline-secondary mb-3">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            <a href="{{ route('admin.system-admin.dashboard') }}"
+               class="d-inline-flex align-items-center gap-1 text-muted small text-decoration-none mb-2"
+               style="transition: color 0.2s;"
+               onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color=''">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
             </a>
-            <h1 class="h2 mb-0">All Rural Health Units</h1>
-            <p class="text-muted mb-0">Manage all RHU applications and accounts</p>
+            <h4 class="fw-bold mb-1" style="color: #1a1a2e;">All Rural Health Units</h4>
+            <p class="text-muted mb-0 small">Manage all RHU applications and accounts</p>
         </div>
     </div>
 
     <!-- Filter Tabs -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
+    <ul class="nav mb-4 gap-1" role="tablist" style="border-bottom: 2px solid #e5e7eb;">
         <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#all">
-                All ({{ count($rhus) }})
+            <a class="nav-link active fw-medium px-3 py-2" data-bs-toggle="tab" href="#all"
+               style="border-radius: 8px 8px 0 0; font-size: 0.875rem; color: #1a1a2e; border: none;">
+                All <span class="badge bg-secondary ms-1">{{ count($rhus) }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#pending">
-                Pending ({{ count(array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'pending')) }})
+            <a class="nav-link fw-medium px-3 py-2" data-bs-toggle="tab" href="#pending"
+               style="border-radius: 8px 8px 0 0; font-size: 0.875rem; border: none;">
+                Pending
+                <span class="badge ms-1" style="background:#f59e0b;">{{ count(array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'pending')) }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#approved">
-                Credentials Sent ({{ count(array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'credentials_sent')) }})
+            <a class="nav-link fw-medium px-3 py-2" data-bs-toggle="tab" href="#approved"
+               style="border-radius: 8px 8px 0 0; font-size: 0.875rem; border: none;">
+                Credentials Sent
+                <span class="badge ms-1" style="background:#10b981;">{{ count(array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'credentials_sent')) }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#rejected">
-                Rejected ({{ count(array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'rejected')) }})
+            <a class="nav-link fw-medium px-3 py-2" data-bs-toggle="tab" href="#rejected"
+               style="border-radius: 8px 8px 0 0; font-size: 0.875rem; border: none;">
+                Rejected
+                <span class="badge ms-1" style="background:#ef4444;">{{ count(array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'rejected')) }}</span>
             </a>
         </li>
     </ul>
 
     <!-- Tab Content -->
     <div class="tab-content">
-        <!-- All RHUs Tab -->
+
+        <!-- All RHUs -->
         <div id="all" class="tab-pane fade show active">
-            <div class="card">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead style="background: #f8fafc;">
                             <tr>
-                                <th>RHU Name</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Location</th>
-                                <th>Applied</th>
-                                <th>Actions</th>
+                                <th class="ps-4 py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">RHU Name</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Email</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Status</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Location</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Applied</th>
+                                <th class="py-3 text-muted small fw-semibold pe-4" style="border-bottom: 1px solid #e5e7eb;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($rhus as $rhu)
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td class="ps-4 py-3">
+                                        <div class="d-flex align-items-center gap-2">
                                             @if($rhu['logo_url'] ?? false)
-                                                <img src="{{ $rhu['logo_url'] }}" alt="Logo" class="rounded me-2" width="40" height="40" style="object-fit: cover;">
+                                                <img src="{{ $rhu['logo_url'] }}" alt="Logo"
+                                                     class="rounded-circle flex-shrink-0"
+                                                     width="36" height="36" style="object-fit: cover;">
                                             @else
-                                                <div class="rounded me-2 bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                    <i class="fas fa-hospital text-muted"></i>
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                     style="width: 36px; height: 36px; background: #dbeafe;">
+                                                    <i class="bi bi-hospital" style="color: #2563eb; font-size: 0.9rem;"></i>
                                                 </div>
                                             @endif
-                                            <strong>{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</strong>
+                                            <span class="fw-semibold" style="color: #1a1a2e;">{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</span>
                                         </div>
                                     </td>
-                                    <td>
-                                        <a href="mailto:{{ $rhu['email'] }}">{{ $rhu['email'] }}</a>
+                                    <td class="py-3">
+                                        <a href="mailto:{{ $rhu['email'] }}" class="text-muted small text-decoration-none">
+                                            {{ $rhu['email'] }}
+                                        </a>
                                     </td>
-                                    <td>
+                                    <td class="py-3">
                                         @php
-                                            $badgeClass = match($rhu['status'] ?? 'pending') {
-                                                'pending' => 'bg-warning',
-                                                'credentials_sent' => 'bg-success',
-                                                'active' => 'bg-info',
-                                                'rejected' => 'bg-danger',
-                                                default => 'bg-secondary'
+                                            $status = $rhu['status'] ?? 'pending';
+                                            $badgeStyle = match($status) {
+                                                'pending'          => 'background:#fef3c7; color:#92400e;',
+                                                'credentials_sent' => 'background:#d1fae5; color:#065f46;',
+                                                'active'           => 'background:#dbeafe; color:#1e40af;',
+                                                'rejected'         => 'background:#fee2e2; color:#991b1b;',
+                                                default            => 'background:#f3f4f6; color:#374151;',
+                                            };
+                                            $badgeLabel = match($status) {
+                                                'pending'          => 'Pending',
+                                                'credentials_sent' => 'Credentials Sent',
+                                                'active'           => 'Active',
+                                                'rejected'         => 'Rejected',
+                                                default            => ucfirst($status),
                                             };
                                         @endphp
-                                        <span class="badge {{ $badgeClass }}">
-                                            {{ match($rhu['status'] ?? 'pending') {
-                                                'pending' => 'Pending',
-                                                'credentials_sent' => 'Credentials Sent',
-                                                'active' => 'Active',
-                                                'rejected' => 'Rejected',
-                                                default => ucfirst($rhu['status'] ?? 'unknown')
-                                            } }}
+                                        <span class="badge fw-medium px-2 py-1" style="{{ $badgeStyle }} border-radius: 6px; font-size: 0.75rem;">
+                                            {{ $badgeLabel }}
                                         </span>
                                     </td>
-                                    <td>
-                                        @if(isset($rhu['displayLocation']))
-                                            <small>{{ $rhu['displayLocation'] }}</small>
-                                        @else
-                                            <small>{{ $rhu['city'] ?? 'N/A' }}{{ isset($rhu['province']) ? ', ' . $rhu['province'] : '' }}</small>
-                                        @endif
+                                    <td class="py-3">
+                                        <span class="text-muted small">
+                                            @if(isset($rhu['displayLocation']))
+                                                {{ $rhu['displayLocation'] }}
+                                            @else
+                                                {{ $rhu['city'] ?? 'N/A' }}{{ isset($rhu['province']) ? ', ' . $rhu['province'] : '' }}
+                                            @endif
+                                        </span>
                                     </td>
-                                    <td>
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($rhu['created_at'])->format('M d, Y') ?? 'N/A' }}</small>
+                                    <td class="py-3">
+                                        <span class="text-muted small">{{ \Carbon\Carbon::parse($rhu['created_at'])->format('M d, Y') }}</span>
                                     </td>
-                                    <td>
-                                        <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> View
-                                        </a>
-                                        @if(($rhu['status'] ?? '') === 'credentials_sent')
-                                            <button type="button" class="btn btn-sm btn-outline-info resend-btn" data-rhu-id="{{ $rhu['id'] }}" title="Resend credentials">
-                                                <i class="fas fa-redo"></i>
-                                            </button>
-                                        @endif
+                                    <td class="py-3 pe-4">
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               style="border-radius: 8px; font-size: 0.8rem;">
+                                                <i class="bi bi-eye me-1"></i> View
+                                            </a>
+                                            @if($status === 'credentials_sent')
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-info resend-btn"
+                                                        data-rhu-id="{{ $rhu['id'] }}"
+                                                        title="Resend credentials"
+                                                        style="border-radius: 8px; font-size: 0.8rem;">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox d-block mb-2" style="font-size: 2.5rem;"></i>
                                         No RHUs found
                                     </td>
                                 </tr>
@@ -126,47 +156,48 @@
             </div>
         </div>
 
-        <!-- Pending Tab -->
+        <!-- Pending -->
         <div id="pending" class="tab-pane fade">
-            <div class="card">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead style="background: #f8fafc;">
                             <tr>
-                                <th>RHU Name</th>
-                                <th>Email</th>
-                                <th>Location</th>
-                                <th>Applied</th>
-                                <th>Actions</th>
+                                <th class="ps-4 py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">RHU Name</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Email</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Location</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Applied</th>
+                                <th class="py-3 text-muted small fw-semibold pe-4" style="border-bottom: 1px solid #e5e7eb;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @php
-                                $pendingRhus = array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'pending');
-                            @endphp
+                            @php $pendingRhus = array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'pending'); @endphp
                             @forelse($pendingRhus as $rhu)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</strong>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td class="ps-4 py-3">
+                                        <span class="fw-semibold" style="color: #1a1a2e;">{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</span>
                                     </td>
-                                    <td>
-                                        <a href="mailto:{{ $rhu['email'] }}">{{ $rhu['email'] }}</a>
+                                    <td class="py-3">
+                                        <a href="mailto:{{ $rhu['email'] }}" class="text-muted small text-decoration-none">{{ $rhu['email'] }}</a>
                                     </td>
-                                    <td>
-                                        <small>{{ $rhu['city'] ?? 'N/A' }}</small>
+                                    <td class="py-3">
+                                        <span class="text-muted small">{{ $rhu['city'] ?? 'N/A' }}</span>
                                     </td>
-                                    <td>
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($rhu['created_at'])->format('M d, Y') ?? 'N/A' }}</small>
+                                    <td class="py-3">
+                                        <span class="text-muted small">{{ \Carbon\Carbon::parse($rhu['created_at'])->format('M d, Y') }}</span>
                                     </td>
-                                    <td>
-                                        <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> View
+                                    <td class="py-3 pe-4">
+                                        <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}"
+                                           class="btn btn-sm btn-outline-primary"
+                                           style="border-radius: 8px; font-size: 0.8rem;">
+                                            <i class="bi bi-eye me-1"></i> View
                                         </a>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox d-block mb-2" style="font-size: 2.5rem;"></i>
                                         No pending applications
                                     </td>
                                 </tr>
@@ -177,50 +208,56 @@
             </div>
         </div>
 
-        <!-- Approved Tab -->
+        <!-- Credentials Sent -->
         <div id="approved" class="tab-pane fade">
-            <div class="card">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead style="background: #f8fafc;">
                             <tr>
-                                <th>RHU Name</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Approved</th>
-                                <th>Actions</th>
+                                <th class="ps-4 py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">RHU Name</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Username</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Email</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Approved</th>
+                                <th class="py-3 text-muted small fw-semibold pe-4" style="border-bottom: 1px solid #e5e7eb;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @php
-                                $approvedRhus = array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'credentials_sent');
-                            @endphp
+                            @php $approvedRhus = array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'credentials_sent'); @endphp
                             @forelse($approvedRhus as $rhu)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</strong>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td class="ps-4 py-3">
+                                        <span class="fw-semibold" style="color: #1a1a2e;">{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</span>
                                     </td>
-                                    <td>
-                                        <code>{{ $rhu['username'] ?? 'N/A' }}</code>
+                                    <td class="py-3">
+                                        <code class="px-2 py-1 rounded small" style="background:#f1f5f9; color:#1a1a2e;">{{ $rhu['username'] ?? 'N/A' }}</code>
                                     </td>
-                                    <td>
-                                        <a href="mailto:{{ $rhu['email'] }}">{{ $rhu['email'] }}</a>
+                                    <td class="py-3">
+                                        <a href="mailto:{{ $rhu['email'] }}" class="text-muted small text-decoration-none">{{ $rhu['email'] }}</a>
                                     </td>
-                                    <td>
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($rhu['credentials_sent_at'])->format('M d, Y') ?? 'N/A' }}</small>
+                                    <td class="py-3">
+                                        <span class="text-muted small">{{ \Carbon\Carbon::parse($rhu['credentials_sent_at'])->format('M d, Y') }}</span>
                                     </td>
-                                    <td>
-                                        <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> View
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-info resend-btn" data-rhu-id="{{ $rhu['id'] }}">
-                                            <i class="fas fa-redo"></i> Resend
-                                        </button>
+                                    <td class="py-3 pe-4">
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               style="border-radius: 8px; font-size: 0.8rem;">
+                                                <i class="bi bi-eye me-1"></i> View
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-info resend-btn"
+                                                    data-rhu-id="{{ $rhu['id'] }}"
+                                                    style="border-radius: 8px; font-size: 0.8rem;">
+                                                <i class="bi bi-arrow-repeat me-1"></i> Resend
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox d-block mb-2" style="font-size: 2.5rem;"></i>
                                         No approved applications
                                     </td>
                                 </tr>
@@ -231,41 +268,40 @@
             </div>
         </div>
 
-        <!-- Rejected Tab -->
+        <!-- Rejected -->
         <div id="rejected" class="tab-pane fade">
-            <div class="card">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead style="background: #f8fafc;">
                             <tr>
-                                <th>RHU Name</th>
-                                <th>Email</th>
-                                <th>Rejection Reason</th>
-                                <th>Rejected</th>
+                                <th class="ps-4 py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">RHU Name</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Email</th>
+                                <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Rejection Reason</th>
+                                <th class="py-3 text-muted small fw-semibold pe-4" style="border-bottom: 1px solid #e5e7eb;">Rejected</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @php
-                                $rejectedRhus = array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'rejected');
-                            @endphp
+                            @php $rejectedRhus = array_filter($rhus, fn($r) => ($r['status'] ?? '') === 'rejected'); @endphp
                             @forelse($rejectedRhus as $rhu)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</strong>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td class="ps-4 py-3">
+                                        <span class="fw-semibold" style="color: #1a1a2e;">{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</span>
                                     </td>
-                                    <td>
-                                        <a href="mailto:{{ $rhu['email'] }}">{{ $rhu['email'] }}</a>
+                                    <td class="py-3">
+                                        <a href="mailto:{{ $rhu['email'] }}" class="text-muted small text-decoration-none">{{ $rhu['email'] }}</a>
                                     </td>
-                                    <td>
-                                        <small>{{ $rhu['rejection_reason'] ?? 'N/A' }}</small>
+                                    <td class="py-3">
+                                        <span class="text-muted small">{{ $rhu['rejection_reason'] ?? 'N/A' }}</span>
                                     </td>
-                                    <td>
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($rhu['rejected_at'])->format('M d, Y') ?? 'N/A' }}</small>
+                                    <td class="py-3 pe-4">
+                                        <span class="text-muted small">{{ \Carbon\Carbon::parse($rhu['rejected_at'])->format('M d, Y') }}</span>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox d-block mb-2" style="font-size: 2.5rem;"></i>
                                         No rejected applications
                                     </td>
                                 </tr>
@@ -275,38 +311,104 @@
                 </div>
             </div>
         </div>
+
+    </div><!-- /.tab-content -->
+</div>
+
+<!-- Toast Container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="resendSuccessToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true"
+         style="background: #059669; border-radius: 10px;">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                <span>Credentials resent successfully.</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+    <div id="resendErrorToast" class="toast align-items-center text-white border-0 mt-2" role="alert" aria-live="assertive" aria-atomic="true"
+         style="background: #dc2626; border-radius: 10px;">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+                <span id="resendErrorMsg">Failed to resend credentials.</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Resend Confirmation Modal -->
+<div class="modal fade" id="resendModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius: 14px;">
+            <div class="modal-header border-0 pb-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mt-2"
+                     style="width: 56px; height: 56px; background: #dbeafe;">
+                    <i class="bi bi-arrow-repeat" style="font-size: 1.8rem; color: #2563eb;"></i>
+                </div>
+            </div>
+            <div class="modal-body text-center px-4 py-3">
+                <h5 class="fw-bold mb-1">Resend Credentials?</h5>
+                <p class="text-muted small mb-0">The login credentials will be re-sent to the RHU's registered email address.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                <button type="button" class="btn btn-info text-white px-4" id="confirmResendBtn" style="border-radius: 8px;">
+                    <i class="bi bi-arrow-repeat me-1"></i> Yes, Resend
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    let pendingResendId = null;
 
-    // Resend credentials button
+    const resendModal = new bootstrap.Modal(document.getElementById('resendModal'));
+
     document.querySelectorAll('.resend-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const rhuId = this.getAttribute('data-rhu-id');
-            if (confirm('Resend credentials to this RHU?')) {
-                fetch(`/admin/system-admin/${rhuId}/resend-credentials`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Content-Type': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✓ Credentials resent');
-                    } else {
-                        alert(`Error: ${data.error || 'Failed to resend'}`);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred');
-                });
+        button.addEventListener('click', function () {
+            pendingResendId = this.getAttribute('data-rhu-id');
+            resendModal.show();
+        });
+    });
+
+    document.getElementById('confirmResendBtn').addEventListener('click', function () {
+        if (!pendingResendId) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+        fetch(`/admin/system-admin/${pendingResendId}/resend-credentials`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            resendModal.hide();
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Yes, Resend';
+
+            if (data.success) {
+                new bootstrap.Toast(document.getElementById('resendSuccessToast'), { delay: 4000 }).show();
+            } else {
+                document.getElementById('resendErrorMsg').textContent = data.error || 'Failed to resend credentials.';
+                new bootstrap.Toast(document.getElementById('resendErrorToast'), { delay: 4000 }).show();
             }
+        })
+        .catch(() => {
+            resendModal.hide();
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Yes, Resend';
+            document.getElementById('resendErrorMsg').textContent = 'Request failed. Check your connection.';
+            new bootstrap.Toast(document.getElementById('resendErrorToast'), { delay: 4000 }).show();
         });
     });
 });

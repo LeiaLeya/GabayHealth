@@ -278,8 +278,6 @@ class RegisterController extends Controller
                 'username' => null,
                 'uid' => null,
             ]);
-            $this->initializeRhuServicesSubcollection($firestore, $uid);
-
             $this->saveUserProfile(
                 $firestore,
                 $uid,
@@ -492,8 +490,6 @@ class RegisterController extends Controller
                 'rhu_name' => $request->rhuName,
                 'logo_url' => $logoUrl,
             ]);
-            $this->initializeRhuServicesSubcollection($firestore, $uid);
-
             $this->saveUserProfile(
                 $firestore,
                 $uid,
@@ -678,15 +674,4 @@ class RegisterController extends Controller
         ], ['merge' => true]);
     }
 
-    private function initializeRhuServicesSubcollection($firestore, string $rhuId): void
-    {
-        $firestore->collection('rhu')
-            ->document($rhuId)
-            ->collection('services')
-            ->document('_meta')
-            ->set([
-                '_meta' => true,
-                'initialized_at' => now()->toDateTimeString(),
-            ], ['merge' => true]);
-    }
 }
