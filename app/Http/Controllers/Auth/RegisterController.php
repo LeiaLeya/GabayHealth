@@ -19,6 +19,11 @@ class RegisterController extends Controller
         return view('auth.register_landing');
     }
 
+    public function success()
+    {
+        return view('auth.register_success');
+    }
+
     public function showBhwForm()
     {
         try {
@@ -152,7 +157,7 @@ class RegisterController extends Controller
                     'status' => 'unread',
                 ]);
 
-            return back()->with('success', 'Barangay registration submitted! Waiting for RHU approval.');
+            return redirect()->route('register.success')->with('success_type', 'bhw');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
             return back()->withErrors(['username' => 'This username is already registered.'])->withInput();
@@ -297,7 +302,7 @@ class RegisterController extends Controller
                 \Log::error('Failed to send registration confirmation email: ' . $mailException->getMessage());
             }
 
-            return back()->with('success', 'RHU registration submitted successfully! Please check your email and wait for admin approval.');
+            return redirect()->route('register.success')->with('success_type', 'rhu');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
             return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
@@ -501,7 +506,7 @@ class RegisterController extends Controller
 
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar']);
 
-            return redirect()->route('register.landing')->with('success', 'Registration submitted successfully! Please wait for admin approval and credentials via email.');
+            return redirect()->route('register.success')->with('success_type', 'rhu');
         } catch (Exception $e) {
             \Log::error('Google RHU Registration error: ' . $e->getMessage());
             return back()->withErrors(['error' => $e->getMessage()]);
@@ -644,7 +649,7 @@ class RegisterController extends Controller
 
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar', 'oauth_type']);
 
-            return redirect()->route('login')->with('success', 'Registration submitted! Waiting for RHU approval.');
+            return redirect()->route('register.success')->with('success_type', 'bhw');
         } catch (Exception $e) {
             \Log::error('Google BHW Registration error: ' . $e->getMessage());
             return back()->withErrors(['error' => $e->getMessage()]);

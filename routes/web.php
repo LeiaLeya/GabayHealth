@@ -110,6 +110,7 @@ Route::get('/register/rhu/google', [RegisterController::class, 'showGoogleForm']
 Route::post('/register/rhu/google', [RegisterController::class, 'registerRhuGoogle'])->name('register.rhu.google.submit');
 Route::get('/register/bhw/google', [RegisterController::class, 'showGoogleFormBhw'])->name('register.bhw.google');
 Route::post('/register/bhw/google', [RegisterController::class, 'registerBhwGoogle'])->name('register.bhw.google.submit');
+Route::get('/register/success', [RegisterController::class, 'success'])->name('register.success');
 
 // Debug session route (public)
 Route::get('/debug-session', function() {
