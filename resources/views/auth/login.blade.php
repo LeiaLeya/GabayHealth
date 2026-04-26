@@ -2,346 +2,325 @@
 @section('content')
 @php($hideSidebar = true)
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,700;1,400&display=swap');
+
     body, html {
-        background: #fff !important;
-        min-height: 100vh;
-        width: 100%;
         margin: 0 !important;
         padding: 0 !important;
+        min-height: 100vh;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     }
-    
-    .nucleus-login-container {
+
+    .main-content {
+        padding: 0 !important;
+    }
+
+    .login-container {
         display: flex;
         min-height: 100vh;
-        background: #fff;
-        margin: 0;
-        padding: 0;
     }
-    
-    .nucleus-sidebar {
-        flex: 0 0 35%;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.7) 100%);
-        background-size: cover;
-        background-position: left center;
-        background-image: url('{{ asset('images/Login_StockPhoto.jpg') }}');
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: 2.5rem;
-        color: #fff;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .nucleus-sidebar::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
-    }
-    
-    .nucleus-sidebar-content {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        justify-content: space-between;
-    }
-    
-    .nucleus-sidebar-top {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .nucleus-sidebar-top img {
-        width: 50px;
-        height: 50px;
-    }
-    
-    .nucleus-sidebar-top-text {
-        font-size: 1.25rem;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-    }
-    
-    .nucleus-sidebar-testimonial {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .nucleus-sidebar-quote {
-        font-size: 1.75rem;
-        font-weight: 600;
-        line-height: 1.4;
-        margin-bottom: 2rem;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-    
-    .nucleus-sidebar-author {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    
-    .nucleus-sidebar-title {
-        font-size: 0.95rem;
-        color: rgba(255, 255, 255, 0.8);
-        font-weight: 400;
-    }
-    
-    .nucleus-form-container {
-        flex: 1;
+
+    /* ── Left: Form ── */
+    .login-form-panel {
+        flex: 0 0 55%;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         padding: 3rem 2rem;
         background: #fff;
+        box-sizing: border-box;
     }
-    
-    .nucleus-form-wrapper {
+
+    .login-form-inner {
         width: 100%;
         max-width: 400px;
     }
-    
-    .nucleus-logo {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #1e40af;
-        margin-bottom: 2rem;
-        letter-spacing: -0.5px;
+
+    .login-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 2.5rem;
     }
-    
-    .nucleus-title {
+
+    .login-brand img {
+        width: 48px;
+        height: 48px;
+    }
+
+    .login-brand-name {
+        font-family: 'Lora', Georgia, serif;
+        font-size: 1.6rem;
+        color: #1e40af;
+        letter-spacing: -0.2px;
+    }
+
+    .login-brand-name .word-gabay {
+        font-weight: 700;
+        font-style: normal;
+    }
+
+    .login-brand-name .word-health {
+        font-weight: 400;
+        font-style: italic;
+    }
+
+    .login-title {
         font-size: 2rem;
         font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 0.75rem;
+        color: #111827;
+        margin-bottom: 0.375rem;
+        line-height: 1.2;
     }
-    
-    .nucleus-subtitle {
-        font-size: 1rem;
+
+    .login-subtitle {
+        font-size: 0.9rem;
         color: #6b7280;
         margin-bottom: 2rem;
         line-height: 1.5;
     }
-    
-    .nucleus-form-group {
-        margin-bottom: 1.5rem;
+
+    .login-form-group {
+        margin-bottom: 1.125rem;
     }
-    
-    .nucleus-form-group label {
+
+    .login-form-group label {
         display: block;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         font-weight: 500;
         color: #374151;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.375rem;
     }
-    
-    .nucleus-form-group input {
+
+    .login-form-group input {
         width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid #d1d5db;
+        padding: 0.7rem 1rem;
+        border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
-        font-size: 1rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
+        font-size: 0.9375rem;
+        background: #f9fafb;
+        transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         box-sizing: border-box;
+        color: #111827;
     }
-    
-    .nucleus-form-group input:focus {
+
+    .login-form-group input:focus {
         outline: none;
         border-color: #1e40af;
+        background: #fff;
         box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
     }
-    
-    .nucleus-form-actions {
+
+    .login-form-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
-        font-size: 0.875rem;
+        margin-bottom: 1.25rem;
+        font-size: 0.8125rem;
     }
-    
-    .nucleus-forgot-link {
+
+    .login-remember {
+        display: flex;
+        align-items: center;
+        gap: 0.425rem;
+        color: #6b7280;
+    }
+
+    .login-remember input {
+        width: 0.9rem;
+        height: 0.9rem;
+        accent-color: #1e40af;
+        cursor: pointer;
+    }
+
+    .login-remember label {
+        cursor: pointer;
+        margin: 0;
+    }
+
+    .login-forgot {
         color: #1e40af;
         text-decoration: none;
         font-weight: 500;
     }
-    
-    .nucleus-forgot-link:hover {
+
+    .login-forgot:hover {
         color: #1e3a8a;
+        text-decoration: underline;
     }
-    
-    .nucleus-remember-check {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .nucleus-remember-check input {
-        width: 1.2rem;
-        height: 1.2rem;
-        cursor: pointer;
-        accent-color: #1e40af;
-    }
-    
-    .nucleus-remember-check label {
-        cursor: pointer;
-        color: #374151;
-        margin: 0;
-    }
-    
-    .nucleus-btn-login {
+
+    .login-btn {
         width: 100%;
-        padding: 0.75rem 1rem;
+        padding: 0.8rem 1rem;
         background: #1e40af;
         color: #fff;
         border: none;
         border-radius: 0.5rem;
-        font-size: 1rem;
+        font-size: 0.9375rem;
         font-weight: 600;
         cursor: pointer;
-        transition: background-color 0.2s;
-        margin-bottom: 1.5rem;
+        transition: background 0.2s, transform 0.1s;
+        margin-bottom: 1rem;
     }
-    
-    .nucleus-btn-login:hover {
-        background: #1e3a8a;
-    }
-    
-    .nucleus-btn-login:active {
-        background: #172554;
-    }
-    
-    .nucleus-divider {
+
+    .login-btn:hover { background: #1e3a8a; }
+    .login-btn:active { background: #172554; transform: scale(0.99); }
+
+    .login-divider {
         display: flex;
         align-items: center;
-        margin-bottom: 1.5rem;
-        font-size: 0.875rem;
-        color: #6b7280;
+        margin-bottom: 1rem;
+        font-size: 0.75rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
-    
-    .nucleus-divider::before,
-    .nucleus-divider::after {
+
+    .login-divider::before,
+    .login-divider::after {
         content: '';
         flex: 1;
         height: 1px;
-        background: #e5e7eb;
+        background: #f3f4f6;
     }
-    
-    .nucleus-divider span {
-        margin: 0 1rem;
-        font-weight: 500;
-    }
-    
-    .nucleus-btn-google {
+
+    .login-divider span { margin: 0 0.75rem; font-weight: 600; }
+
+    .login-btn-google {
         width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid #d1d5db;
+        padding: 0.7rem 1rem;
+        border: 1px solid #e5e7eb;
         background: #fff;
-        color: #1f2937;
+        color: #374151;
         border-radius: 0.5rem;
-        font-size: 1rem;
+        font-size: 0.9rem;
         font-weight: 500;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.75rem;
-        transition: background-color 0.2s, border-color 0.2s;
+        gap: 0.625rem;
+        transition: background 0.2s, border-color 0.2s;
         text-decoration: none;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.75rem;
     }
-    
-    .nucleus-btn-google:hover {
+
+    .login-btn-google:hover {
         background: #f9fafb;
         border-color: #bfdbfe;
+        color: #374151;
+        text-decoration: none;
     }
-    
-    .nucleus-signup {
+
+    .login-signup {
         text-align: center;
-        font-size: 0.95rem;
-        color: #6b7280;
+        font-size: 0.875rem;
+        color: #9ca3af;
+        padding-top: 1rem;
+        border-top: 1px solid #f3f4f6;
     }
-    
-    .nucleus-signup a {
+
+    .login-signup a {
         color: #1e40af;
         text-decoration: none;
         font-weight: 600;
     }
-    
-    .nucleus-signup a:hover {
+
+    .login-signup a:hover {
         color: #1e3a8a;
+        text-decoration: underline;
     }
-    
+
     .alert {
-        margin-bottom: 1.5rem;
-        padding: 0.75rem 1rem;
+        margin-bottom: 1.125rem;
+        padding: 0.7rem 1rem;
         border-radius: 0.5rem;
+        font-size: 0.875rem;
     }
-    
+
     .alert-danger {
         background: #fee2e2;
         border: 1px solid #fecaca;
         color: #991b1b;
     }
-    
+
+    /* ── Right: Photo ── */
+    .login-photo-panel {
+        flex: 1;
+        background-image: url('{{ asset('images/Login_StockPhoto.jpg') }}');
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .login-photo-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(160deg, rgba(10, 25, 70, 0.55) 0%, rgba(0, 0, 0, 0.45) 100%);
+    }
+
+    .login-photo-caption {
+        position: absolute;
+        bottom: 2.5rem;
+        left: 2.5rem;
+        right: 2.5rem;
+        z-index: 2;
+        color: #fff;
+    }
+
+    .login-photo-caption-quote {
+        font-size: 1.1rem;
+        font-weight: 400;
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.9);
+        font-style: italic;
+        margin-bottom: 0.75rem;
+    }
+
+    .login-photo-caption-sub {
+        font-size: 0.8125rem;
+        color: rgba(255, 255, 255, 0.55);
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
     @media (max-width: 768px) {
-        .nucleus-login-container {
-            flex-direction: column;
+        .login-container { flex-direction: column-reverse; }
+
+        .login-form-panel {
+            flex: 1;
+            padding: 2rem 1.25rem;
         }
-        
-        .nucleus-sidebar {
-            flex: 0 0 250px;
-            min-height: 250px;
-            padding: 2rem;
+
+        .login-photo-panel {
+            flex: 0 0 200px;
+            min-height: 200px;
         }
-        
-        .nucleus-form-container {
-            padding: 2rem 1rem;
-        }
-        
-        .nucleus-sidebar-quote {
-            font-size: 1.5rem;
-        }
-        
-        .nucleus-title {
-            font-size: 1.75rem;
-        }
+
+        .login-photo-caption { display: none; }
+
+        .login-title { font-size: 1.75rem; }
     }
 </style>
 
-<div class="nucleus-login-container">
-    <!-- Left Sidebar -->
-    <div class="nucleus-sidebar" style="background-image: url('{{ asset('images/Login_StockPhoto.jpg') }}');">
-        <div class="nucleus-sidebar-content">
-            <div class="nucleus-sidebar-top">
-                <img src="{{ asset('images/GabayHealthLogoLight.png') }}" alt="GabayHealth Logo">
-                <div class="nucleus-sidebar-top-text">GabayHealth</div>
+<div class="login-container">
+
+    <!-- Left: Form -->
+    <div class="login-form-panel">
+        <div class="login-form-inner">
+
+            <div class="login-brand">
+                <img src="{{ asset('images/GabayHealthLogoLight.png') }}" alt="GabayHealth">
+                <span class="login-brand-name"><span class="word-gabay">Gabay</span><span class="word-health">Health</span></span>
             </div>
-            <div class="nucleus-sidebar-testimonial">
-                <div class="nucleus-sidebar-quote">
-                    "Empowering rural health units with technology for better healthcare delivery."
-                </div>
-                <div class="nucleus-sidebar-author">GabayHealth</div>
-                <div class="nucleus-sidebar-title">Community Health Management System</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Right Form Container -->
-    <div class="nucleus-form-container">
-        <div class="nucleus-form-wrapper">
-            <div class="nucleus-logo">GabayHealth</div>
-            <h1 class="nucleus-title">Welcome back</h1>
-            <p class="nucleus-subtitle">Sign in to your account to manage your health services.</p>
-            
+
+            <h1 class="login-title">Welcome back</h1>
+            <p class="login-subtitle">Sign in to your account to continue.</p>
+
             @if($errors->has('login'))
                 <div class="alert alert-danger">{{ $errors->first('login') }}</div>
             @endif
@@ -349,10 +328,9 @@
             @if(session('error'))
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
-            
-            <!-- Google Sign-In Button -->
-            <a href="{{ route('google.login.redirect') }}" class="nucleus-btn-google">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+            <a href="{{ route('google.login.redirect') }}" class="login-btn-google">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -360,40 +338,49 @@
                 </svg>
                 Continue with Google
             </a>
-            
-            <div class="nucleus-divider">
-                <span>OR</span>
-            </div>
-            
+
+            <div class="login-divider"><span>or</span></div>
+
             <form method="POST" action="{{ route('login.submit') }}">
                 @csrf
-                <div class="nucleus-form-group">
+                <div class="login-form-group">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus value="{{ old('username') }}">
                 </div>
-                
-                <div class="nucleus-form-group">
+
+                <div class="login-form-group">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" placeholder="••••••••" required>
                 </div>
-                
-                <div class="nucleus-form-actions">
-                    <div class="nucleus-remember-check">
+
+                <div class="login-form-row">
+                    <div class="login-remember">
                         <input type="checkbox" id="remember" name="remember" value="on">
-                        <label for="remember">Remember sign in details</label>
+                        <label for="remember">Remember me</label>
                     </div>
+                    <a href="#" class="login-forgot">Forgot password?</a>
                 </div>
-                
-                <a href="#" class="nucleus-forgot-link" style="display: block; margin-bottom: 1.5rem; text-align: right;">Forgot password?</a>
-                
-                <button type="submit" class="nucleus-btn-login">Log in</button>
+
+                <button type="submit" class="login-btn">Log in</button>
             </form>
-            
-            <div class="nucleus-signup">
+
+            <div class="login-signup">
                 Don't have an account? <a href="{{ route('register.landing') }}">Sign up</a>
             </div>
+
         </div>
     </div>
+
+    <!-- Right: Photo -->
+    <div class="login-photo-panel">
+        <div class="login-photo-caption">
+            <div class="login-photo-caption-quote">
+                "Empowering rural health units with technology for better healthcare delivery."
+            </div>
+            <div class="login-photo-caption-sub">Community Health Management System</div>
+        </div>
+    </div>
+
 </div>
 
 @endsection

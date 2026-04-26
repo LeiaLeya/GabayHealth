@@ -5,7 +5,7 @@
 <div class="sidebar">
     <!-- Logo and App Title -->
     <div class="logo-section">
-        <img src="{{ asset('images/gabayhealth_logo.png') }}" class="logo" alt="GabayHealth Logo">
+        <img src="{{ asset('images/GabayHealthLogoDark.png') }}" class="logo" alt="GabayHealth Logo">
         <span class="title">GabayHealth</span>
     </div>
 
