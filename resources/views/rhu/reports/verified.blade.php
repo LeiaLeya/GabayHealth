@@ -35,6 +35,37 @@
         </div>
     @endif
 
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ route('rhu.reports.verified.export') }}">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Verified From</label>
+                        <input type="date" class="form-control" name="date_from" value="{{ request('date_from') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Verified To</label>
+                        <input type="date" class="form-control" name="date_to" value="{{ request('date_to') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Symptom</label>
+                        <input type="text" class="form-control" name="symptom" placeholder="e.g. fever" value="{{ request('symptom') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Verified By</label>
+                        <input type="text" class="form-control" name="verified_by" placeholder="Staff name" value="{{ request('verified_by') }}">
+                    </div>
+                    <div class="col-md-1 d-grid">
+                        <button type="submit" class="btn btn-dark">
+                            <i class="bi bi-download me-1"></i>CSV
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2">Export the current verified report dataset as CSV. Filters are optional.</small>
+            </form>
+        </div>
+    </div>
+
     <!-- Verified Reports Table -->
     <div class="row">
         <div class="col-12">
@@ -55,6 +86,7 @@
                                         <th>Verified Date</th>
                                         <th>Verified By</th>
                                         <th>Additional Info</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -107,6 +139,13 @@
                                                 @endphp
                                                 <span class="text-muted">{{ Str::limit($displayInfo, 50) }}</span>
                                             </td>
+                                            <td>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-success"
+                                                        onclick="openResolveModal('{{ route('rhu.reports.resolve', $report['id']) }}')">
+                                                    <i class="bi bi-check2-circle me-1"></i>Resolved
+                                                </button>
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -120,6 +159,30 @@
                         </div>
                     @endif
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="resolveForm" method="POST" style="display: none;">
+    @csrf
+</form>
+
+<div class="modal fade" id="confirmResolveModal" tabindex="-1" aria-labelledby="confirmResolveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title" id="confirmResolveModalLabel">Mark Report as Resolved</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Mark this verified report as resolved? It will no longer appear in current active analytics.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmResolveBtn">
+                    <i class="bi bi-check2-circle me-1"></i>Yes, Mark as Resolved
+                </button>
             </div>
         </div>
     </div>
@@ -151,5 +214,21 @@
     transform: rotate(180deg);
 }
 </style>
+
+<script>
+let resolveActionUrl = '';
+
+function openResolveModal(actionUrl) {
+    resolveActionUrl = actionUrl;
+    new bootstrap.Modal(document.getElementById('confirmResolveModal')).show();
+}
+
+document.getElementById('confirmResolveBtn')?.addEventListener('click', function () {
+    if (!resolveActionUrl) return;
+    const form = document.getElementById('resolveForm');
+    form.action = resolveActionUrl;
+    form.submit();
+});
+</script>
 @endsection
 

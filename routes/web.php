@@ -496,6 +496,14 @@ Route::middleware('auth.check')->group(function () {
         elseif ($role === 'barangay') return app(BHCReportsController::class)->reject(request(), $id);
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('reports.reject');
+    Route::post('/reports/{id}/resolve', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUReportsController::class)->resolve(request(), $id);
+        elseif ($role === 'barangay') return app(BHCReportsController::class)->resolve(request(), $id);
+        return redirect()->route('login')->with('error', 'Unauthorized access');
+    })->name('reports.resolve');
 
     // Notifications routes - Redirect to role-based routes
     Route::get('/notifications', function() {
@@ -835,9 +843,11 @@ Route::middleware('auth.check')->group(function () {
         Route::get('/reports', [BHCReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/verify', [BHCReportsController::class, 'verify'])->name('reports.verify');
         Route::get('/reports/verified', [BHCReportsController::class, 'verified'])->name('reports.verified');
+        Route::get('/reports/verified/export', [BHCReportsController::class, 'exportVerifiedCsv'])->name('reports.verified.export');
         Route::get('/reports/rejected', [BHCReportsController::class, 'rejected'])->name('reports.rejected');
         Route::post('/reports/{id}/approve', [BHCReportsController::class, 'approve'])->name('reports.approve');
         Route::post('/reports/{id}/reject', [BHCReportsController::class, 'reject'])->name('reports.reject');
+        Route::post('/reports/{id}/resolve', [BHCReportsController::class, 'resolve'])->name('reports.resolve');
 
         // Inventory routes
         Route::get('/inventory', [BHCInventoryController::class, 'index'])->name('inventory.index');
@@ -936,9 +946,11 @@ Route::middleware('auth.check')->group(function () {
         Route::get('/reports', [RHUReportsController::class, 'index'])->name('reports.index');
         Route::get('/reports/verify', [RHUReportsController::class, 'verify'])->name('reports.verify');
         Route::get('/reports/verified', [RHUReportsController::class, 'verified'])->name('reports.verified');
+        Route::get('/reports/verified/export', [RHUReportsController::class, 'exportVerifiedCsv'])->name('reports.verified.export');
         Route::get('/reports/rejected', [RHUReportsController::class, 'rejected'])->name('reports.rejected');
         Route::post('/reports/{id}/approve', [RHUReportsController::class, 'approve'])->name('reports.approve');
         Route::post('/reports/{id}/reject', [RHUReportsController::class, 'reject'])->name('reports.reject');
+        Route::post('/reports/{id}/resolve', [RHUReportsController::class, 'resolve'])->name('reports.resolve');
 
         // Inventory routes
         Route::get('/inventory', [RHUInventoryController::class, 'index'])->name('inventory.index');
