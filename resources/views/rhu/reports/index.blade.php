@@ -442,7 +442,10 @@ function initializeMap() {
 
     verifiedBubbleData.forEach(point => {
         const color = getCategoryColor(point.diseaseCategory);
-        const radius = getBubbleRadius(point.totalCases, 140, 18);
+        const activeCases = Number(point.totalCases || 0);
+        const resolvedCases = Number(point.resolvedCases || 0);
+        const confirmedTotalCases = Number(point.confirmedTotalCases || (activeCases + resolvedCases));
+        const radius = getBubbleRadius(Math.max(1, confirmedTotalCases), 140, 18);
         const coordinateKey = getCoordinateKey(point.lat, point.lng);
         const totalAtCoordinate = verifiedCoordinateTotals.get(coordinateKey) || 1;
         const indexAtCoordinate = verifiedCoordinateIndex.get(coordinateKey) || 0;
@@ -459,25 +462,32 @@ function initializeMap() {
             radius: radius,
             color: color,
             fillColor: color,
-            fillOpacity: 0.9,
+            fillOpacity: activeCases > 0 ? 0.9 : 0.35,
             weight: 2
         }).addTo(map);
 
-        verified.bindTooltip(`${point.barangay}: ${point.totalCases} verified`, { direction: 'top' });
+        verified.bindTooltip(
+            `${point.barangay}: ${activeCases} active, ${resolvedCases} resolved`,
+            { direction: 'top' }
+        );
         verified.bindPopup(`
             <div style="min-width: 260px; padding: 6px;">
                 <div class="fw-bold mb-1">${point.barangay}</div>
-                <div><span class="text-muted">Confirmed disease category:</span> <strong>${formatCategory(point.diseaseCategory)}</strong></div>
-                <div><span class="text-muted">Confirmed cases:</span> <strong>${point.totalCases}</strong></div>
-                <div><span class="text-muted">Total confirmed in barangay:</span> <strong>${point.barangayTotalCases ?? point.totalCases}</strong></div>
+                <div><span class="text-muted">Symptoms:</span> <strong>${formatSymptoms(point.symptoms)}</strong></div>
+                <div><span class="text-muted">Active cases:</span> <strong>${activeCases}</strong></div>
+                <div><span class="text-muted">Resolved cases:</span> <strong>${resolvedCases}</strong></div>
+                <hr class="my-2">
+                <div><span class="text-muted">Barangay active total:</span> <strong>${point.barangayTotalCases ?? activeCases}</strong></div>
+                <div><span class="text-muted">Barangay resolved total:</span> <strong>${point.barangayResolvedCases ?? 0}</strong></div>
+                <div><span class="text-muted">Barangay confirmed total:</span> <strong>${point.barangayConfirmedTotalCases ?? (point.barangayTotalCases ?? activeCases)}</strong></div>
             </div>
         `);
         verifiedLayers.push(verified);
 
-        if ((point.totalCases || 0) >= 8) {
+        if (activeCases >= 8) {
             const radiusLayer = L.circle([point.lat, point.lng], {
                 pane: 'hotspotPane',
-                radius: 250 + (point.totalCases * 25),
+                radius: 250 + (activeCases * 25),
                 color: color,
                 fillColor: color,
                 fillOpacity: 0.08,
@@ -533,6 +543,16 @@ function formatCategory(category) {
         waterborne: 'Waterborne Disease'
     };
     return labels[category] || 'Other';
+}
+
+function formatSymptoms(symptoms) {
+    if (!Array.isArray(symptoms) || symptoms.length === 0) {
+        return 'Not specified';
+    }
+    return symptoms.map(symptom => {
+        const token = String(symptom || '').trim();
+        return token ? token.charAt(0).toUpperCase() + token.slice(1) : '';
+    }).filter(Boolean).join(', ');
 }
 
 function getCoordinateKey(lat, lng) {
