@@ -20,40 +20,43 @@
         min-height: 100vh;
     }
 
-    /* ── Left: Form ── */
+    /* ── Right: Form ── */
     .login-form-panel {
-        flex: 0 0 55%;
+        flex: 0 0 45%;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        padding: 3rem 2rem;
+        padding: 3rem 2.5rem;
         background: #fff;
         box-sizing: border-box;
     }
 
     .login-form-inner {
         width: 100%;
-        max-width: 400px;
+        max-width: 420px;
     }
 
     .login-brand {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
-        margin-bottom: 2.5rem;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
     }
 
     .login-brand img {
-        width: 48px;
-        height: 48px;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
     }
 
     .login-brand-name {
         font-family: 'Lora', Georgia, serif;
-        font-size: 1.6rem;
+        font-size: 2rem;
         color: #1e40af;
         letter-spacing: -0.2px;
+        line-height: 1;
     }
 
     .login-brand-name .word-gabay {
@@ -66,8 +69,15 @@
         font-style: italic;
     }
 
+    .login-brand-sep {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #e5e7eb 30%, #e5e7eb 70%, transparent);
+        margin: 1.5rem 0 2rem;
+    }
+
     .login-title {
-        font-size: 2rem;
+        font-size: 1.625rem;
         font-weight: 700;
         color: #111827;
         margin-bottom: 0.375rem;
@@ -75,9 +85,9 @@
     }
 
     .login-subtitle {
-        font-size: 0.9rem;
+        font-size: 0.875rem;
         color: #6b7280;
-        margin-bottom: 2rem;
+        margin-bottom: 1.75rem;
         line-height: 1.5;
     }
 
@@ -170,7 +180,7 @@
     .login-divider {
         display: flex;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
         font-size: 0.75rem;
         color: #9ca3af;
         text-transform: uppercase;
@@ -182,15 +192,15 @@
         content: '';
         flex: 1;
         height: 1px;
-        background: #f3f4f6;
+        background: #e5e7eb;
     }
 
-    .login-divider span { margin: 0 0.75rem; font-weight: 600; }
+    .login-divider span { margin: 0 0.875rem; font-weight: 600; }
 
     .login-btn-google {
         width: 100%;
-        padding: 0.7rem 1rem;
-        border: 1px solid #e5e7eb;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #e5e7eb;
         background: #fff;
         color: #374151;
         border-radius: 0.5rem;
@@ -201,16 +211,18 @@
         align-items: center;
         justify-content: center;
         gap: 0.625rem;
-        transition: background 0.2s, border-color 0.2s;
+        transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
         text-decoration: none;
-        margin-bottom: 1.75rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
     .login-btn-google:hover {
         background: #f9fafb;
-        border-color: #bfdbfe;
+        border-color: #93c5fd;
         color: #374151;
         text-decoration: none;
+        box-shadow: 0 2px 6px rgba(30,64,175,0.08);
     }
 
     .login-signup {
@@ -245,7 +257,7 @@
         color: #991b1b;
     }
 
-    /* ── Right: Photo ── */
+    /* ── Left: Photo ── */
     .login-photo-panel {
         flex: 1;
         background-image: url('{{ asset('images/Login_StockPhoto.jpg') }}');
@@ -253,63 +265,84 @@
         background-position: center;
         position: relative;
         overflow: hidden;
+        filter: saturate(1.35) brightness(1.08);
     }
 
     .login-photo-panel::before {
         content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(160deg, rgba(10, 25, 70, 0.55) 0%, rgba(0, 0, 0, 0.45) 100%);
+        background: linear-gradient(160deg, rgba(10, 25, 70, 0.25) 0%, rgba(0, 0, 0, 0.2) 100%);
+    }
+
+    .login-photo-panel::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 35%, transparent 65%);
+        z-index: 1;
     }
 
     .login-photo-caption {
         position: absolute;
         bottom: 2.5rem;
         left: 2.5rem;
-        right: 2.5rem;
+        max-width: 80%;
         z-index: 2;
         color: #fff;
     }
 
     .login-photo-caption-quote {
-        font-size: 1.1rem;
-        font-weight: 400;
-        line-height: 1.7;
-        color: rgba(255, 255, 255, 0.9);
+        font-size: 2rem;
+        font-weight: 600;
+        line-height: 1.35;
+        color: rgba(255, 255, 255, 0.95);
         font-style: italic;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.85rem;
     }
 
     .login-photo-caption-sub {
-        font-size: 0.8125rem;
-        color: rgba(255, 255, 255, 0.55);
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.65);
         font-weight: 500;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
     }
 
     @media (max-width: 768px) {
-        .login-container { flex-direction: column-reverse; }
+        .login-container { flex-direction: column; }
 
         .login-form-panel {
             flex: 1;
-            padding: 2rem 1.25rem;
+            padding: 2rem 1.5rem;
         }
 
         .login-photo-panel {
-            flex: 0 0 200px;
-            min-height: 200px;
+            flex: 0 0 220px;
+            min-height: 220px;
         }
 
         .login-photo-caption { display: none; }
 
-        .login-title { font-size: 1.75rem; }
+        .login-brand { justify-content: flex-start; }
+
+        .login-title { font-size: 1.5rem; }
     }
 </style>
 
 <div class="login-container">
 
-    <!-- Left: Form -->
+    <!-- Left: Photo -->
+    <div class="login-photo-panel">
+        <div class="login-photo-caption">
+            <div class="login-photo-caption-quote">
+                "Empowering rural health units with technology for better healthcare delivery."
+            </div>
+            <div class="login-photo-caption-sub">Community Health Management System</div>
+        </div>
+    </div>
+
+    <!-- Right: Form -->
     <div class="login-form-panel">
         <div class="login-form-inner">
 
@@ -317,6 +350,8 @@
                 <img src="{{ asset('images/GabayHealthLogoLight.png') }}" alt="GabayHealth">
                 <span class="login-brand-name"><span class="word-gabay">Gabay</span><span class="word-health">Health</span></span>
             </div>
+
+            <div class="login-brand-sep"></div>
 
             <h1 class="login-title">Welcome back</h1>
             <p class="login-subtitle">Sign in to your account to continue.</p>
@@ -368,16 +403,6 @@
                 Don't have an account? <a href="{{ route('register.landing') }}">Sign up</a>
             </div>
 
-        </div>
-    </div>
-
-    <!-- Right: Photo -->
-    <div class="login-photo-panel">
-        <div class="login-photo-caption">
-            <div class="login-photo-caption-quote">
-                "Empowering rural health units with technology for better healthcare delivery."
-            </div>
-            <div class="login-photo-caption-sub">Community Health Management System</div>
         </div>
     </div>
 
