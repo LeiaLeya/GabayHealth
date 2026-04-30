@@ -121,6 +121,14 @@ class SystemAdminController extends Controller
             }
 
             $rhuData = $rhuDoc->data();
+
+            $currentStatus = $rhuData['status'] ?? 'pending';
+            if ($currentStatus !== 'pending') {
+                return response()->json([
+                    'error' => 'RHU has already been processed (current status: ' . $currentStatus . ')',
+                ], 422);
+            }
+
             $rhuEmail = $rhuData['email'];
             $rhuName = $rhuData['rhuName'] ?? $rhuData['name'];
 
