@@ -9,8 +9,10 @@
     <link rel="icon" type="image/png" href="{{ asset('images/gabayhealth_logo.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
+        body {
+            font-family: 'Poppins', sans-serif;
         }
 
         .main-wrapper {
@@ -29,8 +31,7 @@
         .main-content {
             flex: 1;
             overflow-y: auto;
-            background: #fff;
-            padding: 0;
+            background: #f4f6fb;
             padding: 32px;
         }
 
@@ -39,9 +40,6 @@
             color: #000000 !important;
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     @stack('styles')
 
 </head>

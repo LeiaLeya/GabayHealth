@@ -631,6 +631,7 @@ class InventoryController extends Controller
             'name' => 'required|string|max:255',
             'type' => 'required|string|max:100',
             'quantity' => 'required|integer|min:0',
+            'unit_type' => 'required|in:capsules,tablets,pieces,boxes,packs,bottles,vials,sachets',
             'unit_type' => 'required|in:capsules,tablets,pieces,boxes,bottles,packs',
             'description' => 'nullable|string|max:500',
             'generic_name' => 'nullable|string|max:255',
@@ -648,6 +649,8 @@ class InventoryController extends Controller
         if ($isBatchTrackedType && empty(trim($request->generic_name ?? ''))) {
             return redirect()->back()->withErrors(['generic_name' => 'Generic name is required for medicines and vaccines.'])->withInput();
         }
+        if (in_array($request->type, ['Medicine', 'Vaccine']) && ($request->milligrams === null || $request->milligrams === '')) {
+            return redirect()->back()->withErrors(['milligrams' => 'Dosage (mg) is required for medicines and vaccines.'])->withInput();
         if ($isBatchTrackedType && ($request->milligrams === null || $request->milligrams === '')) {
             return redirect()->back()->withErrors(['milligrams' => 'Milligrams is required for medicines and vaccines.'])->withInput();
         }
@@ -754,6 +757,7 @@ class InventoryController extends Controller
             'name' => 'required|string|max:255',
             'type' => 'required|string|max:100',
             'quantity' => 'required|integer|min:0',
+            'unit_type' => 'required|in:capsules,tablets,pieces,boxes,packs,bottles,vials,sachets',
             'unit_type' => 'required|in:capsules,tablets,pieces,boxes,bottles,packs',
             'description' => 'nullable|string|max:500',
             'generic_name' => 'nullable|string|max:255',
@@ -766,7 +770,7 @@ class InventoryController extends Controller
             return redirect()->back()->withErrors(['generic_name' => 'Generic name is required for medicines and vaccines.'])->withInput();
         }
         if (in_array($request->type, ['Medicine', 'Vaccine']) && ($request->milligrams === null || $request->milligrams === '')) {
-            return redirect()->back()->withErrors(['milligrams' => 'Milligrams is required for medicines and vaccines.'])->withInput();
+            return redirect()->back()->withErrors(['milligrams' => 'Dosage (mg) is required for medicines and vaccines.'])->withInput();
         }
 
         // Calculate automatic status based on quantity
@@ -1171,7 +1175,19 @@ class InventoryController extends Controller
             'packs' => [
                 'low_stock' => 5,
                 'out_of_stock' => 0
-            ]
+            ],
+            'bottles' => [
+                'low_stock' => 5,
+                'out_of_stock' => 0
+            ],
+            'vials' => [
+                'low_stock' => 10,
+                'out_of_stock' => 0
+            ],
+            'sachets' => [
+                'low_stock' => 10,
+                'out_of_stock' => 0
+            ],
         ];
 
         $threshold = $thresholds[$unitType] ?? $thresholds['pieces'];

@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 use App\Services\FirebaseService;
+use App\Mail\RhuRegistrationReceivedEmail;
 use Laravel\Socialite\Facades\Socialite;
 use Cloudinary\Cloudinary;
-use Cloudinary\Uploader;
 use Exception;
 
 class RegisterController extends Controller
@@ -16,6 +17,11 @@ class RegisterController extends Controller
     public function landing()
     {
         return view('auth.register_landing');
+    }
+
+    public function success()
+    {
+        return view('auth.register_success');
     }
 
     public function showBhwForm()
@@ -151,7 +157,7 @@ class RegisterController extends Controller
                     'status' => 'unread',
                 ]);
 
-            return back()->with('success', 'Barangay registration submitted! Waiting for RHU approval.');
+            return redirect()->route('register.success')->with('success_type', 'bhw');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
             return back()->withErrors(['username' => 'This username is already registered.'])->withInput();
@@ -211,15 +217,13 @@ class RegisterController extends Controller
                         'tmp_path' => $logo->getRealPath(),
                     ]);
 
-                    $cloudinaryUrl = env('CLOUDINARY_URL');
-                    \Log::info('Cloudinary environment check', [
-                        'CLOUDINARY_URL_set' => !empty($cloudinaryUrl),
-                        'CLOUDINARY_CLOUD_NAME' => env('CLOUDINARY_CLOUD_NAME'),
-                        'CLOUDINARY_API_KEY' => env('CLOUDINARY_API_KEY') ? 'SET' : 'NOT SET',
+                    $cloudinary = new Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                            'api_key'    => env('CLOUDINARY_API_KEY'),
+                            'api_secret' => env('CLOUDINARY_API_SECRET'),
+                        ]
                     ]);
-
-                    $cloudinary = new Cloudinary();
-                    \Log::info('Cloudinary instance created');
                     
                     $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
                         'folder' => "gabayhealth/rhu/{$uid}",
@@ -274,12 +278,10 @@ class RegisterController extends Controller
                 'username' => null,
                 'uid' => null,
             ]);
-            $this->initializeRhuServicesSubcollection($firestore, $uid);
-
             $this->saveUserProfile(
                 $firestore,
                 $uid,
-                $email,
+                $request->email,
                 'rhu',
                 $uid,
                 $request->rhuName,
@@ -292,10 +294,13 @@ class RegisterController extends Controller
                 'logo_url' => $logoUrl,
             ]);
 
-            return back()->with('success', 'RHU registration submitted successfully! Please wait for admin approval and credentials via email.');
-            $this->saveUserProfile($firestore, $uid, $email, 'rhu', $uid, $request->rhuName);
+            try {
+                Mail::to($request->email)->send(new RhuRegistrationReceivedEmail($request->rhuName));
+            } catch (\Exception $mailException) {
+                \Log::error('Failed to send registration confirmation email: ' . $mailException->getMessage());
+            }
 
-            return back()->with('success', 'RHU registration submitted! Waiting for admin approval.');
+            return redirect()->route('register.success')->with('success_type', 'rhu');
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             \Log::error('Firebase Auth: Email already exists - ' . $e->getMessage());
             return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
@@ -485,8 +490,6 @@ class RegisterController extends Controller
                 'rhu_name' => $request->rhuName,
                 'logo_url' => $logoUrl,
             ]);
-            $this->initializeRhuServicesSubcollection($firestore, $uid);
-
             $this->saveUserProfile(
                 $firestore,
                 $uid,
@@ -499,7 +502,7 @@ class RegisterController extends Controller
 
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar']);
 
-            return redirect()->route('register.landing')->with('success', 'Registration submitted successfully! Please wait for admin approval and credentials via email.');
+            return redirect()->route('register.success')->with('success_type', 'rhu');
         } catch (Exception $e) {
             \Log::error('Google RHU Registration error: ' . $e->getMessage());
             return back()->withErrors(['error' => $e->getMessage()]);
@@ -642,7 +645,7 @@ class RegisterController extends Controller
 
             session()->forget(['google_email', 'google_name', 'google_id', 'google_avatar', 'oauth_type']);
 
-            return redirect()->route('login')->with('success', 'Registration submitted! Waiting for RHU approval.');
+            return redirect()->route('register.success')->with('success_type', 'bhw');
         } catch (Exception $e) {
             \Log::error('Google BHW Registration error: ' . $e->getMessage());
             return back()->withErrors(['error' => $e->getMessage()]);
@@ -671,15 +674,4 @@ class RegisterController extends Controller
         ], ['merge' => true]);
     }
 
-    private function initializeRhuServicesSubcollection($firestore, string $rhuId): void
-    {
-        $firestore->collection('rhu')
-            ->document($rhuId)
-            ->collection('services')
-            ->document('_meta')
-            ->set([
-                '_meta' => true,
-                'initialized_at' => now()->toDateTimeString(),
-            ], ['merge' => true]);
-    }
 }
