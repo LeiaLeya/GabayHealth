@@ -313,6 +313,7 @@ class RegisterController extends Controller
     // Google OAuth redirect for RHU
     public function redirectToGoogle()
     {
+        session(['oauth_type' => 'rhu']);
         return Socialite::driver('google')->redirect();
     }
 
@@ -328,7 +329,7 @@ class RegisterController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-            $oauthType = session('oauth_type', 'rhu');
+            $oauthType = session('oauth_type', 'bhw');
 
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();
@@ -376,7 +377,7 @@ class RegisterController extends Controller
             return redirect()->route('register.rhu.google');
         } catch (Exception $e) {
             \Log::error('Google OAuth error: ' . $e->getMessage());
-            $oauthType = session('oauth_type', 'rhu');
+            $oauthType = session('oauth_type', 'bhw');
             session()->forget('oauth_type');
             if ($oauthType === 'bhw') {
                 return redirect('/register/bhw')->with('error', 'Google sign-in failed');

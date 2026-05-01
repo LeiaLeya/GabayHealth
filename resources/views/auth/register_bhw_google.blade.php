@@ -2,7 +2,11 @@
 @section('content')
 @php($hideSidebar = true)
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
     html, body {
         height: 100%;
@@ -33,7 +37,11 @@
         margin-bottom: 28px;
     }
 
-    .registration-header img { width: 50px; height: 50px; margin-bottom: 15px; }
+    .registration-header img {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 15px;
+    }
 
     .registration-header h1 {
         font-size: 24px;
@@ -42,9 +50,11 @@
         margin-bottom: 6px;
     }
 
-    .registration-header p { color: #6b7280; font-size: 14px; }
+    .registration-header p {
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-    /* ── Stepper ── */
     .stepper {
         display: flex;
         align-items: flex-start;
@@ -75,8 +85,11 @@
         flex-shrink: 0;
     }
 
-    .step.active .step-circle  { background: #2563eb; color: #fff; }
-    .step.completed .step-circle { background: #2563eb; color: #fff; }
+    .step.active .step-circle,
+    .step.completed .step-circle {
+        background: #2563eb;
+        color: #fff;
+    }
 
     .step-label {
         font-size: 11px;
@@ -86,8 +99,14 @@
         transition: color 0.3s;
     }
 
-    .step.active .step-label    { color: #2563eb; font-weight: 600; }
-    .step.completed .step-label { color: #2563eb; }
+    .step.active .step-label,
+    .step.completed .step-label {
+        color: #2563eb;
+    }
+
+    .step.active .step-label {
+        font-weight: 600;
+    }
 
     .step-connector {
         flex: 1;
@@ -98,17 +117,20 @@
         transition: background 0.3s;
     }
 
-    .step-connector.completed { background: #2563eb; }
+    .step-connector.completed {
+        background: #2563eb;
+    }
 
-    /* ── Step panels ── */
-    .step-panel { display: none; }
+    .step-panel {
+        display: none;
+    }
 
     .step-panel.active {
         display: block;
         animation: fadeIn 0.2s ease;
     }
 
-    @@keyframes fadeIn {
+    @keyframes fadeIn {
         from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
     }
@@ -122,8 +144,9 @@
         border-bottom: 1px solid #f3f4f6;
     }
 
-    /* ── Form elements ── */
-    .form-group { margin-bottom: 16px; }
+    .form-group {
+        margin-bottom: 16px;
+    }
 
     .form-group label {
         display: block;
@@ -151,12 +174,23 @@
         box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
     }
 
-    .form-group small { display: block; color: #9ca3af; font-size: 12px; margin-top: 4px; }
+    .form-group small {
+        display: block;
+        color: #9ca3af;
+        font-size: 12px;
+        margin-top: 4px;
+    }
 
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .form-row .form-group { margin-bottom: 0; }
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
 
-    /* ── Google badge ── */
+    .form-row .form-group {
+        margin-bottom: 0;
+    }
+
     .google-badge {
         display: flex;
         align-items: center;
@@ -175,7 +209,6 @@
     .google-badge a { font-size: 12px; color: #2563eb; text-decoration: none; font-weight: 600; white-space: nowrap; }
     .google-badge a:hover { text-decoration: underline; }
 
-    /* ── Logo upload ── */
     .logo-upload-section {
         background: #f3f4f6;
         border: 2px dashed #d1d5db;
@@ -187,17 +220,44 @@
         margin-bottom: 20px;
     }
 
-    .logo-upload-section:hover { border-color: #2563eb; background: #eff6ff; }
-    .logo-upload-section.dragging { border-color: #2563eb; background: #dbeafe; }
+    .logo-upload-section:hover {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
 
-    #logoUploadArea { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .logo-upload-section.dragging {
+        border-color: #2563eb;
+        background: #dbeafe;
+    }
+
+    #logoUploadArea {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
     #logoUploadArea svg { color: #9ca3af; }
-    #logoUploadArea p { color: #6b7280; font-size: 13px; margin: 0; }
-    #logoUploadArea p:first-of-type { font-weight: 600; color: #374151; }
+
+    #logoUploadArea p {
+        color: #6b7280;
+        font-size: 13px;
+        margin: 0;
+    }
+
+    #logoUploadArea p:first-of-type {
+        font-weight: 600;
+        color: #374151;
+    }
 
     #logoPreview { display: none; text-align: center; }
 
-    #logoPreviewImg { width: 100px; height: 100px; object-fit: contain; margin-bottom: 12px; }
+    #logoPreviewImg {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        margin-bottom: 12px;
+    }
 
     .logo-change-btn {
         background: #f3f4f6;
@@ -212,8 +272,10 @@
 
     .logo-change-btn:hover { background: #e5e7eb; }
 
-    /* ── Address / Mapbox ── */
-    .location-search-container { position: relative; z-index: 1000; }
+    .location-search-container {
+        position: relative;
+        z-index: 1000;
+    }
 
     .suggestions-list {
         position: absolute;
@@ -245,9 +307,22 @@
     }
 
     .suggestion-item:last-child { border-bottom: none; }
-    .suggestion-item:hover { background-color: #f3f4f6; color: #2563eb; }
-    .suggestion-item .suggestion-title { font-weight: 600; color: #1f2937; }
-    .suggestion-item .suggestion-subtitle { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+
+    .suggestion-item:hover {
+        background-color: #f3f4f6;
+        color: #2563eb;
+    }
+
+    .suggestion-item .suggestion-title {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .suggestion-item .suggestion-subtitle {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
 
     .manual-entry-option {
         padding: 12px;
@@ -262,44 +337,68 @@
 
     .manual-entry-option:hover { background-color: #eff6ff; }
 
-    .manual-mode-indicator { font-size: 12px; color: #6b7280; margin-top: 4px; font-style: italic; display: none; }
+    .manual-mode-indicator {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+        font-style: italic;
+        display: none;
+    }
+
     .manual-mode-indicator.active { color: #2563eb; }
 
-    .location-coordinates { font-size: 12px; color: #9ca3af; margin-top: 8px; padding: 8px 0; }
-
-    #addressSearch {
-        width: 100%;
-        padding: 10px 12px;
-        font-size: 14px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background-color: #f9fafb;
-        transition: all 0.2s;
-        font-family: inherit;
+    .location-coordinates {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 8px;
+        padding: 8px 0;
     }
 
-    #addressSearch:focus {
-        outline: none;
-        border-color: #2563eb;
-        background-color: #fff;
-        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    .terms-check {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 16px 0;
+        line-height: 1.5;
     }
 
-    /* ── Terms ── */
-    .terms-check { font-size: 12px; color: #6b7280; margin: 16px 0; line-height: 1.5; }
-    .terms-check a { color: #2563eb; text-decoration: none; }
+    .terms-check a {
+        color: #2563eb;
+        text-decoration: none;
+    }
+
     .terms-check a:hover { text-decoration: underline; }
-    .form-check { display: flex; align-items: center; gap: 8px; }
-    .form-check-input { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
 
-    /* ── Alerts ── */
-    .alert { padding: 12px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
-    .alert-error { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-    .alert-error ul { margin: 0; padding-left: 1.5rem; }
-    .alert-error li { font-size: 13px; }
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-    /* ── Step navigation ── */
-    .step-nav { display: flex; gap: 10px; margin-top: 24px; }
+    .form-check-input {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #2563eb;
+    }
+
+    .alert {
+        padding: 12px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #7f1d1d;
+        border: 1px solid #fecaca;
+    }
+
+    .step-nav {
+        display: flex;
+        gap: 10px;
+        margin-top: 24px;
+    }
 
     .nav-back-btn {
         flex: 1;
@@ -332,8 +431,19 @@
     .nav-next-btn:hover, .nav-submit-btn:hover { background: #1d4ed8; }
     .nav-next-btn:active, .nav-submit-btn:active { transform: scale(0.98); }
 
-    .login-link { text-align: center; margin-top: 16px; font-size: 14px; color: #6b7280; }
-    .login-link a { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .login-link {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .login-link a {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
     .login-link a:hover { text-decoration: underline; }
 
     @media (max-width: 600px) {
@@ -346,15 +456,12 @@
 
 <div id="app">
     <div class="registration-wrapper">
-
-        <!-- Header -->
         <div class="registration-header">
             <img src="{{ asset('images/GabayHealthLogoLight.png') }}" alt="GabayHealth Logo">
             <h1>Sign up for GabayHealth</h1>
-            <p>Complete your BHC registration</p>
+            <p>Complete your barangay health center registration</p>
         </div>
 
-        <!-- Stepper -->
         <div class="stepper">
             <div class="step active" data-step="1">
                 <div class="step-circle"><span>1</span></div>
@@ -368,14 +475,13 @@
             <div class="step-connector" id="connector-2"></div>
             <div class="step" data-step="3">
                 <div class="step-circle"><span>3</span></div>
-                <div class="step-label">Details</div>
+                <div class="step-label">Account</div>
             </div>
         </div>
 
-        <!-- Alerts -->
         @if($errors->any())
             <div class="alert alert-error">
-                <ul>
+                <ul style="margin: 0; padding-left: 20px;">
                     @foreach($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -383,15 +489,12 @@
             </div>
         @endif
 
-        <!-- Form -->
         <form method="POST" action="{{ route('register.bhw.google.submit') }}" enctype="multipart/form-data">
             @csrf
 
-            <!-- Step 1: Your Center -->
             <div class="step-panel active" id="step-1">
-                <p class="step-heading">Tell us about your health center</p>
+                <p class="step-heading">Tell us about your barangay health center</p>
 
-                <!-- Google badge -->
                 <div class="google-badge">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -406,7 +509,6 @@
                     <a href="{{ route('google.redirect.bhw') }}">Change</a>
                 </div>
 
-                <!-- Logo Upload -->
                 <div class="logo-upload-section" id="logoUploadSection">
                     <div id="logoUploadArea">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -414,7 +516,7 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <p>Upload your Health Center logo</p>
+                        <p>Upload your center logo</p>
                         <p>PNG or JPG, up to 5MB</p>
                     </div>
                     <div id="logoPreview">
@@ -423,37 +525,31 @@
                     </div>
                 </div>
 
-                <!-- Username -->
                 <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required value="{{ old('username') }}">
-                    @error('username') <small style="color:#dc2626;">{{ $message }}</small> @enderror
-                </div>
-
-                <!-- Health Center Name -->
-                <div class="form-group">
-                    <label for="healthCenterName">Health Center Name</label>
-                    <input type="text" id="healthCenterName" name="healthCenterName" class="form-control" placeholder="Enter health center name" required value="{{ old('healthCenterName') }}">
+                    <label for="healthCenterName">Barangay Health Center Name</label>
+                    <input type="text" id="healthCenterName" name="healthCenterName" class="form-control" placeholder="e.g. Brgy. San Isidro Health Center" value="{{ old('healthCenterName') }}">
                     @error('healthCenterName') <small style="color:#dc2626;">{{ $message }}</small> @enderror
                 </div>
 
-                <!-- Password Row -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" name="password" class="form-control" placeholder="At least 6 characters" required>
-                        @error('password') <small style="color:#dc2626;">{{ $message }}</small> @enderror
-                    </div>
-                    <div class="form-group">
-                        <label for="password_confirmation">Confirm</label>
-                        <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password" required>
-                    </div>
+                <div class="form-group">
+                    <label for="rhuId">Parent RHU</label>
+                    <select id="rhuId" name="rhuId" class="form-select">
+                        <option value="">Select RHU</option>
+                        @forelse($rhus as $rhu)
+                            <option value="{{ $rhu['id'] }}" {{ old('rhuId') == $rhu['id'] ? 'selected' : '' }}>{{ $rhu['name'] }}</option>
+                        @empty
+                            <option value="" disabled>No approved RHUs available</option>
+                        @endforelse
+                    </select>
+                    @if(empty($rhus))
+                        <small style="color:#dc2626;">No approved RHUs found. Please contact administrator.</small>
+                    @endif
+                    @error('rhuId') <small style="color:#dc2626;">{{ $message }}</small> @enderror
                 </div>
             </div>
 
-            <!-- Step 2: Location -->
             <div class="step-panel" id="step-2">
-                <p class="step-heading">Where is your health center located?</p>
+                <p class="step-heading">Where is your center located?</p>
 
                 <div class="form-group">
                     <label for="addressSearch">Address</label>
@@ -505,36 +601,35 @@
                         @error('barangay') <small style="color:#dc2626;">{{ $message }}</small> @enderror
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label for="postalCode">Postal Code</label>
+                    <input type="text" id="postalCode" name="postalCode" class="form-control" placeholder="Enter postal code" value="{{ old('postalCode') }}">
+                    @error('postalCode') <small style="color:#dc2626;">{{ $message }}</small> @enderror
+                </div>
             </div>
 
-            <!-- Step 3: Details -->
             <div class="step-panel" id="step-3">
-                <p class="step-heading">Final details</p>
+                <p class="step-heading">Set up your account</p>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" value="{{ old('username') }}">
+                    @error('username') <small style="color:#dc2626;">{{ $message }}</small> @enderror
+                </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="postalCode">Postal Code</label>
-                        <input type="text" id="postalCode" name="postalCode" class="form-control" placeholder="Enter postal code" required value="{{ old('postalCode') }}">
-                        @error('postalCode') <small style="color:#dc2626;">{{ $message }}</small> @enderror
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="At least 6 characters">
+                        @error('password') <small style="color:#dc2626;">{{ $message }}</small> @enderror
                     </div>
                     <div class="form-group">
-                        <label for="rhuId">Parent RHU</label>
-                        <select id="rhuId" name="rhuId" class="form-select" required>
-                            <option value="">Select RHU</option>
-                            @forelse($rhus as $rhu)
-                                <option value="{{ $rhu['id'] }}" {{ old('rhuId') == $rhu['id'] ? 'selected' : '' }}>{{ $rhu['name'] }}</option>
-                            @empty
-                                <option value="" disabled>No approved RHUs available</option>
-                            @endforelse
-                        </select>
-                        @if(empty($rhus))
-                            <small style="color:#dc2626;">No approved RHUs found. Please contact administrator.</small>
-                        @endif
-                        @error('rhuId') <small style="color:#dc2626;">{{ $message }}</small> @enderror
+                        <label for="password_confirmation">Confirm Password</label>
+                        <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" placeholder="Confirm password">
                     </div>
                 </div>
 
-                <!-- Terms -->
                 <div class="terms-check">
                     <div class="form-check">
                         <input type="checkbox" id="terms" name="terms" class="form-check-input" required>
@@ -543,10 +638,8 @@
                 </div>
             </div>
 
-            <!-- File input at form level -->
             <input type="file" id="logoUpload" name="logo" accept="image/*" style="display:none;">
 
-            <!-- Navigation -->
             <div class="step-nav">
                 <button type="button" id="backBtn" class="nav-back-btn" style="display:none;" onclick="goToStep(currentStep - 1)">Back</button>
                 <button type="button" id="nextBtn" class="nav-next-btn" onclick="goToStep(currentStep + 1)">Next &rarr;</button>
@@ -557,12 +650,11 @@
         <div class="login-link">
             Already have an account? <a href="{{ route('login') }}">Sign in</a>
         </div>
-
     </div>
 </div>
 
 <script>
-let currentStep = {{ $errors->hasAny(['fullAddress', 'region', 'province', 'city', 'barangay']) ? 2 : ($errors->hasAny(['postalCode', 'rhuId', 'terms']) ? 3 : 1) }};
+let currentStep = {{ $errors->hasAny(['fullAddress', 'region', 'province', 'city', 'barangay', 'postalCode']) ? 2 : ($errors->hasAny(['username', 'password', 'terms']) ? 3 : 1) }};
 const totalSteps = 3;
 
 const checkSVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -604,49 +696,68 @@ function goToStep(target) {
 
 function validateStep(step) {
     if (step === 1) {
-        const username         = document.getElementById('username').value.trim();
         const healthCenterName = document.getElementById('healthCenterName').value.trim();
-        const password         = document.getElementById('password').value;
-        const confirm          = document.getElementById('password_confirmation').value;
-
-        if (!username)         { document.getElementById('username').focus(); document.getElementById('username').style.borderColor = '#dc2626'; return false; }
-        document.getElementById('username').style.borderColor = '';
-
-        if (!healthCenterName) { document.getElementById('healthCenterName').focus(); document.getElementById('healthCenterName').style.borderColor = '#dc2626'; return false; }
+        const rhuId = document.getElementById('rhuId').value;
+        if (!healthCenterName) {
+            document.getElementById('healthCenterName').focus();
+            document.getElementById('healthCenterName').style.borderColor = '#dc2626';
+            return false;
+        }
+        if (!rhuId) {
+            document.getElementById('rhuId').focus();
+            return false;
+        }
         document.getElementById('healthCenterName').style.borderColor = '';
-
-        if (!password || password.length < 6) { document.getElementById('password').focus(); document.getElementById('password').style.borderColor = '#dc2626'; return false; }
-        document.getElementById('password').style.borderColor = '';
-
-        if (password !== confirm) { document.getElementById('password_confirmation').focus(); document.getElementById('password_confirmation').style.borderColor = '#dc2626'; return false; }
-        document.getElementById('password_confirmation').style.borderColor = '';
     }
-    if (step === 2) {
-        const address  = document.getElementById('fullAddress').value.trim() || document.getElementById('addressSearch').value.trim();
-        const region   = document.getElementById('region').value;
-        const province = document.getElementById('province').value;
-        const city     = document.getElementById('city').value;
-        const barangay = document.getElementById('barangay').value;
 
-        if (!address)  { document.getElementById('addressSearch').focus(); document.getElementById('addressSearch').style.borderColor = '#dc2626'; return false; }
+    if (step === 2) {
+        const address = document.getElementById('fullAddress').value.trim() || document.getElementById('addressSearch').value.trim();
+        const region = document.getElementById('region').value;
+        const province = document.getElementById('province').value;
+        const city = document.getElementById('city').value;
+        const barangay = document.getElementById('barangay').value;
+        const postalCode = document.getElementById('postalCode').value.trim();
+
+        if (!address) {
+            document.getElementById('addressSearch').focus();
+            document.getElementById('addressSearch').style.borderColor = '#dc2626';
+            return false;
+        }
         document.getElementById('addressSearch').style.borderColor = '';
-        if (!region)   { document.getElementById('region').focus(); return false; }
+        if (!region) { document.getElementById('region').focus(); return false; }
         if (!province) { document.getElementById('province').focus(); return false; }
-        if (!city)     { document.getElementById('city').focus(); return false; }
+        if (!city) { document.getElementById('city').focus(); return false; }
         if (!barangay) { document.getElementById('barangay').focus(); return false; }
+        if (!postalCode) { document.getElementById('postalCode').focus(); return false; }
+    }
+
+    if (step === 3) {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('password_confirmation').value;
+        if (!username) { document.getElementById('username').focus(); return false; }
+        if (!password) { document.getElementById('password').focus(); return false; }
+        if (!confirm) { document.getElementById('password_confirmation').focus(); return false; }
+        if (password !== confirm) {
+            document.getElementById('password_confirmation').focus();
+            document.getElementById('password_confirmation').style.borderColor = '#dc2626';
+            return false;
+        }
+        document.getElementById('password_confirmation').style.borderColor = '';
     }
     return true;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     if (currentStep > 1) goToStep(currentStep);
+});
 
-    // Logo upload
+document.addEventListener('DOMContentLoaded', function () {
     const logoUploadSection = document.getElementById('logoUploadSection');
-    const logoUploadArea    = document.getElementById('logoUploadArea');
-    const logoUpload        = document.getElementById('logoUpload');
-    const logoPreview       = document.getElementById('logoPreview');
-    const logoPreviewImg    = document.getElementById('logoPreviewImg');
+    const logoUploadArea = document.getElementById('logoUploadArea');
+    const logoUpload = document.getElementById('logoUpload');
+    const logoPreview = document.getElementById('logoPreview');
+    const logoPreviewImg = document.getElementById('logoPreviewImg');
 
     logoUploadSection.addEventListener('click', () => logoUpload.click());
 
@@ -654,8 +765,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function (e) {
-                logoPreviewImg.src = e.target.result;
+            reader.onload = function (ev) {
+                logoPreviewImg.src = ev.target.result;
                 logoUploadArea.style.display = 'none';
                 logoPreview.style.display = 'block';
             };
@@ -672,8 +783,15 @@ document.addEventListener('DOMContentLoaded', () => {
         logoUpload.click();
     });
 
-    logoUploadSection.addEventListener('dragover', (e) => { e.preventDefault(); logoUploadSection.classList.add('dragging'); });
-    logoUploadSection.addEventListener('dragleave', () => logoUploadSection.classList.remove('dragging'));
+    logoUploadSection.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        logoUploadSection.classList.add('dragging');
+    });
+
+    logoUploadSection.addEventListener('dragleave', () => {
+        logoUploadSection.classList.remove('dragging');
+    });
+
     logoUploadSection.addEventListener('drop', (e) => {
         e.preventDefault();
         logoUploadSection.classList.remove('dragging');
@@ -681,10 +799,9 @@ document.addEventListener('DOMContentLoaded', () => {
         logoUpload.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    // Location dropdowns (PSGC)
-    const regionSelect   = document.getElementById('region');
+    const regionSelect = document.getElementById('region');
     const provinceSelect = document.getElementById('province');
-    const citySelect     = document.getElementById('city');
+    const citySelect = document.getElementById('city');
     const barangaySelect = document.getElementById('barangay');
 
     function resetSelect(select, placeholder) {
@@ -693,7 +810,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetch('https://psgc.gitlab.io/api/regions/')
         .then(res => res.json())
-        .then(data => data.forEach(r => regionSelect.innerHTML += `<option value="${r.code}">${r.name}</option>`));
+        .then(data => {
+            data.forEach(region => {
+                regionSelect.innerHTML += `<option value="${region.code}" ${String(region.code) === "{{ old('region') }}" ? 'selected' : ''}>${region.name}</option>`;
+            });
+        });
 
     regionSelect.addEventListener('change', function () {
         resetSelect(provinceSelect, 'Select province');
@@ -702,7 +823,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!this.value) return;
         fetch(`https://psgc.gitlab.io/api/regions/${this.value}/provinces/`)
             .then(res => res.json())
-            .then(data => data.forEach(p => provinceSelect.innerHTML += `<option value="${p.code}">${p.name}</option>`));
+            .then(data => {
+                data.forEach(province => {
+                    provinceSelect.innerHTML += `<option value="${province.code}" ${String(province.code) === "{{ old('province') }}" ? 'selected' : ''}>${province.name}</option>`;
+                });
+                if ("{{ old('province') }}") {
+                    provinceSelect.dispatchEvent(new Event('change'));
+                }
+            });
     });
 
     provinceSelect.addEventListener('change', function () {
@@ -711,7 +839,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!this.value) return;
         fetch(`https://psgc.gitlab.io/api/provinces/${this.value}/cities-municipalities/`)
             .then(res => res.json())
-            .then(data => data.forEach(c => citySelect.innerHTML += `<option value="${c.code}">${c.name}</option>`));
+            .then(data => {
+                data.forEach(city => {
+                    citySelect.innerHTML += `<option value="${city.code}" ${String(city.code) === "{{ old('city') }}" ? 'selected' : ''}>${city.name}</option>`;
+                });
+                if ("{{ old('city') }}") {
+                    citySelect.dispatchEvent(new Event('change'));
+                }
+            });
     });
 
     citySelect.addEventListener('change', function () {
@@ -719,30 +854,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!this.value) return;
         fetch(`https://psgc.gitlab.io/api/cities-municipalities/${this.value}/barangays/`)
             .then(res => res.json())
-            .then(data => data.forEach(b => barangaySelect.innerHTML += `<option value="${b.code}">${b.name}</option>`));
+            .then(data => {
+                data.forEach(barangay => {
+                    barangaySelect.innerHTML += `<option value="${barangay.name}" ${String(barangay.name) === "{{ old('barangay') }}" ? 'selected' : ''}>${barangay.name}</option>`;
+                });
+            });
     });
+
+    if ("{{ old('region') }}") {
+        regionSelect.value = "{{ old('region') }}";
+        regionSelect.dispatchEvent(new Event('change'));
+    }
 });
 </script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const mapboxAccessToken   = @json(env('MAPBOX_ACCESS_TOKEN'));
-    const searchInput         = document.getElementById('addressSearch');
-    const suggestionsList     = document.getElementById('suggestionsList');
-    const fullAddressInput    = document.getElementById('fullAddress');
-    const latitudeInput       = document.getElementById('latitude');
-    const longitudeInput      = document.getElementById('longitude');
-    const coordsDisplay       = document.getElementById('coordsDisplay');
-    const manualModeInput     = document.getElementById('manualMode');
+    const mapboxAccessToken = @json(env('MAPBOX_ACCESS_TOKEN'));
+    const searchInput = document.getElementById('addressSearch');
+    const suggestionsList = document.getElementById('suggestionsList');
+    const fullAddressInput = document.getElementById('fullAddress');
+    const latitudeInput = document.getElementById('latitude');
+    const longitudeInput = document.getElementById('longitude');
+    const coordsDisplay = document.getElementById('coordsDisplay');
+    const manualModeInput = document.getElementById('manualMode');
     const manualModeIndicator = document.getElementById('manualModeIndicator');
 
     if (!mapboxAccessToken) {
-        searchInput.addEventListener('input', function () { fullAddressInput.value = this.value.trim(); });
-        searchInput.addEventListener('blur',  function () { if (this.value.trim()) fullAddressInput.value = this.value.trim(); });
+        if (searchInput && fullAddressInput) {
+            searchInput.addEventListener('input', function () {
+                fullAddressInput.value = this.value.trim();
+            });
+            searchInput.addEventListener('blur', function () {
+                if (this.value.trim()) fullAddressInput.value = this.value.trim();
+            });
+        }
         return;
     }
 
-    if (searchInput.value && !fullAddressInput.value) fullAddressInput.value = searchInput.value;
+    if (searchInput.value && !fullAddressInput.value) {
+        fullAddressInput.value = searchInput.value;
+    }
 
     let searchTimeout;
     let isManualMode = false;
@@ -765,22 +917,41 @@ document.addEventListener('DOMContentLoaded', function () {
         const query = this.value.trim();
         if (query.length > 0) fullAddressInput.value = query;
         if (isManualMode) return;
-        if (query.length < 2) { suggestionsList.innerHTML = ''; suggestionsList.classList.remove('show'); if (!query) fullAddressInput.value = ''; return; }
+        if (query.length < 2) {
+            suggestionsList.innerHTML = '';
+            suggestionsList.classList.remove('show');
+            if (query.length === 0) fullAddressInput.value = '';
+            return;
+        }
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => searchMapbox(query), 300);
     });
 
-    searchInput.addEventListener('blur',   function () { if (this.value.trim()) fullAddressInput.value = this.value.trim(); });
-    searchInput.addEventListener('change', function () { if (this.value.trim()) fullAddressInput.value = this.value.trim(); });
+    searchInput.addEventListener('blur', function () {
+        if (this.value.trim()) fullAddressInput.value = this.value.trim();
+    });
+
+    searchInput.addEventListener('change', function () {
+        if (this.value.trim()) fullAddressInput.value = this.value.trim();
+    });
 
     function searchMapbox(query) {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxAccessToken}&country=PH&proximity=120.7,15.5&limit=5`;
-        fetch(url).then(r => r.json()).then(d => displaySuggestions(d.features || [])).catch(() => displaySuggestions([]));
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+            `access_token=${mapboxAccessToken}&country=PH&proximity=121.7740,12.8797&limit=8`;
+
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`Mapbox error: ${res.status}`);
+                return res.json();
+            })
+            .then(data => displaySuggestions(data.features || []))
+            .catch(() => displaySuggestions([]));
     }
 
     function displaySuggestions(features) {
         suggestionsList.innerHTML = '';
         if (!features.length) {
+            suggestionsList.innerHTML = '<div style="padding:12px;color:#9ca3af;">No results found</div>';
             const opt = document.createElement('div');
             opt.className = 'manual-entry-option';
             opt.textContent = 'Enter full address manually';
@@ -792,7 +963,7 @@ document.addEventListener('DOMContentLoaded', function () {
         features.forEach(feature => {
             const item = document.createElement('div');
             item.className = 'suggestion-item';
-            const title    = feature.place_name.split(',')[0];
+            const title = feature.place_name.split(',')[0];
             const subtitle = feature.place_name.split(',').slice(1).join(',').trim();
             item.innerHTML = `<div class="suggestion-title">${title}</div><div class="suggestion-subtitle">${subtitle}</div>`;
             item.addEventListener('click', () => selectAddress(feature));
@@ -803,10 +974,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function selectAddress(feature) {
         const [lng, lat] = feature.geometry.coordinates;
-        searchInput.value      = feature.place_name;
+        searchInput.value = feature.place_name;
         fullAddressInput.value = feature.place_name;
-        latitudeInput.value    = lat.toFixed(6);
-        longitudeInput.value   = lng.toFixed(6);
+        latitudeInput.value = lat.toFixed(6);
+        longitudeInput.value = lng.toFixed(6);
         coordsDisplay.textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         suggestionsList.innerHTML = '';
         suggestionsList.classList.remove('show');
@@ -817,12 +988,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.addEventListener('click', function (e) {
-        if (e.target !== searchInput && !suggestionsList.contains(e.target)) suggestionsList.classList.remove('show');
+        if (e.target !== searchInput && !suggestionsList.contains(e.target)) {
+            suggestionsList.classList.remove('show');
+        }
     });
 
     document.querySelector('form').addEventListener('submit', function (e) {
-        if (searchInput.value.trim()) fullAddressInput.value = searchInput.value.trim();
-        if (!fullAddressInput.value.trim()) { e.preventDefault(); searchInput.focus(); }
+        const searchValue = searchInput.value.trim();
+        if (searchValue) fullAddressInput.value = searchValue;
+        if (!fullAddressInput.value.trim()) {
+            e.preventDefault();
+            searchInput.focus();
+            return false;
+        }
     });
 });
 </script>
