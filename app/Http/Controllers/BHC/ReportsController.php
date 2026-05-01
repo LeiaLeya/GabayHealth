@@ -88,10 +88,11 @@ class ReportsController extends Controller
         $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($filter, $dateRange, $symptomFilter, $barangayId) {
             // Fetch ALL verified reports from ALL barangays for the heatmap
             $verifiedReports = $this->getAllVerifiedHealthReports($filter, $dateRange, $symptomFilter);
+            $resolvedReports = $this->getAllResolvedHealthReports($filter, $dateRange, $symptomFilter);
             $unverifiedReports = $this->getAllUnverifiedSymptomSignals($filter, $dateRange, $symptomFilter);
             $barangays = $this->getAllBarangaysWithCoordinates();
             $heatmapData = $this->processHeatmapData($verifiedReports, $barangays);
-            $verifiedBubbleData = $this->processVerifiedBubbleData($verifiedReports, $barangays);
+            $verifiedBubbleData = $this->processVerifiedBubbleData($verifiedReports, $resolvedReports, $barangays);
             $unverifiedBubbleData = $this->processUnverifiedBubbleData($unverifiedReports, $barangays);
             $hotspotData = $this->buildHotspotData($verifiedBubbleData);
 
@@ -251,6 +252,112 @@ class ReportsController extends Controller
         $barangayNames = $this->getBarangayNamesForReports($verifiedReports);
         
         return $this->view('reports.verified', compact('verifiedReports', 'barangayNames'));
+    }
+
+    public function exportVerifiedCsv(Request $request)
+    {
+        $user = session('user');
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to export verified reports.');
+        }
+
+        $barangayId = $this->getBarangayId();
+        if (!$barangayId) {
+            return redirect()->back()->with('error', 'Unable to determine barangay. Please contact your administrator.');
+        }
+
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        $symptomFilter = strtolower(trim((string) $request->input('symptom', '')));
+        $verifiedByFilter = strtolower(trim((string) $request->input('verified_by', '')));
+
+        $reports = collect($this->getVerifiedReports($barangayId))->filter(function ($report) use ($dateFrom, $dateTo, $symptomFilter, $verifiedByFilter) {
+            if (!empty($dateFrom)) {
+                try {
+                    $verifiedDate = Carbon::parse($report['verified_at'] ?? $report['createdAt'] ?? null);
+                    if ($verifiedDate->lt(Carbon::parse($dateFrom)->startOfDay())) {
+                        return false;
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
+            }
+
+            if (!empty($dateTo)) {
+                try {
+                    $verifiedDate = Carbon::parse($report['verified_at'] ?? $report['createdAt'] ?? null);
+                    if ($verifiedDate->gt(Carbon::parse($dateTo)->endOfDay())) {
+                        return false;
+                    }
+                } catch (\Exception $e) {
+                    return false;
+                }
+            }
+
+            if (!empty($symptomFilter)) {
+                $symptoms = array_map('strtolower', $report['symptoms'] ?? []);
+                if (!in_array($symptomFilter, $symptoms, true)) {
+                    return false;
+                }
+            }
+
+            if (!empty($verifiedByFilter)) {
+                $verifiedBy = strtolower((string) ($report['verified_by'] ?? ''));
+                if (!str_contains($verifiedBy, $verifiedByFilter)) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
+
+        $barangayNames = $this->getBarangayNamesForReports($reports->all());
+        $filename = 'verified-reports-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($reports, $barangayNames) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Report ID',
+                'Barangay',
+                'Symptoms',
+                'Affected Person',
+                'Start Date',
+                'Verified Date',
+                'Verified By',
+                'Additional Info',
+                'Status',
+            ]);
+
+            foreach ($reports as $report) {
+                $symptoms = $report['symptoms'] ?? [];
+                if (!is_array($symptoms)) {
+                    $symptoms = [];
+                }
+
+                $additionalInfo = $report['additionalInfo'] ?? '';
+                if (is_array($additionalInfo)) {
+                    $additionalInfo = json_encode($additionalInfo);
+                }
+
+                fputcsv($handle, [
+                    $report['id'] ?? '',
+                    $barangayNames[$report['barangayId'] ?? ''] ?? 'Unknown',
+                    implode(', ', array_map('ucfirst', $symptoms)),
+                    $report['affectedPerson'] ?? '',
+                    $report['startDate'] ?? '',
+                    $report['verified_at'] ?? '',
+                    $report['verified_by'] ?? '',
+                    $additionalInfo,
+                    $report['status'] ?? 'verified',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function approve(Request $request, $id)
@@ -467,6 +574,55 @@ class ReportsController extends Controller
         }
     }
 
+    public function resolve(Request $request, $id)
+    {
+        $user = session('user');
+
+        if (!$user) {
+            return redirect()->back()->with('error', 'Please login to resolve reports.');
+        }
+
+        $barangayId = $this->getBarangayId();
+        if (!$barangayId) {
+            return redirect()->back()->with('error', 'Unable to determine barangay. Please contact your administrator.');
+        }
+
+        try {
+            $reportDoc = $this->firestore
+                ->collection("reports")
+                ->document($id)
+                ->snapshot();
+
+            if (!$reportDoc->exists()) {
+                return redirect()->back()->with('error', 'Report not found.');
+            }
+
+            $reportData = $reportDoc->data();
+            if (($reportData['barangayId'] ?? null) !== $barangayId) {
+                return redirect()->back()->with('error', 'You can only resolve reports from your barangay.');
+            }
+
+            if (($reportData['status'] ?? null) !== 'verified') {
+                return redirect()->back()->with('error', 'Only verified reports can be marked as resolved.');
+            }
+
+            $this->firestore
+                ->collection("reports")
+                ->document($id)
+                ->update([
+                    ['path' => 'status', 'value' => 'resolved'],
+                    ['path' => 'resolved_at', 'value' => now()->toDateTimeString()],
+                    ['path' => 'resolved_by', 'value' => session('user.name', 'Health Worker')],
+                    ['path' => 'resolved_by_id', 'value' => session('user.id')],
+                ]);
+
+            return redirect()->back()->with('success', 'Report marked as resolved.');
+        } catch (\Exception $e) {
+            \Log::error('Error resolving report: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to resolve report: ' . $e->getMessage());
+        }
+    }
+
     private function getVerifiedHealthReports($barangayId, $filter, $dateRange, $symptomFilter)
     {
         $reports = [];
@@ -611,6 +767,70 @@ class ReportsController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Error fetching all verified health reports: ' . $e->getMessage());
+        }
+
+        return $reports;
+    }
+
+    private function getAllResolvedHealthReports($filter, $dateRange, $symptomFilter)
+    {
+        $reports = [];
+
+        try {
+            $endDate = Carbon::now();
+            switch ($dateRange) {
+                case 'week':
+                    $startDate = $endDate->copy()->subWeek();
+                    break;
+                case 'month':
+                    $startDate = $endDate->copy()->subMonth();
+                    break;
+                case 'quarter':
+                    $startDate = $endDate->copy()->subQuarter();
+                    break;
+                case 'year':
+                    $startDate = $endDate->copy()->subYear();
+                    break;
+                default:
+                    $startDate = $endDate->copy()->subYear();
+            }
+
+            $documents = $this->firestore
+                ->collection("reports")
+                ->where('status', '=', 'resolved')
+                ->documents();
+
+            foreach ($documents as $doc) {
+                if (!$doc->exists()) {
+                    continue;
+                }
+
+                $reportData = $doc->data();
+                $dateField = $reportData['resolved_at'] ?? $reportData['verified_at'] ?? $reportData['startDate'] ?? $reportData['createdAt'] ?? null;
+
+                if ($dateField) {
+                    try {
+                        $reportDate = Carbon::parse($dateField);
+                        if (!$reportDate->between($startDate, $endDate)) {
+                            continue;
+                        }
+                    } catch (\Exception $e) {
+                        // Keep report if date parsing fails.
+                    }
+                }
+
+                if ($filter !== 'all' && !$this->matchesCondition($reportData, $filter)) {
+                    continue;
+                }
+
+                if ($symptomFilter !== 'all' && !$this->hasSymptom($reportData, $symptomFilter)) {
+                    continue;
+                }
+
+                $reports[] = array_merge($reportData, ['id' => $doc->id()]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching resolved health reports: ' . $e->getMessage());
         }
 
         return $reports;
@@ -1223,10 +1443,10 @@ class ReportsController extends Controller
         return $barangayNames;
     }
 
-    private function processVerifiedBubbleData(array $reports, array $barangays): array
+    private function processVerifiedBubbleData(array $activeReports, array $resolvedReports, array $barangays): array
     {
         $grouped = [];
-        foreach ($reports as $report) {
+        foreach ($activeReports as $report) {
             $barangayId = $report['barangayId'] ?? null;
             if (!$barangayId || !isset($barangays[$barangayId])) {
                 continue;
@@ -1239,23 +1459,67 @@ class ReportsController extends Controller
                     'barangay' => $barangays[$barangayId]['name'],
                     'lat' => $barangays[$barangayId]['lat'],
                     'lng' => $barangays[$barangayId]['lng'],
-                    'totalCases' => 0,
+                    'activeCases' => 0,
+                    'resolvedCases' => 0,
+                    'totalConfirmedCases' => 0,
                     'categories' => [
-                        'dengue' => 0,
-                        'respiratory' => 0,
-                        'waterborne' => 0,
+                        'dengue' => ['active' => 0, 'resolved' => 0, 'symptoms' => []],
+                        'respiratory' => ['active' => 0, 'resolved' => 0, 'symptoms' => []],
+                        'waterborne' => ['active' => 0, 'resolved' => 0, 'symptoms' => []],
                     ],
                 ];
             }
 
-            $grouped[$barangayId]['totalCases']++;
-            $grouped[$barangayId]['categories'][$category]++;
+            $grouped[$barangayId]['activeCases']++;
+            $grouped[$barangayId]['totalConfirmedCases']++;
+            $grouped[$barangayId]['categories'][$category]['active']++;
+            $grouped[$barangayId]['categories'][$category]['symptoms'] = array_values(array_unique(array_merge(
+                $grouped[$barangayId]['categories'][$category]['symptoms'],
+                $this->extractSymptoms($report)
+            )));
+        }
+
+        foreach ($resolvedReports as $report) {
+            $barangayId = $report['barangayId'] ?? null;
+            if (!$barangayId || !isset($barangays[$barangayId])) {
+                continue;
+            }
+
+            $category = $this->categorizeConfirmedDisease($report);
+            if (!isset($grouped[$barangayId])) {
+                $grouped[$barangayId] = [
+                    'barangayId' => $barangayId,
+                    'barangay' => $barangays[$barangayId]['name'],
+                    'lat' => $barangays[$barangayId]['lat'],
+                    'lng' => $barangays[$barangayId]['lng'],
+                    'activeCases' => 0,
+                    'resolvedCases' => 0,
+                    'totalConfirmedCases' => 0,
+                    'categories' => [
+                        'dengue' => ['active' => 0, 'resolved' => 0, 'symptoms' => []],
+                        'respiratory' => ['active' => 0, 'resolved' => 0, 'symptoms' => []],
+                        'waterborne' => ['active' => 0, 'resolved' => 0, 'symptoms' => []],
+                    ],
+                ];
+            }
+
+            $grouped[$barangayId]['resolvedCases']++;
+            $grouped[$barangayId]['totalConfirmedCases']++;
+            $grouped[$barangayId]['categories'][$category]['resolved']++;
+            $grouped[$barangayId]['categories'][$category]['symptoms'] = array_values(array_unique(array_merge(
+                $grouped[$barangayId]['categories'][$category]['symptoms'],
+                $this->extractSymptoms($report)
+            )));
         }
 
         $bubbles = [];
         foreach ($grouped as $entry) {
-            foreach ($entry['categories'] as $category => $count) {
-                if ($count <= 0) {
+            foreach ($entry['categories'] as $category => $counts) {
+                $activeCount = $counts['active'] ?? 0;
+                $resolvedCount = $counts['resolved'] ?? 0;
+                $confirmedCount = $activeCount + $resolvedCount;
+
+                if ($confirmedCount <= 0) {
                     continue;
                 }
 
@@ -1264,9 +1528,14 @@ class ReportsController extends Controller
                     'barangay' => $entry['barangay'],
                     'lat' => $entry['lat'],
                     'lng' => $entry['lng'],
-                    'totalCases' => $count,
-                    'barangayTotalCases' => $entry['totalCases'],
+                    'totalCases' => $activeCount,
+                    'resolvedCases' => $resolvedCount,
+                    'confirmedTotalCases' => $confirmedCount,
+                    'barangayTotalCases' => $entry['activeCases'],
+                    'barangayResolvedCases' => $entry['resolvedCases'],
+                    'barangayConfirmedTotalCases' => $entry['totalConfirmedCases'],
                     'diseaseCategory' => $category,
+                    'symptoms' => $counts['symptoms'] ?? [],
                     'categories' => $entry['categories'],
                 ];
             }
@@ -1428,6 +1697,22 @@ class ReportsController extends Controller
         }
 
         return 'respiratory';
+    }
+
+    private function extractSymptoms(array $report): array
+    {
+        $symptoms = $report['symptoms'] ?? [];
+        if (!is_array($symptoms)) {
+            $symptoms = [];
+        }
+
+        if (empty($symptoms) && !empty($report['condition'])) {
+            $symptoms[] = (string) $report['condition'];
+        }
+
+        return array_values(array_filter(array_map(function ($symptom) {
+            return strtolower(trim((string) $symptom));
+        }, $symptoms)));
     }
 
     private function getStatistics($reports)
