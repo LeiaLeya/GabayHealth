@@ -651,6 +651,7 @@ class InventoryController extends Controller
         }
         if (in_array($request->type, ['Medicine', 'Vaccine']) && ($request->milligrams === null || $request->milligrams === '')) {
             return redirect()->back()->withErrors(['milligrams' => 'Dosage (mg) is required for medicines and vaccines.'])->withInput();
+        }
         if ($isBatchTrackedType && ($request->milligrams === null || $request->milligrams === '')) {
             return redirect()->back()->withErrors(['milligrams' => 'Milligrams is required for medicines and vaccines.'])->withInput();
         }

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Cloudinary\Cloudinary;
 
 class AccountController extends Controller
 {
@@ -185,7 +186,7 @@ class AccountController extends Controller
                     'email' => $validated['email'],
                     'fullname' => $validated['name'],
                     'role' => $validated['role'],
-                    'barangay_id' => $user['barangayId'] ?? $user['id'],
+                    'matchedBarangayId' => $user['barangayId'] ?? $user['id'],
                     'barangay_name' => $user['name'] ?? $user['healthCenterName'] ?? '',
                     'created_at' => now()->toDateTimeString(),
                     'updated_at' => now()->toDateTimeString(),
@@ -300,6 +301,128 @@ class AccountController extends Controller
             ]);
 
         return redirect()->route('bhc.accounts.index')->with('success', 'Password changed successfully!');
+    }
+
+    // Upload health center logo
+    public function uploadLogo(Request $request)
+    {
+        $validated = $request->validate([
+            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:5120',
+        ]);
+
+        $user = session('user');
+
+        try {
+            $logo = $request->file('logo');
+            $cloudinaryConfig = [
+                'cloud' => [
+                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                    'api_key' => env('CLOUDINARY_API_KEY'),
+                    'api_secret' => env('CLOUDINARY_API_SECRET'),
+                ],
+            ];
+
+            if (
+                empty($cloudinaryConfig['cloud']['cloud_name']) ||
+                empty($cloudinaryConfig['cloud']['api_key']) ||
+                empty($cloudinaryConfig['cloud']['api_secret'])
+            ) {
+                return back()->withErrors(['error' => 'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env.']);
+            }
+
+            $cloudinary = new Cloudinary($cloudinaryConfig);
+
+            $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
+                'folder' => "gabayhealth/barangay/{$user['id']}/logo",
+                'resource_type' => 'auto',
+                'quality' => 'auto',
+                'overwrite' => true,
+                'public_id' => 'main-logo',
+            ]);
+
+            $logoUrl = $result['secure_url'];
+
+            $collectionName = $this->getCollectionNameByRole($user['role']);
+            $this->firestore->getFirestore()
+                ->collection($collectionName)
+                ->document($user['id'])
+                ->update([
+                    ['path' => 'logo_url', 'value' => $logoUrl],
+                    ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
+                ]);
+
+            $userSession = session('user');
+            $userSession['logo_url'] = $logoUrl;
+            session(['user' => $userSession]);
+
+            \Log::info('Barangay logo uploaded to Cloudinary', [
+                'barangay_id' => $user['id'],
+                'logo_url' => $logoUrl,
+            ]);
+
+            return back()->with('success', 'Health center logo updated successfully!');
+        } catch (\Exception $e) {
+            \Log::error('Barangay logo upload error: ' . $e->getMessage(), [
+                'barangay_id' => $user['id'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->withErrors(['error' => 'Failed to upload logo: ' . $e->getMessage()]);
+        }
+    }
+
+    // Delete health center logo
+    public function deleteLogo(Request $request)
+    {
+        $user = session('user');
+
+        try {
+            $cloudinaryConfig = [
+                'cloud' => [
+                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                    'api_key' => env('CLOUDINARY_API_KEY'),
+                    'api_secret' => env('CLOUDINARY_API_SECRET'),
+                ],
+            ];
+
+            try {
+                if (
+                    !empty($cloudinaryConfig['cloud']['cloud_name']) &&
+                    !empty($cloudinaryConfig['cloud']['api_key']) &&
+                    !empty($cloudinaryConfig['cloud']['api_secret'])
+                ) {
+                    $cloudinary = new Cloudinary($cloudinaryConfig);
+                    $cloudinary->uploadApi()->destroy("gabayhealth/barangay/{$user['id']}/logo/main-logo", [
+                        'resource_type' => 'image',
+                    ]);
+                    \Log::info('Barangay logo deleted from Cloudinary', ['barangay_id' => $user['id']]);
+                } else {
+                    \Log::warning('Cloudinary config missing; skipping cloud delete and clearing Firestore logo_url only.');
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Barangay cloudinary deletion failed, continuing', ['error' => $e->getMessage()]);
+            }
+
+            $collectionName = $this->getCollectionNameByRole($user['role']);
+            $this->firestore->getFirestore()
+                ->collection($collectionName)
+                ->document($user['id'])
+                ->update([
+                    ['path' => 'logo_url', 'value' => null],
+                    ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
+                ]);
+
+            $userSession = session('user');
+            $userSession['logo_url'] = null;
+            session(['user' => $userSession]);
+
+            return back()->with('success', 'Health center logo deleted successfully!');
+        } catch (\Exception $e) {
+            \Log::error('Barangay logo deletion error: ' . $e->getMessage(), [
+                'barangay_id' => $user['id'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->withErrors(['error' => 'Failed to delete logo: ' . $e->getMessage()]);
+        }
     }
 
     // Helper methods

@@ -228,12 +228,12 @@ Route::middleware('auth.check')->group(function () {
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('events.update');
     
-    Route::post('/events/{id}/cancel', function($id) {
+    Route::post('/events/{id}/cancel', function(\Illuminate\Http\Request $request, $id) {
         $user = session('user');
         if (!$user) return redirect()->route('login');
         $role = $user['role'] ?? null;
-        if ($role === 'rhu') return app(RHUEventController::class)->cancel($id);
-        elseif ($role === 'barangay') return app(BHCEventController::class)->cancel($id);
+        if ($role === 'rhu') return app(RHUEventController::class)->cancel($request, $id);
+        elseif ($role === 'barangay') return app(BHCEventController::class)->cancel($request, $id);
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('events.cancel');
     
@@ -563,12 +563,12 @@ Route::middleware('auth.check')->group(function () {
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('update');
         
-        Route::patch('/{id}/toggle-status', function($id) {
+        Route::patch('/{id}/toggle-status', function(\Illuminate\Http\Request $request, $id) {
             $user = session('user');
             if (!$user) return redirect()->route('login');
             $role = $user['role'] ?? null;
-            if ($role === 'rhu') return app(RHUServicesController::class)->toggleStatus($id);
-            elseif ($role === 'barangay') return app(BHCServicesController::class)->toggleStatus($id);
+            if ($role === 'rhu') return app(RHUServicesController::class)->toggleStatus($request, $id);
+            elseif ($role === 'barangay') return app(BHCServicesController::class)->toggleStatus($request, $id);
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('toggle-status');
         
@@ -921,6 +921,8 @@ Route::middleware('auth.check')->group(function () {
             Route::get('/profile', [BHCAccountController::class, 'editProfile'])->name('profile.edit');
             Route::put('/profile', [BHCAccountController::class, 'updateProfile'])->name('profile.update');
             Route::put('/password', [BHCAccountController::class, 'changePassword'])->name('password.update');
+            Route::post('/logo/upload', [BHCAccountController::class, 'uploadLogo'])->name('logo.upload');
+            Route::delete('/logo', [BHCAccountController::class, 'deleteLogo'])->name('logo.delete');
             Route::get('/staff/create', [BHCAccountController::class, 'createStaff'])->name('staff.create');
             Route::post('/staff', [BHCAccountController::class, 'storeStaff'])->name('staff.store');
             Route::get('/staff/{id}/edit', [BHCAccountController::class, 'editStaff'])->name('staff.edit');
