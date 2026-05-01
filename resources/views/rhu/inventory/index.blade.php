@@ -357,6 +357,24 @@
                                                             Packs
                                                         </label>
                                                     </li>
+                                                    <li>
+                                                        <label class="dropdown-item-text">
+                                                            <input type="radio" name="unit_type" value="bottles" class="form-check-input me-2" {{ ($filterUnitType ?? '') == 'bottles' ? 'checked' : '' }} onchange="document.getElementById('unitTypeFilterForm').submit();">
+                                                            Bottles
+                                                        </label>
+                                                    </li>
+                                                    <li>
+                                                        <label class="dropdown-item-text">
+                                                            <input type="radio" name="unit_type" value="vials" class="form-check-input me-2" {{ ($filterUnitType ?? '') == 'vials' ? 'checked' : '' }} onchange="document.getElementById('unitTypeFilterForm').submit();">
+                                                            Vials
+                                                        </label>
+                                                    </li>
+                                                    <li>
+                                                        <label class="dropdown-item-text">
+                                                            <input type="radio" name="unit_type" value="sachets" class="form-check-input me-2" {{ ($filterUnitType ?? '') == 'sachets' ? 'checked' : '' }} onchange="document.getElementById('unitTypeFilterForm').submit();">
+                                                            Sachets
+                                                        </label>
+                                                    </li>
                                                 </form>
                                             </ul>
                                         </div>
@@ -614,6 +632,7 @@
                                         <option value="pieces">Pieces</option>
                                         <option value="boxes">Boxes</option>
                                         <option value="packs">Packs</option>
+                                        <option value="sachets">Sachets</option>
                                     </select>
                                 </div>
                             </div>
@@ -636,8 +655,14 @@
                                     <input type="text" class="form-control" id="generic_name" name="generic_name" placeholder="e.g., Paracetamol">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="dosage_strength" class="form-label fw-semibold">Dosage Strength <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="dosage_strength" name="dosage_strength" placeholder="e.g., 500 mg, 250 mg/5 mL">
+                                    <label for="milligrams" class="form-label fw-semibold">Dosage (mg) <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="milligrams" name="milligrams" placeholder="e.g., 500">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="generic_description" class="form-label fw-semibold">Generic Description</label>
+                                    <input type="text" class="form-control" id="generic_description" name="generic_description" placeholder="e.g., For fever and mild pain">
                                 </div>
                             </div>
                             <div class="row">
@@ -837,6 +862,9 @@
                                         <option value="pieces" {{ ($item['unit_type'] ?? '') == 'pieces' ? 'selected' : '' }}>Pieces</option>
                                         <option value="boxes" {{ ($item['unit_type'] ?? '') == 'boxes' ? 'selected' : '' }}>Boxes</option>
                                         <option value="packs" {{ ($item['unit_type'] ?? '') == 'packs' ? 'selected' : '' }}>Packs</option>
+                                        <option value="bottles" {{ ($item['unit_type'] ?? '') == 'bottles' ? 'selected' : '' }}>Bottles</option>
+                                        <option value="vials" {{ ($item['unit_type'] ?? '') == 'vials' ? 'selected' : '' }}>Vials</option>
+                                        <option value="sachets" {{ ($item['unit_type'] ?? '') == 'sachets' ? 'selected' : '' }}>Sachets</option>
                                     </select>
                                 </div>
                             </div>
