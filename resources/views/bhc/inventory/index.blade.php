@@ -353,6 +353,12 @@
                                                     </li>
                                                     <li>
                                                         <label class="dropdown-item-text">
+                                                            <input type="radio" name="unit_type" value="bottles" class="form-check-input me-2" {{ ($filterUnitType ?? '') == 'bottles' ? 'checked' : '' }} onchange="document.getElementById('unitTypeFilterForm').submit();">
+                                                            Bottles
+                                                        </label>
+                                                    </li>
+                                                    <li>
+                                                        <label class="dropdown-item-text">
                                                             <input type="radio" name="unit_type" value="packs" class="form-check-input me-2" {{ ($filterUnitType ?? '') == 'packs' ? 'checked' : '' }} onchange="document.getElementById('unitTypeFilterForm').submit();">
                                                             Packs
                                                         </label>
@@ -579,47 +585,40 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-12 mb-3">
                                     <label for="type" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
                                     <select class="form-select" id="type" name="type" required>
                                         <option value="">Select category...</option>
-                                        <option value="Medicine">Medicine</option>
-                                        <option value="Vaccine">Vaccine</option>
-                                        <option value="Medical Supply">Medical Supply</option>
-                                        <option value="Family Planning Supply">Family Planning Supply</option>
-                                        <option value="Equipment">Equipment</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="sub_category" class="form-label fw-semibold">Sub-Category</label>
-                                    <select class="form-select" id="sub_category" name="sub_category">
-                                        <option value="">Select sub-category...</option>
+                                        <option value="Medicine" {{ old('type') === 'Medicine' ? 'selected' : '' }}>Medicine</option>
+                                        <option value="Vaccine" {{ old('type') === 'Vaccine' ? 'selected' : '' }}>Vaccine</option>
+                                        <option value="Medical Supply" {{ old('type') === 'Medical Supply' ? 'selected' : '' }}>Medical Supply</option>
+                                        <option value="Family Planning Supply" {{ old('type') === 'Family Planning Supply' ? 'selected' : '' }}>Family Planning Supply</option>
+                                        <option value="Equipment" {{ old('type') === 'Equipment' ? 'selected' : '' }}>Equipment</option>
+                                        <option value="Other" {{ old('type') === 'Other' ? 'selected' : '' }}>Other</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="quantity" class="form-label fw-semibold">Quantity Available <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="quantity" name="quantity" min="0" required placeholder="Enter quantity">
+                                    <input type="number" class="form-control" id="quantity" name="quantity" min="0" required placeholder="Enter quantity" value="{{ old('quantity') }}">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="unit_type" class="form-label fw-semibold">Unit of Issue <span class="text-danger">*</span></label>
+                                    <label for="unit_type" class="form-label fw-semibold">Dispensing Unit <span class="text-danger">*</span></label>
                                     <select class="form-select" id="unit_type" name="unit_type" required>
                                         <option value="">Select unit...</option>
-                                        <option value="tablets">Tablet</option>
-                                        <option value="capsules">Capsule</option>
-                                        <option value="bottles">Bottle</option>
-                                        <option value="vials">Vial</option>
-                                        <option value="pieces">Pieces</option>
-                                        <option value="boxes">Boxes</option>
-                                        <option value="packs">Packs</option>
+                                        <option value="tablets" {{ old('unit_type') === 'tablets' ? 'selected' : '' }}>Tablets</option>
+                                        <option value="capsules" {{ old('unit_type') === 'capsules' ? 'selected' : '' }}>Capsules</option>
+                                        <option value="pieces" {{ old('unit_type') === 'pieces' ? 'selected' : '' }}>Pieces</option>
+                                        <option value="boxes" {{ old('unit_type') === 'boxes' ? 'selected' : '' }}>Boxes</option>
+                                        <option value="bottles" {{ old('unit_type') === 'bottles' ? 'selected' : '' }}>Bottles</option>
+                                        <option value="packs" {{ old('unit_type') === 'packs' ? 'selected' : '' }}>Packs</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label for="description" class="form-label fw-semibold">Description / Notes</label>
-                                <textarea class="form-control" id="description" name="description" rows="2" placeholder="Enter description or notes..."></textarea>
+                                <textarea class="form-control" id="description" name="description" rows="2" placeholder="Enter description or notes...">{{ old('description') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -633,37 +632,35 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="generic_name" class="form-label fw-semibold">Generic Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="generic_name" name="generic_name" placeholder="e.g., Paracetamol">
+                                    <input type="text" class="form-control" id="generic_name" name="generic_name" placeholder="e.g., Paracetamol" value="{{ old('generic_name') }}">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="dosage_strength" class="form-label fw-semibold">Dosage Strength <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="dosage_strength" name="dosage_strength" placeholder="e.g., 500 mg, 250 mg/5 mL">
+                                    <label for="generic_description" class="form-label fw-semibold">Generic Description</label>
+                                    <input type="text" class="form-control" id="generic_description" name="generic_description" placeholder="e.g., For fever and mild pain" value="{{ old('generic_description') }}">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="dosage_form" class="form-label fw-semibold">Dosage Form <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="dosage_form" name="dosage_form">
-                                        <option value="">Select dosage form...</option>
-                                        <option value="Tablet">Tablet</option>
-                                        <option value="Capsule">Capsule</option>
-                                        <option value="Syrup">Syrup</option>
-                                        <option value="Drops">Drops</option>
-                                        <option value="Suspension">Suspension</option>
-                                        <option value="Cream">Cream / Ointment</option>
-                                        <option value="Injection">Injection</option>
-                                    </select>
+                                    <label for="milligrams" class="form-label fw-semibold">Dosage (mg) <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="milligrams" name="milligrams" placeholder="e.g., 500" value="{{ old('milligrams') }}">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="therapeutic_classification" class="form-label fw-semibold">Therapeutic Classification</label>
                                     <select class="form-select" id="therapeutic_classification" name="therapeutic_classification">
                                         <option value="">Select classification...</option>
-                                        <option value="Analgesic">Analgesic</option>
-                                        <option value="Antibiotic">Antibiotic</option>
-                                        <option value="Antihypertensive">Antihypertensive</option>
-                                        <option value="Antidiabetic">Antidiabetic</option>
-                                        <option value="Antipyretic">Antipyretic</option>
-                                        <option value="Vitamin / Supplement">Vitamin / Supplement</option>
+                                        <option value="Analgesic / Antipyretic" {{ old('therapeutic_classification') === 'Analgesic / Antipyretic' ? 'selected' : '' }}>Analgesic / Antipyretic</option>
+                                        <option value="Antacid" {{ old('therapeutic_classification') === 'Antacid' ? 'selected' : '' }}>Antacid</option>
+                                        <option value="Anthelmintic" {{ old('therapeutic_classification') === 'Anthelmintic' ? 'selected' : '' }}>Anthelmintic</option>
+                                        <option value="Antidiarrheal Support" {{ old('therapeutic_classification') === 'Antidiarrheal Support' ? 'selected' : '' }}>Antidiarrheal Support</option>
+                                        <option value="Antihistamine" {{ old('therapeutic_classification') === 'Antihistamine' ? 'selected' : '' }}>Antihistamine</option>
+                                        <option value="Antihypertensive" {{ old('therapeutic_classification') === 'Antihypertensive' ? 'selected' : '' }}>Antihypertensive</option>
+                                        <option value="Bronchodilator" {{ old('therapeutic_classification') === 'Bronchodilator' ? 'selected' : '' }}>Bronchodilator</option>
+                                        <option value="Cough / Expectorant" {{ old('therapeutic_classification') === 'Cough / Expectorant' ? 'selected' : '' }}>Cough / Expectorant</option>
+                                        <option value="NSAID / Anti-inflammatory" {{ old('therapeutic_classification') === 'NSAID / Anti-inflammatory' ? 'selected' : '' }}>NSAID / Anti-inflammatory</option>
+                                        <option value="Oral Rehydration Therapy" {{ old('therapeutic_classification') === 'Oral Rehydration Therapy' ? 'selected' : '' }}>Oral Rehydration Therapy</option>
+                                        <option value="Topical Antiseptic" {{ old('therapeutic_classification') === 'Topical Antiseptic' ? 'selected' : '' }}>Topical Antiseptic</option>
+                                        <option value="Vitamins / Supplements" {{ old('therapeutic_classification') === 'Vitamins / Supplements' ? 'selected' : '' }}>Vitamins / Supplements</option>
+                                        <option value="Wound Care Supplies" {{ old('therapeutic_classification') === 'Wound Care Supplies' ? 'selected' : '' }}>Wound Care Supplies</option>
                                     </select>
                                 </div>
                             </div>
@@ -728,6 +725,30 @@
                                     <input type="text" class="form-control" id="temperature_range" name="temperature_range" value="2-8°C" placeholder="2-8°C">
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Initial Batch Fields -->
+                    <div class="card mb-3" id="batch_fields_create" style="display:none;">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="bi bi-archive me-2"></i>Initial Batch Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="initial_lot_number" class="form-label fw-semibold">Lot Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="initial_lot_number" name="initial_lot_number" placeholder="e.g., LOT-2026-001" value="{{ old('initial_lot_number') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="initial_expiration_date" class="form-label fw-semibold">Expiration Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="initial_expiration_date" name="initial_expiration_date" value="{{ old('initial_expiration_date') }}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="initial_batch_notes" class="form-label fw-semibold">Batch Notes</label>
+                                <textarea class="form-control" id="initial_batch_notes" name="initial_batch_notes" rows="2" placeholder="Optional notes for this batch">{{ old('initial_batch_notes') }}</textarea>
+                            </div>
+                            <small class="text-muted">Initial batch quantity will use the quantity entered in Basic Information.</small>
                         </div>
                     </div>
 
@@ -836,6 +857,7 @@
                                         <option value="tablets" {{ ($item['unit_type'] ?? '') == 'tablets' ? 'selected' : '' }}>Tablets</option>
                                         <option value="pieces" {{ ($item['unit_type'] ?? '') == 'pieces' ? 'selected' : '' }}>Pieces</option>
                                         <option value="boxes" {{ ($item['unit_type'] ?? '') == 'boxes' ? 'selected' : '' }}>Boxes</option>
+                                        <option value="bottles" {{ ($item['unit_type'] ?? '') == 'bottles' ? 'selected' : '' }}>Bottles</option>
                                         <option value="packs" {{ ($item['unit_type'] ?? '') == 'packs' ? 'selected' : '' }}>Packs</option>
                                     </select>
                                 </div>
@@ -918,6 +940,7 @@
                                             <option value="tablets" {{ ($item['unit_type'] ?? '') == 'tablets' ? 'selected' : '' }}>Tablets</option>
                                             <option value="pieces" {{ ($item['unit_type'] ?? '') == 'pieces' ? 'selected' : '' }}>Pieces</option>
                                             <option value="boxes" {{ ($item['unit_type'] ?? '') == 'boxes' ? 'selected' : '' }}>Boxes</option>
+                                            <option value="bottles" {{ ($item['unit_type'] ?? '') == 'bottles' ? 'selected' : '' }}>Bottles</option>
                                             <option value="packs" {{ ($item['unit_type'] ?? '') == 'packs' ? 'selected' : '' }}>Packs</option>
                                         </select>
                                     </div>
@@ -1199,57 +1222,9 @@ th button:hover {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const typeSelectCreate = document.getElementById('type');
-    const subCategorySelect = document.getElementById('sub_category');
     const medicineFieldsCreate = document.getElementById('medicine_fields_create');
     const vaccineFieldsCreate = document.getElementById('vaccine_fields_create');
-    
-    // Sub-category options based on category
-    const subCategories = {
-        'Medicine': [
-            {value: 'Tablet', text: 'Tablet'},
-            {value: 'Capsule', text: 'Capsule'},
-            {value: 'Syrup', text: 'Syrup'},
-            {value: 'Oral Drops', text: 'Oral Drops'},
-            {value: 'Eye Drops', text: 'Eye Drops'},
-            {value: 'Ear Drops', text: 'Ear Drops'},
-            {value: 'Injection', text: 'Injection'},
-            {value: 'Cream', text: 'Cream'},
-            {value: 'Ointment', text: 'Ointment'}
-        ],
-        'Vaccine': [
-            {value: 'Pediatric Vaccine', text: 'Pediatric Vaccine'},
-            {value: 'Adult Vaccine', text: 'Adult Vaccine'}
-        ],
-        'Medical Supply': [
-            {value: 'Syringes', text: 'Syringes'},
-            {value: 'Gloves', text: 'Gloves'},
-            {value: 'Face Masks', text: 'Face Masks'},
-            {value: 'Alcohol / Antiseptic', text: 'Alcohol / Antiseptic'},
-            {value: 'Bandages', text: 'Bandages'},
-            {value: 'Test Kits', text: 'Test Kits (Pregnancy, Blood Sugar)'}
-        ],
-        'Family Planning Supply': [
-            {value: 'Pills', text: 'Pills'},
-            {value: 'Condoms', text: 'Condoms'},
-            {value: 'Injectables', text: 'Injectables'},
-            {value: 'IUD', text: 'IUD'}
-        ]
-    };
-    
-    function updateSubCategories() {
-        if (!typeSelectCreate || !subCategorySelect) return;
-        const selectedType = typeSelectCreate.value;
-        subCategorySelect.innerHTML = '<option value="">Select sub-category...</option>';
-        
-        if (subCategories[selectedType]) {
-            subCategories[selectedType].forEach(option => {
-                const opt = document.createElement('option');
-                opt.value = option.value;
-                opt.textContent = option.text;
-                subCategorySelect.appendChild(opt);
-            });
-        }
-    }
+    const batchFieldsCreate = document.getElementById('batch_fields_create');
     
     function toggleCategoryFields() {
         if (!typeSelectCreate) return;
@@ -1260,7 +1235,7 @@ document.addEventListener('DOMContentLoaded', function() {
             medicineFieldsCreate.style.display = (v === 'Medicine') ? 'block' : 'none';
             if (medicineFieldsCreate.style.display === 'none') {
                 // Clear medicine fields
-                const fields = ['generic_name', 'dosage_strength', 'dosage_form', 'therapeutic_classification', 
+                const fields = ['generic_name', 'generic_description', 'milligrams', 'therapeutic_classification',
                                'prescription_required', 'restricted_medicine', 'storage_condition'];
                 fields.forEach(field => {
                     const el = document.getElementById(field);
@@ -1281,9 +1256,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         }
+
+        // Show/hide initial batch fields for medicine and vaccine
+        if (batchFieldsCreate) {
+            const shouldShowBatchFields = (v === 'Medicine' || v === 'Vaccine');
+            batchFieldsCreate.style.display = shouldShowBatchFields ? 'block' : 'none';
+            if (!shouldShowBatchFields) {
+                const fields = ['initial_lot_number', 'initial_expiration_date', 'initial_batch_notes'];
+                fields.forEach(field => {
+                    const el = document.getElementById(field);
+                    if (el) el.value = '';
+                });
+            }
+        }
         
-        // Update sub-categories
-        updateSubCategories();
     }
     
     if (typeSelectCreate) {
@@ -1308,6 +1294,11 @@ document.addEventListener('DOMContentLoaded', function() {
             generateItemCode();
         });
     }
+
+    @if($errors->any())
+    const addItemModal = new bootstrap.Modal(document.getElementById('addItemModal'));
+    addItemModal.show();
+    @endif
 
     // Handle edit modals (keep existing functionality)
     document.querySelectorAll('[id^="edit_type_"]').forEach(function(select) {
