@@ -13,12 +13,10 @@ class NotificationController extends Controller
     use HasRoleContext;
 
     protected $firestore;
-    protected $storage;
 
     public function __construct(FirebaseService $firebase)
     {
         $this->firestore = $firebase->getFirestore();
-        $this->storage = $firebase->getStorage();
     }
 
     public function index()
@@ -77,24 +75,10 @@ class NotificationController extends Controller
             'target_audience' => 'required|string',
             'target_purok' => 'nullable|string|max:255',
             'target_age_group' => 'nullable|string',
-            'image' => 'nullable|image|max:5120',
             'scheduled_at' => 'nullable|date|after_or_equal:now',
         ]);
 
         try {
-            $imageUrl = null;
-            if ($request->hasFile('image')) {
-                $bucket = $this->storage->getBucket();
-                $file = $request->file('image');
-                $fileName = 'notifications/' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $bucket->upload(
-                    fopen($file->getRealPath(), 'r'),
-                    ['name' => $fileName]
-                );
-                $projectId = env('FIREBASE_PROJECT_ID');
-                $imageUrl = "https://firebasestorage.googleapis.com/v0/b/{$projectId}.appspot.com/o/" . rawurlencode($fileName) . "?alt=media";
-            }
-
             $isScheduled = !empty($request->scheduled_at);
             $status = $isScheduled ? 'scheduled' : 'sent';
 
@@ -105,7 +89,6 @@ class NotificationController extends Controller
                 'target_audience' => $request->target_audience,
                 'target_purok' => $request->target_purok,
                 'target_age_group' => $request->target_age_group,
-                'image_url' => $imageUrl,
                 'status' => $status,
                 'createdAt' => now()->toDateTimeString(),
                 'created_by' => $user['id'],

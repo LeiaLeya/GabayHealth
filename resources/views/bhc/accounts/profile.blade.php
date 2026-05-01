@@ -6,7 +6,7 @@
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="fw-bold text-dark mb-0">Edit Health Center Profile</h2>
-            <a href="{{ route('accounts.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+            <a href="{{ route('bhc.accounts.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                 <i class="bi bi-arrow-left"></i>
                 Back to Account Management
             </a>
@@ -40,7 +40,7 @@
                 </div>
                 <div class="card-body">
                     
-                    <form action="{{ route('accounts.profile.update') }}" method="POST">
+                    <form action="{{ route('bhc.accounts.profile.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -150,13 +150,79 @@
                 </div>
             </div>
 
+            <!-- Logo Upload Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Health Center Logo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Current Logo</label>
+                            <div class="logo-preview mb-3">
+                                @if(!empty($healthCenter['logo_url']))
+                                    <img src="{{ $healthCenter['logo_url'] }}"
+                                         alt="Health Center Logo"
+                                         class="img-thumbnail"
+                                         style="max-width: 200px; max-height: 200px; object-fit: contain;">
+                                @else
+                                    <div class="bg-light border border-dashed rounded p-5 text-center w-100">
+                                        <i class="bi bi-image fs-1 text-muted"></i>
+                                        <p class="text-muted mt-2 mb-0">No logo uploaded yet</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <form action="{{ route('bhc.accounts.logo.upload') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="logo" class="form-label">Upload New Logo</label>
+                                    <input type="file" class="form-control @error('logo') is-invalid @enderror"
+                                           id="logo" name="logo" accept="image/*" onchange="previewLogo(event)">
+                                    <small class="text-muted d-block mt-2">
+                                        Accepted formats: JPEG, PNG, JPG, GIF, SVG. Max size: 5MB
+                                    </small>
+                                    @error('logo')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div id="newLogoPreview" class="mb-3" style="display: none;">
+                                    <label class="form-label">Preview</label>
+                                    <div class="bg-light border rounded p-3">
+                                        <img id="previewImage" src="" alt="Logo Preview"
+                                             style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-upload me-2"></i>Upload Logo
+                                </button>
+                            </form>
+
+                            @if(!empty($healthCenter['logo_url']))
+                                <form action="{{ route('bhc.accounts.logo.delete') }}" method="POST" class="mt-2">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger"
+                                            onclick="return confirm('Are you sure you want to delete the logo?')">
+                                        <i class="bi bi-trash me-2"></i>Delete Logo
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Change Password Section -->
             <div class="card mt-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Change Password</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('accounts.password.update') }}" method="POST">
+                    <form action="{{ route('bhc.accounts.password.update') }}" method="POST">
                         @csrf
                         @method('PUT')
                         <div class="row">
@@ -225,6 +291,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.logo-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 250px;
+}
+
     .btn-check:focus + .day-btn {
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
@@ -232,6 +305,23 @@
 
 @push('scripts')
 <script>
+    function previewLogo(event) {
+        const file = event.target.files[0];
+        const previewContainer = document.getElementById('newLogoPreview');
+        const previewImage = document.getElementById('previewImage');
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewContainer.style.display = 'none';
+        }
+    }
+
     // Password confirmation validation
     document.getElementById('confirm_password').addEventListener('input', function() {
         const newPassword = document.getElementById('new_password').value;

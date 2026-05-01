@@ -70,19 +70,21 @@
             <thead class="table-light">
                 <tr style="border-bottom:2px solid #e9ecef;">
                     <th class="fw-semibold" style="border:none;">Name</th>
-                    <th class="fw-semibold" style="border:none;">Age</th>
+                    <th class="fw-semibold" style="border:none;">Status</th>
                     <th class="fw-semibold" style="border:none;">Gender</th>
+                    <th class="fw-semibold" style="border:none;">Relation</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($paginatedAttendees as $attendee)
                     <tr style="border-bottom:1px solid #f1f1f1;">
                         <td style="border:none;">{{ $attendee['name'] }}</td>
-                        <td style="border:none;">{{ $attendee['age'] ?? '-' }}</td>
+                        <td style="border:none;">{{ ucfirst($attendee['status'] ?? '-') }}</td>
                         <td style="border:none;">{{ $attendee['gender'] }}</td>
+                        <td style="border:none;">{{ $attendee['relation'] ?? '-' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" class="text-center text-muted">No attendees yet.</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted">No attendees yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

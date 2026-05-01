@@ -217,24 +217,14 @@ class EventController extends Controller
         foreach ($attendeesQuery as $doc) {
             if ($doc->exists()) {
                 $data = $doc->data();
-                // Each doc represents one pre-registered attendee
                 $attendees[] = [
                     'name' => $data['name'] ?? '',
+                    'status' => $data['status'] ?? (($data['attended'] ?? false) ? 'attended' : 'pending'),
                     'gender' => $data['gender'] ?? '',
-                    'birthdate' => $data['birthdate'] ?? ($data['patient']['birthdate'] ?? ''),
+                    'relation' => $data['relation'] ?? '',
                 ];
             }
         }
-
-        // Add computed age
-        foreach ($attendees as &$attendee) {
-            if (!empty($attendee['birthdate'])) {
-                $attendee['age'] = Carbon::parse($attendee['birthdate'])->age;
-            } else {
-                $attendee['age'] = 'N/A';
-            }
-        }
-        unset($attendee);
 
         // Paginate attendees (10 per page)
         $page = request()->get('page', 1);
@@ -563,17 +553,34 @@ class EventController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        $this->firestore
-            ->collection("barangay/{$this->barangayId}/events")
-            ->document($id)
-            ->set([
+        try {
+            $eventRef = $this->firestore
+                ->collection("barangay/{$this->barangayId}/events")
+                ->document($id);
+
+            $eventDoc = $eventRef->snapshot();
+            if (!$eventDoc->exists()) {
+                return redirect()->route('bhc.events.index')->with('error', 'Event not found.');
+            }
+
+            $eventData = $eventDoc->data();
+            $eventTitle = $eventData['title'] ?? 'an event';
+
+            $eventRef->set([
                 'status' => 'Cancelled',
                 'cancellation_reason' => $request->reason,
                 'cancelled_at' => now()->toDateTimeString(),
                 'updated_at' => now()->toDateTimeString(),
             ], ['merge' => true]);
 
-        return redirect()->route('bhc.events.index')->with('success', 'Event has been cancelled.');
+            return redirect()->route('bhc.events.index')->with('success', 'Event has been cancelled.');
+        } catch (\Exception $e) {
+            \Log::error('Error cancelling event: ' . $e->getMessage(), [
+                'barangay_id' => $this->barangayId,
+                'event_id' => $id,
+            ]);
+            return redirect()->back()->with('error', 'Failed to cancel event. Please try again.');
+        }
     }
 
 

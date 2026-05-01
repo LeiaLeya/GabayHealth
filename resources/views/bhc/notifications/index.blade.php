@@ -26,7 +26,7 @@
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <form id="notificationForm" action="{{ route('notifications.store') }}" method="POST" enctype="multipart/form-data">
+                    <form id="notificationForm" action="{{ route('notifications.store') }}" method="POST">
                         @csrf
                         
                         <!-- 1. Notification Type -->
@@ -119,16 +119,6 @@
                         <div id="ageGroupField" class="mb-4" style="display: none;">
                             <label for="target_age_group" class="form-label fw-semibold">Age Group <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="target_age_group" name="target_age_group" placeholder="e.g., 18-30, 31-50, etc.">
-                        </div>
-
-                        <!-- 5. Optional Image -->
-                        <div class="mb-4">
-                            <label for="image" class="form-label fw-semibold">Attach Image (Optional)</label>
-                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                            <small class="text-muted">For posters, schedules, infographics (Max 5MB)</small>
-                            <div id="imagePreview" class="mt-2" style="display: none;">
-                                <img id="previewImg" src="" alt="Preview" class="img-thumbnail" style="max-width: 300px; max-height: 300px;">
-                            </div>
                         </div>
 
                         <!-- Send Button -->
@@ -237,9 +227,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetAudience = document.querySelectorAll('input[name="target_audience"]');
     const purokField = document.getElementById('purokField');
     const ageGroupField = document.getElementById('ageGroupField');
-    const imageInput = document.getElementById('image');
-    const imagePreview = document.getElementById('imagePreview');
-    const previewImg = document.getElementById('previewImg');
 
     // Show/hide conditional fields based on target audience
     targetAudience.forEach(radio => {
@@ -259,21 +246,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             validateForm();
         });
-    });
-
-    // Image preview
-    imageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImg.src = e.target.result;
-                imagePreview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        } else {
-            imagePreview.style.display = 'none';
-        }
     });
 
     // Validate form and enable/disable send button
