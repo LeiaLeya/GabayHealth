@@ -632,24 +632,39 @@ class InventoryController extends Controller
             'type' => 'required|string|max:100',
             'quantity' => 'required|integer|min:0',
             'unit_type' => 'required|in:capsules,tablets,pieces,boxes,packs,bottles,vials,sachets',
+            'unit_type' => 'required|in:capsules,tablets,pieces,boxes,bottles,packs',
             'description' => 'nullable|string|max:500',
             'generic_name' => 'nullable|string|max:255',
             'generic_description' => 'nullable|string|max:500',
             'milligrams' => 'nullable|numeric|min:0',
+            'therapeutic_classification' => 'nullable|string|max:255',
+            'initial_lot_number' => 'nullable|string|max:255',
+            'initial_expiration_date' => 'nullable|date|after_or_equal:today',
+            'initial_batch_notes' => 'nullable|string|max:500',
         ]);
 
         // Enforce generic_name for medicines and vaccines
-        if (in_array($request->type, ['Medicine', 'Vaccine']) && empty(trim($request->generic_name ?? ''))) {
+        $isBatchTrackedType = in_array($request->type, ['Medicine', 'Vaccine']);
+
+        if ($isBatchTrackedType && empty(trim($request->generic_name ?? ''))) {
             return redirect()->back()->withErrors(['generic_name' => 'Generic name is required for medicines and vaccines.'])->withInput();
         }
         if (in_array($request->type, ['Medicine', 'Vaccine']) && ($request->milligrams === null || $request->milligrams === '')) {
             return redirect()->back()->withErrors(['milligrams' => 'Dosage (mg) is required for medicines and vaccines.'])->withInput();
+        if ($isBatchTrackedType && ($request->milligrams === null || $request->milligrams === '')) {
+            return redirect()->back()->withErrors(['milligrams' => 'Milligrams is required for medicines and vaccines.'])->withInput();
+        }
+        if ($isBatchTrackedType && empty(trim($request->initial_lot_number ?? ''))) {
+            return redirect()->back()->withErrors(['initial_lot_number' => 'Initial lot number is required for medicines and vaccines.'])->withInput();
+        }
+        if ($isBatchTrackedType && empty($request->initial_expiration_date)) {
+            return redirect()->back()->withErrors(['initial_expiration_date' => 'Initial expiration date is required for medicines and vaccines.'])->withInput();
         }
 
         // Calculate automatic status based on quantity
         $status = $this->calculateStatus($request->quantity, $request->unit_type);
 
-        $this->firestore
+        $parentRef = $this->firestore
             ->collection($user['role'])
             ->document($user['id'])
             ->collection('inventory')
@@ -660,12 +675,31 @@ class InventoryController extends Controller
                 'unit_type' => $request->unit_type,
                 'status' => $status,
                 'description' => $request->description,
-                'generic_name' => in_array($request->type, ['Medicine','Vaccine']) ? trim($request->generic_name) : null,
-                'generic_description' => in_array($request->type, ['Medicine','Vaccine']) ? ($request->generic_description ?? '') : null,
-                'milligrams' => in_array($request->type, ['Medicine','Vaccine']) ? (float)$request->milligrams : null,
+                'generic_name' => $isBatchTrackedType ? trim($request->generic_name) : null,
+                'generic_description' => $isBatchTrackedType ? ($request->generic_description ?? '') : null,
+                'milligrams' => $isBatchTrackedType ? (float)$request->milligrams : null,
+                'therapeutic_classification' => $isBatchTrackedType ? ($request->therapeutic_classification ?? null) : null,
                 'created_at' => now()->toISOString(),
                 'updated_at' => now()->toISOString(),
             ]);
+
+        // Automatically create an initial batch for medicines and vaccines
+        if ($isBatchTrackedType) {
+            $this->firestore
+                ->collection($user['role'])
+                ->document($user['id'])
+                ->collection('inventory')
+                ->document($parentRef->id())
+                ->collection('batches')
+                ->add([
+                    'lot_number' => trim($request->initial_lot_number),
+                    'quantity' => (int) $request->quantity,
+                    'expiration_date' => $request->initial_expiration_date,
+                    'notes' => $request->initial_batch_notes,
+                    'created_at' => now()->toISOString(),
+                    'updated_at' => now()->toISOString(),
+                ]);
+        }
 
         return redirect()->back()->with('success', 'Item added successfully!');
     }
@@ -724,10 +758,12 @@ class InventoryController extends Controller
             'type' => 'required|string|max:100',
             'quantity' => 'required|integer|min:0',
             'unit_type' => 'required|in:capsules,tablets,pieces,boxes,packs,bottles,vials,sachets',
+            'unit_type' => 'required|in:capsules,tablets,pieces,boxes,bottles,packs',
             'description' => 'nullable|string|max:500',
             'generic_name' => 'nullable|string|max:255',
             'generic_description' => 'nullable|string|max:500',
             'milligrams' => 'nullable|numeric|min:0',
+            'therapeutic_classification' => 'nullable|string|max:255',
         ]);
 
         if (in_array($request->type, ['Medicine', 'Vaccine']) && empty(trim($request->generic_name ?? ''))) {
@@ -755,6 +791,7 @@ class InventoryController extends Controller
                 'generic_name' => in_array($request->type, ['Medicine','Vaccine']) ? trim($request->generic_name) : null,
                 'generic_description' => in_array($request->type, ['Medicine','Vaccine']) ? ($request->generic_description ?? '') : null,
                 'milligrams' => in_array($request->type, ['Medicine','Vaccine']) ? (float)$request->milligrams : null,
+                'therapeutic_classification' => in_array($request->type, ['Medicine','Vaccine']) ? ($request->therapeutic_classification ?? null) : null,
                 'updated_at' => now()->toISOString(),
             ]);
 
@@ -1128,6 +1165,10 @@ class InventoryController extends Controller
                 'out_of_stock' => 0
             ],
             'boxes' => [
+                'low_stock' => 2,
+                'out_of_stock' => 0
+            ],
+            'bottles' => [
                 'low_stock' => 2,
                 'out_of_stock' => 0
             ],
