@@ -534,6 +534,35 @@
 <script>
 // Time validation for add event form
 document.addEventListener('DOMContentLoaded', function() {
+    const serverToday = '{{ \Carbon\Carbon::today()->toDateString() }}';
+
+    function enforceEventDateMin(scope = document) {
+        const dateInputs = scope.querySelectorAll('input[type="date"][name="date"]');
+
+        dateInputs.forEach((input) => {
+            input.setAttribute('min', serverToday);
+
+            if (input.value && input.value < serverToday) {
+                input.value = serverToday;
+            }
+
+            if (!input.dataset.minDateBound) {
+                const blockPastDate = () => {
+                    if (input.value && input.value < serverToday) {
+                        input.value = serverToday;
+                    }
+                };
+
+                input.addEventListener('input', blockPastDate);
+                input.addEventListener('change', blockPastDate);
+                input.dataset.minDateBound = '1';
+            }
+        });
+    }
+
+    enforceEventDateMin();
+    document.addEventListener('shown.bs.modal', (e) => enforceEventDateMin(e.target));
+
     const startTimeInput = document.getElementById('start_time');
     const endTimeInput = document.getElementById('end_time');
     

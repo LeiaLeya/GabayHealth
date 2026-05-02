@@ -340,7 +340,8 @@ class CalendarController extends Controller
     {
         // Supported formats:
         // 1) "09/22/2025" or "09/22/2025 10:00AM-12:00PM" (MM/DD/YYYY)
-        // 2) "monday 10:00AM-12:00PM" or "Monday 10:00 AM - 12:00 PM"
+        // 2) "2025-09-22" or "2025-09-22 10:00AM-12:00PM" (YYYY-MM-DD)
+        // 3) "monday 10:00AM-12:00PM" or "Monday 10:00 AM - 12:00 PM"
         if (!$appointmentString) {
             return [];
         }
@@ -351,6 +352,22 @@ class CalendarController extends Controller
             $month = (int)$m[1];
             $day = (int)$m[2];
             $year = (int)$m[3];
+            $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            $start12 = isset($m[4]) ? strtoupper(str_replace(' ', '', $m[4])) : null;
+            $end12 = isset($m[5]) ? strtoupper(str_replace(' ', '', $m[5])) : null;
+            return [
+                'date' => $date,
+                'start_time' => $start12 ? $this->convert12To24($start12) : null,
+                'end_time' => $end12 ? $this->convert12To24($end12) : null,
+            ];
+        }
+
+        // Try YYYY-MM-DD with optional time range
+        $isoDatePattern = '/^\s*(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}:\d{2}\s*[APMapm]{2})\s*[-–]\s*(\d{1,2}:\d{2}\s*[APMapm]{2}))?/';
+        if (preg_match($isoDatePattern, $appointmentString, $m)) {
+            $year = (int)$m[1];
+            $month = (int)$m[2];
+            $day = (int)$m[3];
             $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
             $start12 = isset($m[4]) ? strtoupper(str_replace(' ', '', $m[4])) : null;
             $end12 = isset($m[5]) ? strtoupper(str_replace(' ', '', $m[5])) : null;
@@ -562,5 +579,68 @@ class CalendarController extends Controller
             \Log::error('Calendar - Error fetching calendar data: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch calendar data'], 500);
         }
+    }
+
+    /**
+     * Build calendar appointment payload and merge into grouped items.
+     */
+    private function addAppointmentToGroupedItems($doc, array &$groupedItems, array &$appointments = null, int &$appointmentCount = 0): bool
+    {
+        $data = $doc->data();
+
+        // Try multiple date source fields used across legacy/new records
+        $rawDateSource = $data['appointmentDate'] ?? $data['date'] ?? '';
+        $parsed = $this->parseAppointmentDate($rawDateSource);
+
+        $appointmentDate = $parsed['date'] ?? null;
+        $startTime24 = $parsed['start_time'] ?? ($data['start_time'] ?? null);
+        $endTime24 = $parsed['end_time'] ?? ($data['end_time'] ?? null);
+
+        // Handle explicit date field when parser cannot infer from string
+        if (!$appointmentDate && !empty($data['date'])) {
+            try {
+                $appointmentDate = Carbon::parse($data['date'])->format('Y-m-d');
+            } catch (\Throwable $e) {
+                $appointmentDate = null;
+            }
+        }
+
+        if (!$appointmentDate) {
+            return false;
+        }
+
+        $patientName = $data['patient']['name'] ?? $data['patientName'] ?? $data['name'] ?? 'Patient';
+        $serviceName = $data['serviceName'] ?? $data['service'] ?? 'Appointment';
+
+        $appointmentData = [
+            'id' => $doc->id(),
+            'title' => $patientName . ' - ' . $serviceName,
+            'start' => $appointmentDate . 'T' . ($startTime24 ?? '09:00'),
+            'end' => $appointmentDate . 'T' . ($endTime24 ?? '10:00'),
+            'description' => $serviceName,
+            'type' => 'appointment',
+            'date' => $appointmentDate,
+            'start_time' => $startTime24,
+            'end_time' => $endTime24,
+            'time' => $rawDateSource,
+            'notes' => $data['notes'] ?? '',
+            'patient' => [
+                'name' => $patientName,
+                'gender' => $data['patient']['gender'] ?? $data['gender'] ?? '',
+                'age' => isset($data['patient']['birthdate']) ? $this->calculateAge($data['patient']['birthdate']) : null,
+            ],
+        ];
+
+        if (!isset($groupedItems[$appointmentDate])) {
+            $groupedItems[$appointmentDate] = [];
+        }
+        $groupedItems[$appointmentDate][] = $appointmentData;
+
+        if ($appointments !== null) {
+            $appointments[] = $appointmentData;
+        }
+
+        $appointmentCount++;
+        return true;
     }
 } 
