@@ -86,13 +86,21 @@ class LoginController extends Controller
 
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        // Avoid a leftover oauth_type (from an abandoned registration) sending users to the wrong form.
+        session()->forget('oauth_type');
+
+        // Must match an "Authorized redirect URI" in Google Cloud Console (separate from registration).
+        return Socialite::driver('google')
+            ->redirectUrl(route('google.login.callback'))
+            ->redirect();
     }
 
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl(route('google.login.callback'))
+                ->user();
 
             $firebaseService = app(FirebaseService::class);
             $firestore = $firebaseService->getFirestore();

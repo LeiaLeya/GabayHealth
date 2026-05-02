@@ -314,21 +314,28 @@ class RegisterController extends Controller
     public function redirectToGoogle()
     {
         session(['oauth_type' => 'rhu']);
-        return Socialite::driver('google')->redirect();
+        // Must match an "Authorized redirect URI" in Google Cloud Console (separate from login).
+        return Socialite::driver('google')
+            ->redirectUrl(route('google.callback'))
+            ->redirect();
     }
 
     // Google OAuth redirect for BHW
     public function redirectToGoogleBhw()
     {
         session(['oauth_type' => 'bhw']);
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')
+            ->redirectUrl(route('google.callback'))
+            ->redirect();
     }
 
     // Google OAuth callback
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl(route('google.callback'))
+                ->user();
             $oauthType = session('oauth_type', 'bhw');
 
             $firebaseService = app(FirebaseService::class);
