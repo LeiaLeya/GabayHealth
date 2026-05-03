@@ -154,6 +154,7 @@ class RegisterController extends Controller
                     'barangay_id' => $uid,
                     'barangay_name' => $request->healthCenterName,
                     'created_at' => now()->toDateTimeString(),
+                    'createdAt' => now()->toDateTimeString(),
                     'status' => 'unread',
                 ]);
 
@@ -648,6 +649,7 @@ class RegisterController extends Controller
                     'barangay_id' => $uid,
                     'barangay_name' => $request->healthCenterName,
                     'created_at' => now()->toDateTimeString(),
+                    'createdAt' => now()->toDateTimeString(),
                     'status' => 'unread',
                 ]);
 

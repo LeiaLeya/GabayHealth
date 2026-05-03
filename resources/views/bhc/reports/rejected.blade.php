@@ -10,7 +10,7 @@
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('reports.verify') }}" class="btn btn-warning">
-                <i class="bi bi-patch-check me-2"></i>Verify Reports
+                <i class="bi bi-hourglass-split me-2"></i>Pending Reports
             </a>
             <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Go to Reports

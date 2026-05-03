@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\NotificationBellService;
+use App\Services\PendingReportsCounter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 
@@ -21,6 +24,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+
+        View::composer('partials.sidebar', function ($view) {
+            $view->with(
+                'pendingReportsSidebarCount',
+                app(PendingReportsCounter::class)->countForSidebar()
+            );
+        });
+
+        View::composer(['partials.sidebar', 'notifications._subnav'], function ($view) {
+            $view->with(app(NotificationBellService::class)->composeData());
+        });
         
         // Set timezone to Asia/Manila
         $timezone = env('APP_TIMEZONE', 'Asia/Manila');

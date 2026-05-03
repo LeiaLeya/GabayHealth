@@ -511,110 +511,68 @@
                     </div>
                 </div>
 
-                <!-- Current Services Section -->
+                <!-- Active / Suspended services -->
                 <div class="col-lg-7">
                     <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-gear me-2"></i>
-                                Current Services
-                            </h5>
+                        <div class="card-header bg-white border-bottom-0 pb-0">
+                            <ul class="nav nav-tabs card-header-tabs border-bottom-0" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="services-tab-active" data-bs-toggle="tab" data-bs-target="#services-pane-active" type="button" role="tab" aria-controls="services-pane-active" aria-selected="true">
+                                        <i class="bi bi-check-circle me-1"></i>Active services
+                                        @if(count($activeServices ?? []) > 0)
+                                            <span class="badge bg-primary ms-1">{{ count($activeServices) }}</span>
+                                        @endif
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="services-tab-suspended" data-bs-toggle="tab" data-bs-target="#services-pane-suspended" type="button" role="tab" aria-controls="services-pane-suspended" aria-selected="false">
+                                        <i class="bi bi-pause-circle me-1"></i>Suspended services
+                                        @if(count($suspendedServices ?? []) > 0)
+                                            <span class="badge bg-secondary ms-1">{{ count($suspendedServices) }}</span>
+                                        @endif
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="card-body">
-                            @if(count($currentServices) > 0)
-                                <div class="service-grid">
-                                    @foreach($currentServices as $service)
-                                        <div class="service-card {{ !($service['is_active'] ?? true) ? 'suspended' : '' }}">
-                                            <div class="service-card-header">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div class="flex-grow-1">
-                                                        <h6 class="mb-1">
-                                                            {{ $service['display_name'] ?? $service['name'] }}
-                                                            @if(!($service['is_active'] ?? true))
-                                                                <span class="badge badge-suspended ms-2">
-                                                                    <i class="bi bi-pause-circle me-1"></i>Suspended
-                                                                </span>
-                                                            @endif
-                                                        </h6>
-                                                        @if(!($service['is_active'] ?? true) && !empty($service['deactivation_reason'] ?? ''))
-                                                            <div class="text-warning small mb-2">
-                                                                <i class="bi bi-info-circle me-1"></i>
-                                                                Reason: {{ $service['deactivation_reason'] }}
-                                                            </div>
-                                                        @endif
-                                                        <div class="d-flex gap-2 align-items-center">
-                                                            <span class="badge bg-light text-dark">{{ $service['category'] }}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="toggle-switch me-2" title="{{ ($service['is_active'] ?? true) ? 'Disable Service' : 'Enable Service' }}">
-                                                            <input type="checkbox" 
-                                                                   id="toggle-{{ $service['id'] }}" 
-                                                                   class="toggle-input"
-                                                                   {{ ($service['is_active'] ?? true) ? 'checked' : '' }}
-                                                                   onchange="handleToggleChange('{{ $service['id'] }}', '{{ $service['display_name'] ?? $service['name'] }}', this.checked)">
-                                                            <label for="toggle-{{ $service['id'] }}" class="toggle-label">
-                                                                <span class="toggle-inner"></span>
-                                                                <span class="toggle-switch-slider"></span>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="service-card-body">
-                                                @if($service['description'])
-                                                    <p class="text-muted mb-3">{{ $service['description'] }}</p>
-                                                @endif
-                                                
-                                                @if(isset($service['schedule']) && !empty($service['schedule']))
-                                                    <div class="mb-3">
-                                                        <h6 class="text-dark mb-2">
-                                                            <i class="bi bi-clock me-2"></i>Schedule
-                                                        </h6>
-                                                        @foreach($service['schedule'] as $day => $times)
-                                                            @if(!empty($times))
-                                                                <div class="mb-2">
-                                                                    <strong class="text-capitalize">{{ ucfirst($day) }}:</strong>
-                                                                    @foreach($times as $time)
-                                                                        <span class="schedule-badge">{{ $time }}</span>
-                                                                    @endforeach
-                                                                </div>
-                                                            @endif
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <div class="mb-3">
-                                                        <span class="text-muted">
-                                                            <i class="bi bi-clock me-1"></i>No schedule set
-                                                        </span>
-                                                    </div>
-                                                @endif
-                                                
-                                                <div class="action-buttons">
-                                                    <button type="button" 
-                                                            class="action-btn edit-btn" 
-                                                            onclick="editService('{{ $service['id'] }}', '{{ $service['display_name'] ?? $service['name'] }}', '{{ $service['category'] }}', '{{ $service['description'] ?? '' }}', {{ json_encode($service['schedule'] ?? []) }})"
-                                                            title="Edit">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <button type="button" 
-                                                            class="action-btn delete-btn" 
-                                                            onclick="deleteService('{{ $service['id'] }}', '{{ $service['display_name'] ?? $service['name'] }}')"
-                                                            title="Delete">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
+                        <div class="card-body pt-3">
+                            <div class="tab-content">
+                                <div class="tab-pane fade show active" id="services-pane-active" role="tabpanel" aria-labelledby="services-tab-active" tabindex="0">
+                                    @if(count($currentServices) === 0)
+                                        <div class="empty-state">
+                                            <i class="bi bi-clipboard-x"></i>
+                                            <h5>No Services Added Yet</h5>
+                                            <p>Start by selecting predefined services or adding custom ones.</p>
                                         </div>
-                                    @endforeach
+                                    @elseif(count($activeServices ?? []) > 0)
+                                        <div class="service-grid">
+                                            @foreach($activeServices as $service)
+                                                @include('services._manage_service_card', ['service' => $service])
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="empty-state">
+                                            <i class="bi bi-pause-circle"></i>
+                                            <h5>No active services</h5>
+                                            <p>All listed services are suspended. Open the <strong>Suspended services</strong> tab to manage them.</p>
+                                        </div>
+                                    @endif
                                 </div>
-                            @else
-                                <div class="empty-state">
-                                    <i class="bi bi-clipboard-x"></i>
-                                    <h5>No Services Added Yet</h5>
-                                    <p>Start by selecting predefined services or adding custom ones.</p>
+                                <div class="tab-pane fade" id="services-pane-suspended" role="tabpanel" aria-labelledby="services-tab-suspended" tabindex="0">
+                                    @if(count($suspendedServices ?? []) > 0)
+                                        <div class="service-grid">
+                                            @foreach($suspendedServices as $service)
+                                                @include('services._manage_service_card', ['service' => $service])
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="empty-state">
+                                            <i class="bi bi-check2-circle"></i>
+                                            <h5>No suspended services</h5>
+                                            <p>When you disable a service, it will appear here. Active services stay on the first tab.</p>
+                                        </div>
+                                    @endif
                                 </div>
-                            @endif
+                            </div>
                         </div>
                     </div>
                 </div>

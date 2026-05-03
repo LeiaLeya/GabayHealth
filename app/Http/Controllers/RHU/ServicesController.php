@@ -51,10 +51,23 @@ class ServicesController extends Controller
             
             \Log::info('RHU ServicesController - Found ' . $count . ' services');
 
-            return $this->view('services.index', compact('currentServices', 'predefinedServices'));
+            $activeServices = [];
+            $suspendedServices = [];
+            foreach ($currentServices as $s) {
+                if ($s['is_active'] ?? true) {
+                    $activeServices[] = $s;
+                } else {
+                    $suspendedServices[] = $s;
+                }
+            }
+
+            return $this->view('services.index', compact('currentServices', 'activeServices', 'suspendedServices', 'predefinedServices'));
         } catch (\Exception $e) {
             \Log::error('Error fetching services: ' . $e->getMessage());
-            return $this->view('services.index', compact('currentServices', 'predefinedServices'))->with('error', 'Error loading services data. Please try again.');
+            $activeServices = [];
+            $suspendedServices = [];
+
+            return $this->view('services.index', compact('currentServices', 'activeServices', 'suspendedServices', 'predefinedServices'))->with('error', 'Error loading services data. Please try again.');
         }
     }
 

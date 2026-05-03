@@ -9,7 +9,7 @@
             <p class="text-muted mb-0">View all verified health reports</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('rhu.reports.verify') }}" class="btn btn-outline-dark">Verify Reports</a>
+            <a href="{{ route('rhu.reports.verify') }}" class="btn btn-outline-dark">Pending Reports</a>
             <a href="{{ route('rhu.reports.rejected') }}" class="btn btn-outline-dark">Rejected Reports</a>
         </div>
     </div>
