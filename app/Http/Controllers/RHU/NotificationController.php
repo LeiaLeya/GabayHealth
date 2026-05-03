@@ -4,9 +4,10 @@ namespace App\Http\Controllers\RHU;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
+use App\Services\NotificationBellService;
+use App\Services\NotificationPageSupport;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
-use Carbon\Carbon;
 
 class NotificationController extends Controller
 {
@@ -19,52 +20,146 @@ class NotificationController extends Controller
         $this->firestore = $firebase->getFirestore();
     }
 
-    public function index()
+    protected function notificationsPath(): string
     {
-        $user = session('user');
-        
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Please login to access notifications.');
-        }
-        
         $rhuId = $this->getBarangayId();
-        
-        if (!$rhuId) {
-            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
+
+        return $rhuId ? "rhu/{$rhuId}/notifications" : '';
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function loadAllNotifications(): array
+    {
+        $path = $this->notificationsPath();
+        if ($path === '') {
+            return [];
         }
 
-        $notifications = [];
-        
+        $out = [];
         try {
-            $notificationsQuery = $this->firestore
-                ->collection("rhu/{$rhuId}/notifications")
-                ->orderBy('createdAt', 'DESC')
-                ->limit(100)
-                ->documents();
-
-            foreach ($notificationsQuery as $doc) {
+            $snap = $this->firestore->collection($path)->limit(200)->documents();
+            foreach ($snap as $doc) {
                 if ($doc->exists()) {
-                    $notifications[] = array_merge($doc->data(), ['id' => $doc->id()]);
+                    $out[] = array_merge($doc->data(), ['id' => $doc->id()]);
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Error fetching notifications: ' . $e->getMessage());
+            \Log::error('Error fetching notifications: '.$e->getMessage());
         }
 
-        return $this->view('notifications.index', compact('notifications'));
+        return NotificationPageSupport::sortNewestFirst($out);
+    }
+
+    public function inbox()
+    {
+        $user = session('user');
+
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'Please login to access notifications.');
+        }
+
+        if (! $this->getBarangayId()) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
+        }
+
+        $all = $this->loadAllNotifications();
+        [$inbox,] = NotificationPageSupport::partitionInboxSent($all);
+
+        return $this->view('notifications.inbox', compact('inbox'));
+    }
+
+    public function create()
+    {
+        $user = session('user');
+
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'Please login to access notifications.');
+        }
+
+        if (! $this->getBarangayId()) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
+        }
+
+        return $this->view('notifications.create');
+    }
+
+    public function sent()
+    {
+        $user = session('user');
+
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'Please login to access notifications.');
+        }
+
+        if (! $this->getBarangayId()) {
+            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
+        }
+
+        $all = $this->loadAllNotifications();
+        [, $sent] = NotificationPageSupport::partitionInboxSent($all);
+
+        return $this->view('notifications.sent', compact('sent'));
+    }
+
+    public function markRead($id)
+    {
+        $user = session('user');
+
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'Please login.');
+        }
+
+        $rhuId = $this->getBarangayId();
+        if (! $rhuId) {
+            return redirect()->back()->with('error', 'RHU ID not found.');
+        }
+
+        try {
+            $doc = $this->firestore
+                ->collection("rhu/{$rhuId}/notifications")
+                ->document($id)
+                ->snapshot();
+
+            if (! $doc->exists()) {
+                return redirect()->route('rhu.notifications.index')->with('error', 'Notification not found.');
+            }
+
+            $data = $doc->data();
+            if (NotificationPageSupport::isOutboundNotification($data)) {
+                return redirect()->route('rhu.notifications.index')->with('error', 'Invalid notification.');
+            }
+
+            $this->firestore
+                ->collection("rhu/{$rhuId}/notifications")
+                ->document($id)
+                ->update([
+                    ['path' => 'status', 'value' => 'read'],
+                    ['path' => 'read_at', 'value' => now()->toDateTimeString()],
+                ]);
+
+            NotificationBellService::forgetCacheForCurrentUser();
+
+            return redirect()->route('rhu.notifications.index')->with('success', 'Marked as read.');
+        } catch (\Exception $e) {
+            \Log::error('Error marking notification read: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'Could not update notification.');
+        }
     }
 
     public function store(Request $request)
     {
         $user = session('user');
-        
-        if (!$user) {
+
+        if (! $user) {
             return redirect()->route('login')->with('error', 'Please login to create notifications.');
         }
-        
+
         $rhuId = $this->getBarangayId();
-        
-        if (!$rhuId) {
+
+        if (! $rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
@@ -79,7 +174,7 @@ class NotificationController extends Controller
         ]);
 
         try {
-            $isScheduled = !empty($request->scheduled_at);
+            $isScheduled = ! empty($request->scheduled_at);
             $status = $isScheduled ? 'scheduled' : 'sent';
 
             $notificationData = [
@@ -105,43 +200,59 @@ class NotificationController extends Controller
                 ->collection("rhu/{$rhuId}/notifications")
                 ->add($notificationData);
 
-            $successMessage = $isScheduled 
-                ? 'Notification scheduled successfully!' 
+            NotificationBellService::forgetCacheForCurrentUser();
+
+            $successMessage = $isScheduled
+                ? 'Notification scheduled successfully!'
                 : 'Notification sent successfully!';
 
-            return redirect()->route('rhu.notifications.index')->with('success', $successMessage);
+            return redirect()->route('rhu.notifications.create')->with('success', $successMessage);
         } catch (\Exception $e) {
-            \Log::error('Error creating notification: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to create notification: ' . $e->getMessage())->withInput();
+            \Log::error('Error creating notification: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to create notification: '.$e->getMessage())->withInput();
         }
     }
 
     public function destroy($id)
     {
         $user = session('user');
-        
-        if (!$user) {
+
+        if (! $user) {
             return redirect()->route('login')->with('error', 'Please login to delete notifications.');
         }
-        
+
         $rhuId = $this->getBarangayId();
-        
-        if (!$rhuId) {
+
+        if (! $rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
 
         try {
+            $doc = $this->firestore
+                ->collection("rhu/{$rhuId}/notifications")
+                ->document($id)
+                ->snapshot();
+
+            if ($doc->exists()) {
+                $data = $doc->data();
+                if (! NotificationPageSupport::isOutboundNotification($data)) {
+                    return redirect()->route('rhu.notifications.sent')->with('error', 'Only sent broadcasts can be deleted here.');
+                }
+            }
+
             $this->firestore
                 ->collection("rhu/{$rhuId}/notifications")
                 ->document($id)
                 ->delete();
 
-            return redirect()->route('rhu.notifications.index')->with('success', 'Notification deleted successfully!');
+            NotificationBellService::forgetCacheForCurrentUser();
+
+            return redirect()->route('rhu.notifications.sent')->with('success', 'Notification deleted successfully!');
         } catch (\Exception $e) {
-            \Log::error('Error deleting notification: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to delete notification: ' . $e->getMessage());
+            \Log::error('Error deleting notification: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to delete notification: '.$e->getMessage());
         }
     }
 }
-
-

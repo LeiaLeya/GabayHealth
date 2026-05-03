@@ -4,6 +4,7 @@ namespace App\Http\Controllers\RHU;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
+use App\Http\Controllers\Traits\PreparesUserRequestRows;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -11,6 +12,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class UserRequestController extends Controller
 {
     use HasRoleContext;
+    use PreparesUserRequestRows;
 
     protected $firestore;
 
@@ -34,6 +36,7 @@ class UserRequestController extends Controller
         $pendingCount = 0;
         $approvedCount = 0;
         $declinedCount = 0;
+        $search = trim((string) request('q', ''));
         
         try {
             \Log::info('RHU UserRequestController - Fetching user requests for user: ' . $user['id'] . ' with role: ' . $user['role']);
@@ -48,7 +51,7 @@ class UserRequestController extends Controller
             $count = 0;
             foreach ($userRequestsQuery as $doc) {
                 if ($doc->exists()) {
-                    $requests[] = array_merge($doc->data(), ['id' => $doc->id()]);
+                    $requests[] = $this->prepareUserRequestRow($doc->data(), $doc->id());
                     $count++;
                 }
             }
@@ -60,9 +63,18 @@ class UserRequestController extends Controller
             $approvedCount = count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'approved'));
             $declinedCount = count(array_filter($requests, fn($r) => ($r['status'] ?? '') === 'declined'));
 
+            if ($search !== '') {
+                $requests = array_values(array_filter(
+                    $requests,
+                    fn ($r) => $this->userRequestMatchesSearch($r, $search)
+                ));
+            }
+
             $perPage = 7;
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
-            $requestsCollection = collect($requests);
+            $requestsCollection = collect($requests)
+                ->sortByDesc(fn ($r) => $this->userRequestCreatedSortTimestamp($r))
+                ->values();
             $requests = new LengthAwarePaginator(
                 $requestsCollection->forPage($currentPage, $perPage)->values(),
                 $requestsCollection->count(),
@@ -79,7 +91,8 @@ class UserRequestController extends Controller
                 'totalRequests',
                 'pendingCount',
                 'approvedCount',
-                'declinedCount'
+                'declinedCount',
+                'search'
             ));
         } catch (\Exception $e) {
             \Log::error('Error fetching user requests: ' . $e->getMessage());
@@ -88,7 +101,8 @@ class UserRequestController extends Controller
                 'totalRequests',
                 'pendingCount',
                 'approvedCount',
-                'declinedCount'
+                'declinedCount',
+                'search'
             ))->with('error', 'Error loading user requests data. Please try again.');
         }
     }
@@ -157,7 +171,7 @@ class UserRequestController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(Request $httpRequest, $id)
     {
         $user = session('user');
         
@@ -174,12 +188,25 @@ class UserRequestController extends Controller
                 ->snapshot();
 
             if (!$requestDoc->exists()) {
+                if ($httpRequest->wantsJson()) {
+                    return response()->json(['message' => 'Request not found.'], 404);
+                }
+
                 return redirect()->route('rhu.user-requests.index')->with('error', 'Request not found.');
             }
 
-            $request = array_merge($requestDoc->data(), ['id' => $id]);
+            $request = $this->prepareUserRequestRow($requestDoc->data(), $id);
+
+            if ($httpRequest->wantsJson()) {
+                return response()->json($request);
+            }
+
             return $this->view('user-requests.show', compact('request'));
         } catch (\Exception $e) {
+            if ($httpRequest->wantsJson()) {
+                return response()->json(['message' => 'Failed to load request details.'], 500);
+            }
+
             return redirect()->back()->with('error', 'Failed to load request details: ' . $e->getMessage());
         }
     }

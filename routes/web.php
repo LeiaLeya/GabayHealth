@@ -533,6 +533,15 @@ Route::middleware('auth.check')->group(function () {
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('notifications.destroy');
 
+    Route::post('/notifications/{id}/read', function($id) {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+        $role = $user['role'] ?? null;
+        if ($role === 'rhu') return app(RHUNotificationController::class)->markRead($id);
+        elseif ($role === 'barangay') return app(BHCNotificationController::class)->markRead($id);
+        return redirect()->route('login')->with('error', 'Unauthorized access');
+    })->name('notifications.read');
+
 
 
     // Services Management Routes - Redirect to role-based routes
@@ -596,8 +605,8 @@ Route::middleware('auth.check')->group(function () {
             $user = session('user');
             if (!$user) return redirect()->route('login');
             $role = $user['role'] ?? null;
-            if ($role === 'rhu') return app(RHUUserRequestController::class)->show($id);
-            elseif ($role === 'barangay') return app(BHCUserRequestController::class)->show($id);
+            if ($role === 'rhu') return app(RHUUserRequestController::class)->show(request(), $id);
+            elseif ($role === 'barangay') return app(BHCUserRequestController::class)->show(request(), $id);
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('show');
         Route::post('/{id}/approve', function($id) {
@@ -930,10 +939,15 @@ Route::middleware('auth.check')->group(function () {
             Route::delete('/staff/{id}', [BHCAccountController::class, 'destroyStaff'])->name('staff.destroy');
         });
 
-        // Notifications routes
-        Route::get('/notifications', [BHCNotificationController::class, 'index'])->name('notifications.index');
-        Route::post('/notifications', [BHCNotificationController::class, 'store'])->name('notifications.store');
-        Route::delete('/notifications/{id}', [BHCNotificationController::class, 'destroy'])->name('notifications.destroy');
+        // Notifications routes (inbox vs compose vs sent)
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [BHCNotificationController::class, 'inbox'])->name('index');
+            Route::get('/create', [BHCNotificationController::class, 'create'])->name('create');
+            Route::get('/sent', [BHCNotificationController::class, 'sent'])->name('sent');
+            Route::post('/', [BHCNotificationController::class, 'store'])->name('store');
+            Route::post('/{id}/read', [BHCNotificationController::class, 'markRead'])->name('read');
+            Route::delete('/{id}', [BHCNotificationController::class, 'destroy'])->name('destroy');
+        });
     });
 
     // ============================================
@@ -1035,10 +1049,15 @@ Route::middleware('auth.check')->group(function () {
             Route::delete('/staff/{id}', [RHUAccountController::class, 'destroyStaff'])->name('staff.destroy');
         });
 
-        // Notifications routes
-        Route::get('/notifications', [RHUNotificationController::class, 'index'])->name('notifications.index');
-        Route::post('/notifications', [RHUNotificationController::class, 'store'])->name('notifications.store');
-        Route::delete('/notifications/{id}', [RHUNotificationController::class, 'destroy'])->name('notifications.destroy');
+        // Notifications routes (inbox vs compose vs sent)
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [RHUNotificationController::class, 'inbox'])->name('index');
+            Route::get('/create', [RHUNotificationController::class, 'create'])->name('create');
+            Route::get('/sent', [RHUNotificationController::class, 'sent'])->name('sent');
+            Route::post('/', [RHUNotificationController::class, 'store'])->name('store');
+            Route::post('/{id}/read', [RHUNotificationController::class, 'markRead'])->name('read');
+            Route::delete('/{id}', [RHUNotificationController::class, 'destroy'])->name('destroy');
+        });
     });
 
     // Dashboard route (protected by auth)

@@ -101,6 +101,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>Email</th>
+                                <th>Date created</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -114,12 +115,19 @@
                                                 <i class="bi bi-person text-muted"></i>
                                             </div>
                                             <div>
-                                                <strong>{{ $request['email'] ?? 'N/A' }}</strong>
-                                                @if(isset($request['submittedAt']))
-                                                    <br><small class="text-muted">{{ \Carbon\Carbon::parse($request['submittedAt'])->format('M d, Y g:i A') }}</small>
-                                                @endif
+                                                <strong>{{ $request['email'] ?? ($request['username'] ?? 'N/A') }}</strong>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        @php
+                                            $createdRaw = $request['submittedAt'] ?? $request['createdAt'] ?? $request['created_at'] ?? $request['approved_at'] ?? null;
+                                        @endphp
+                                        @if($createdRaw)
+                                            {{ \Carbon\Carbon::parse($createdRaw)->format('M d, Y g:i A') }}
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
                                     </td>
                                     <td>
                                         @php
@@ -182,8 +190,18 @@
             <div class="modal-body" id="requestModalBody">
                 <!-- Request details will be loaded here -->
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer d-flex flex-wrap align-items-center gap-2">
+                <div id="viewModalPendingActions" class="d-none me-auto">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-success btn-sm" id="viewModalApproveBtn">
+                            <i class="bi bi-check me-1"></i>Approve
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" id="viewModalDeclineBtn">
+                            <i class="bi bi-x me-1"></i>Decline
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -252,10 +270,119 @@
 </style>
 
 <script>
-function viewRequest(requestId) {
-    // Load request details via AJAX or redirect to show page
-    window.location.href = `/user-requests/${requestId}`;
+let viewModalCurrent = { id: '', email: '' };
+
+function escapeReqHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
+
+function formatReqDate(s) {
+    if (!s) return 'N/A';
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    }
+    return escapeReqHtml(String(s));
+}
+
+function pickCreatedRaw(d) {
+    return d.submittedAt || d.createdAt || d.created_at || d.approved_at || null;
+}
+
+function buildRequestDetailHtml(d) {
+    const status = d.status || 'pending';
+    const statusClass = status === 'approved' ? 'success' : (status === 'declined' ? 'danger' : 'warning');
+    const statusIcon = status === 'approved' ? 'check-circle' : (status === 'declined' ? 'x-circle' : 'clock');
+    const email = d.email || d.username || 'N/A';
+    let extraDates = '';
+    if (d.approvedAt) {
+        extraDates += `<div class="mb-2"><span class="text-muted small d-block">Approved at</span>${escapeReqHtml(formatReqDate(d.approvedAt))}</div>`;
+    }
+    if (d.declinedAt) {
+        extraDates += `<div class="mb-2"><span class="text-muted small d-block">Declined at</span>${escapeReqHtml(formatReqDate(d.declinedAt))}</div>`;
+    }
+    return `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold text-muted small">Email</label>
+                <p class="mb-0">${escapeReqHtml(String(email))}</p>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold text-muted small">User ID</label>
+                <p class="mb-0">${escapeReqHtml(String(d.userId ?? d.uid ?? d.id ?? 'N/A'))}</p>
+            </div>
+            <div class="col-12 mb-3">
+                <label class="form-label fw-semibold text-muted small">Full address</label>
+                <p class="mb-0">${escapeReqHtml(String(d.fullAddress ?? d.address ?? d.location ?? 'N/A'))}</p>
+            </div>
+        </div>
+        <hr class="my-3">
+        <div class="mb-2">
+            <label class="form-label fw-semibold text-muted small">Status</label>
+            <div><span class="badge bg-${statusClass}"><i class="bi bi-${statusIcon} me-1"></i>${escapeReqHtml(String(status).charAt(0).toUpperCase() + String(status).slice(1))}</span></div>
+        </div>
+        <div class="mb-2">
+            <span class="text-muted small d-block">Date created</span>
+            ${escapeReqHtml(formatReqDate(pickCreatedRaw(d)))}
+        </div>
+        ${extraDates}`;
+}
+
+function viewRequest(requestId) {
+    const body = document.getElementById('requestModalBody');
+    const pendingWrap = document.getElementById('viewModalPendingActions');
+    body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    pendingWrap.classList.add('d-none');
+
+    const modalEl = document.getElementById('viewRequestModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+
+    fetch(`/user-requests/${requestId}`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+        .then(function (r) {
+            if (!r.ok) throw new Error('load failed');
+            return r.json();
+        })
+        .then(function (data) {
+            viewModalCurrent = {
+                id: data.id || requestId,
+                email: data.email || data.username || 'this request'
+            };
+            body.innerHTML = buildRequestDetailHtml(data);
+            if ((data.status || 'pending') === 'pending') {
+                pendingWrap.classList.remove('d-none');
+            } else {
+                pendingWrap.classList.add('d-none');
+            }
+        })
+        .catch(function () {
+            body.innerHTML = '<p class="text-danger mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Could not load request details.</p>';
+            pendingWrap.classList.add('d-none');
+        });
+}
+
+document.getElementById('viewModalApproveBtn').addEventListener('click', function () {
+    const inst = bootstrap.Modal.getInstance(document.getElementById('viewRequestModal'));
+    if (inst) inst.hide();
+    approveRequest(viewModalCurrent.id, viewModalCurrent.email);
+});
+
+document.getElementById('viewModalDeclineBtn').addEventListener('click', function () {
+    const inst = bootstrap.Modal.getInstance(document.getElementById('viewRequestModal'));
+    if (inst) inst.hide();
+    declineRequest(viewModalCurrent.id, viewModalCurrent.email);
+});
 
 function approveRequest(requestId, email) {
     document.getElementById('approveEmail').textContent = email;

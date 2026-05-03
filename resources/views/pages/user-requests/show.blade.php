@@ -106,10 +106,13 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-semibold text-muted">Submitted At</label>
+                        <label class="form-label fw-semibold text-muted">Date created</label>
                         <p class="mb-0">
-                            @if(isset($request['submittedAt']))
-                                {{ \Carbon\Carbon::parse($request['submittedAt'])->format('F d, Y g:i A') }}
+                            @php
+                                $createdRaw = $request['submittedAt'] ?? $request['createdAt'] ?? $request['created_at'] ?? $request['approved_at'] ?? null;
+                            @endphp
+                            @if($createdRaw)
+                                {{ \Carbon\Carbon::parse($createdRaw)->format('F d, Y g:i A') }}
                             @else
                                 N/A
                             @endif

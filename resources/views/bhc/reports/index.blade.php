@@ -10,7 +10,7 @@
         </div>
         <div class="d-flex align-items-center gap-3">
             <a href="{{ route('reports.verify') }}" class="btn btn-warning">
-                <i class="bi bi-patch-check me-2"></i>Verify Reports
+                <i class="bi bi-hourglass-split me-2"></i>Pending Reports
             </a>
             <div class="d-flex align-items-center gap-2">
                 <label class="form-label mb-0 fw-semibold">Filter by:</label>

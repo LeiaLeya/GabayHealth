@@ -4,6 +4,7 @@ namespace App\Http\Controllers\BHC;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
+use App\Services\PendingReportsCounter;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Cache;
@@ -424,6 +425,8 @@ class ReportsController extends Controller
                     ['path' => 'verified_by_id', 'value' => $user['id']]
                 ]);
 
+            app(PendingReportsCounter::class)->forgetForSessionUser();
+
             return redirect()->back()->with('success', 'Report verified successfully!');
         } catch (\Exception $e) {
             \Log::error('Error verifying report: ' . $e->getMessage());
@@ -566,6 +569,8 @@ class ReportsController extends Controller
                     ['path' => 'rejected_by_id', 'value' => session('user.id')],
                     ['path' => 'rejection_reason', 'value' => $request->rejection_reason]
                 ]);
+
+            app(PendingReportsCounter::class)->forgetForSessionUser();
 
             return redirect()->back()->with('success', 'Report rejected successfully!');
         } catch (\Exception $e) {
