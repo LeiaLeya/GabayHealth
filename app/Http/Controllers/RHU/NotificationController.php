@@ -79,9 +79,10 @@ class NotificationController extends Controller
         if (!$rhuId) return redirect()->back()->with('error', 'RHU ID not found.');
 
         $all = $this->fetchAll($rhuId);
-        [$inbox] = NotificationPageSupport::partitionInboxSent($all);
+        [$inbox, $sent] = NotificationPageSupport::partitionInboxSent($all);
+        $barangays = $this->fetchBarangays($rhuId);
 
-        return $this->view('notifications.inbox', compact('inbox'));
+        return $this->view('notifications.inbox', compact('inbox', 'sent', 'barangays'));
     }
 
     public function create()

@@ -580,6 +580,15 @@
     background:#fff; text-align:center;
 }
 .custom-slot-group input[type="time"]:focus { outline:none; border-color:#1657c1; }
+.cs-input-error { border-color:#ef4444 !important; background:#fff5f5 !important; }
+.cs-error {
+    display:none; align-items:center; gap:5px;
+    font-size:.65rem; color:#b91c1c; font-weight:500;
+    background:#fee2e2; border:1px solid #fca5a5;
+    border-radius:4px; padding:4px 7px; margin-top:2px;
+    line-height:1.3;
+}
+.cs-error i { font-size:.7rem; flex-shrink:0; }
 .custom-slot-sep { font-size:.6rem; color:#9ca3af; text-align:center; line-height:1; }
 .custom-slot-remove {
     position:absolute; top:-5px; right:-5px; width:16px; height:16px;
@@ -901,8 +910,44 @@ function addCustomSlotWithValues(day, start24, end24) {
         <input type="time" class="cs-start" value="${start24}" placeholder="Start">
         <div class="custom-slot-sep">to</div>
         <input type="time" class="cs-end"   value="${end24}"   placeholder="End">
-        <button type="button" class="custom-slot-remove" onclick="this.closest('.custom-slot-group').remove()" title="Remove">×</button>`;
+        <button type="button" class="custom-slot-remove" onclick="this.closest('.custom-slot-group').remove()" title="Remove">×</button>
+        <div class="cs-error" style="display:none;">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            End time must be after start time — shifts cannot cross midnight.
+        </div>`;
     list.appendChild(grp);
+
+    const startInput = grp.querySelector('.cs-start');
+    const endInput   = grp.querySelector('.cs-end');
+    const errorEl    = grp.querySelector('.cs-error');
+
+    function validateTime() {
+        const s = startInput.value;
+        const e = endInput.value;
+        if (!s || !e) { clearError(); return; }
+        if (e <= s) {
+            showError();
+        } else {
+            clearError();
+        }
+    }
+
+    function showError() {
+        errorEl.style.display = 'flex';
+        startInput.classList.add('cs-input-error');
+        endInput.classList.add('cs-input-error');
+    }
+
+    function clearError() {
+        errorEl.style.display = 'none';
+        startInput.classList.remove('cs-input-error');
+        endInput.classList.remove('cs-input-error');
+    }
+
+    startInput.addEventListener('change', validateTime);
+    endInput.addEventListener('change', validateTime);
+
+    if (start24 && end24) validateTime();
 }
 
 // ── Time helpers ─────────────────────────────────────
@@ -943,6 +988,14 @@ document.getElementById('schedForm').addEventListener('submit', function(e) {
     if (!barangayId)    { showValidation('Please select a location.'); return; }
     if (!smType)        { showValidation('Please select a schedule type.'); return; }
     if (!smPersonnelId) { showValidation('Please select a personnel.'); return; }
+
+    // Validate custom time slots — block if any end ≤ start
+    const invalidSlots = document.querySelectorAll('.custom-slot-group .cs-input-error');
+    if (invalidSlots.length > 0) {
+        showValidation('One or more custom shifts have an invalid time range. End time must be after start time.');
+        invalidSlots[0].closest('.custom-slot-group').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
 
     // Collect shifts
     const scheduleData = {};

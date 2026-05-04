@@ -1,129 +1,293 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid px-5 py-4">
-    <div class="d-flex justify-content-between align-items-start mb-2">
-        <div>
-            <h1 class="fw-bold mb-1 mb-0" style="font-size:2.5rem;">{{ $event['title'] }}</h1>
-            <div class="lead text-muted mb-3" style="font-size:1.25rem;">{{ $event['description'] }}</div>
-        </div>
-        <a href="{{ route('events.index') }}" class="btn btn-outline-primary d-flex align-items-center gap-2 back-btn" style="min-width: 110px;">
-            <i class="bi bi-arrow-left"></i> Back to Events
-        </a>
-    </div>
+<div style="max-width:900px;margin:0 auto;padding:32px 24px;">
 
-    <hr class="mb-4">
-
-    <div class="row mb-4 g-3">
-        <div class="col-auto d-flex align-items-center gap-2">
-            <i class="bi bi-geo-alt-fill text-primary"></i>
-            <span class="fw-semibold">{{ $event['location'] }}</span>
-        </div>
-        <div class="col-auto d-flex align-items-center gap-2">
-            <i class="bi bi-calendar-event-fill text-primary"></i>
-            <span>
-                {{ \Carbon\Carbon::parse($event['date'])->format('F d, Y') }}, 
-                @if(isset($event['start_time']) && isset($event['end_time']))
-                    {{ \Carbon\Carbon::parse($event['start_time'])->format('h:iA') }} - {{ \Carbon\Carbon::parse($event['end_time'])->format('h:iA') }}
-                @elseif(isset($event['time']))
-                    {{ $event['time'] }}
-                @else
-                    N/A
+    {{-- Header --}}
+    <div style="margin-bottom:24px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;">
+                @php
+                    $status = $event['status'] ?? 'Upcoming';
+                    $statusColor = match($status) {
+                        'Done'      => ['bg'=>'#d1fae5','color'=>'#065f46'],
+                        'Ongoing'   => ['bg'=>'#dbeafe','color'=>'#1e40af'],
+                        'Cancelled' => ['bg'=>'#fee2e2','color'=>'#991b1b'],
+                        default     => ['bg'=>'#f3f4f6','color'=>'#374151'],
+                    };
+                @endphp
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="font-size:.65rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:{{ $statusColor['bg'] }};color:{{ $statusColor['color'] }};padding:3px 10px;border-radius:20px;">
+                        {{ $status }}
+                    </span>
+                </div>
+                <h1 style="font-size:1.75rem;font-weight:700;color:#37352f;margin:0 0 6px;">{{ $event['title'] }}</h1>
+                @if(!empty($event['description']))
+                    <p style="font-size:.9rem;color:#787774;margin:0;line-height:1.6;">{{ $event['description'] }}</p>
                 @endif
-            </span>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start;flex-wrap:wrap;">
+                <a href="{{ route('rhu.calendars.index') }}" class="action-btn action-btn-ghost">
+                    <i class="bi bi-calendar3"></i> View in Calendar
+                </a>
+                <a href="{{ route('events.index') }}" class="action-btn action-btn-ghost">
+                    <i class="bi bi-arrow-left"></i> Back to Events
+                </a>
+            </div>
         </div>
-        <div class="col-auto d-flex align-items-center gap-2">
-            <i class="bi bi-people-fill text-primary"></i>
-            <span>Registered: {{ count($attendees) }}</span>
-        </div>
-        @if(isset($event['isOpenToAll']) && $event['isOpenToAll'])
-            <div class="col-auto d-flex align-items-center gap-2">
-                <i class="bi bi-globe text-primary"></i>
-                <span>Open to All Barangays</span>
-            </div>
-        @endif
-        @if(!empty($allowedBarangayNames ?? []))
-            <div class="col-12 d-flex align-items-start gap-2">
-                <i class="bi bi-geo-alt-fill text-primary"></i>
-                <span>Allowed Barangays: {{ implode(', ', $allowedBarangayNames) }}</span>
-            </div>
-        @endif
-        @if(isset($event['in_charge']) && $event['in_charge'])
-            <div class="col-auto d-flex align-items-center gap-2">
-                <i class="bi bi-person-badge-fill text-primary"></i>
-                <span>In Charge: {{ $event['in_charge'] }}</span>
-            </div>
-        @endif
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <div class="fw-semibold" style="font-size:1.2rem;">Attendees</div>
-        <div class="d-flex gap-2">
-            <a href="{{ route('events.exportPdf', $event['id']) }}" class="btn btn-sm btn-danger px-4">
-                <i class="bi bi-filetype-pdf me-1"></i> Export PDF
+    {{-- Info card --}}
+    <div class="notion-card" style="margin-bottom:20px;">
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-geo-alt-fill"></i></div>
+                <div>
+                    <div class="info-label">Location</div>
+                    <div class="info-value">{{ $event['location'] ?? '—' }}</div>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <div>
+                    <div class="info-label">Date &amp; Time</div>
+                    <div class="info-value">
+                        {{ \Carbon\Carbon::parse($event['date'])->format('F d, Y') }}
+                        @if(isset($event['start_time']) && isset($event['end_time']))
+                            &mdash; {{ \Carbon\Carbon::parse($event['start_time'])->format('h:i A') }} – {{ \Carbon\Carbon::parse($event['end_time'])->format('h:i A') }}
+                        @elseif(isset($event['time']))
+                            &mdash; {{ $event['time'] }}
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-people-fill"></i></div>
+                <div>
+                    <div class="info-label">Registered</div>
+                    <div class="info-value">{{ count($attendees) }} attendee{{ count($attendees) !== 1 ? 's' : '' }}</div>
+                </div>
+            </div>
+            @if(isset($event['in_charge']) && $event['in_charge'])
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-person-badge-fill"></i></div>
+                <div>
+                    <div class="info-label">In Charge</div>
+                    <div class="info-value">{{ $event['in_charge'] }}</div>
+                </div>
+            </div>
+            @endif
+            @if(isset($event['isOpenToAll']) && $event['isOpenToAll'])
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-globe"></i></div>
+                <div>
+                    <div class="info-label">Access</div>
+                    <div class="info-value">Open to All Barangays</div>
+                </div>
+            </div>
+            @elseif(!empty($allowedBarangayNames ?? []))
+            <div class="info-item" style="grid-column:1/-1;">
+                <div class="info-icon"><i class="bi bi-building"></i></div>
+                <div>
+                    <div class="info-label">Allowed Barangays</div>
+                    <div class="info-value">{{ implode(', ', $allowedBarangayNames) }}</div>
+                </div>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Attendees --}}
+    <div class="notion-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+                <div style="font-size:.65rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#9b9b9b;margin-bottom:3px;">Attendees</div>
+                <div style="font-size:1rem;font-weight:600;color:#37352f;">{{ count($attendees) }} registered</div>
+            </div>
+            <a href="{{ route('events.exportPdf', $event['id']) }}" class="action-btn action-btn-danger">
+                <i class="bi bi-filetype-pdf"></i> Export PDF
             </a>
         </div>
-    </div>
 
-    <div class="table-responsive">
-        <table class="table mb-0" style="border-collapse:separate;border-spacing:0 0.25rem;">
-            <thead class="table-blue">
-                <tr style="border-bottom:2px solid #e9ecef;">
-                    <th class="fw-semibold" style="border:none;">Name</th>
-                    <th class="fw-semibold" style="border:none;">Age</th>
-                    <th class="fw-semibold" style="border:none;">Gender</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($paginatedAttendees as $attendee)
-                    <tr style="border-bottom:1px solid #f1f1f1;">
-                        <td style="border:none;">{{ $attendee['name'] }}</td>
-                        <td style="border:none;">{{ $attendee['age'] ?? '-' }}</td>
-                        <td style="border:none;">{{ $attendee['gender'] }}</td>
+        <div class="inv-table-wrap">
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width:50%;">Name</th>
+                        <th style="width:20%;">Age</th>
+                        <th style="width:30%;">Gender</th>
                     </tr>
-                @empty
-                    <tr><td colspan="3" class="text-center text-muted">No attendees yet.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse($paginatedAttendees as $attendee)
+                        <tr>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <div class="attendee-avatar">{{ strtoupper(substr($attendee['name'] ?? '?', 0, 1)) }}</div>
+                                    <span style="font-weight:500;color:#37352f;">{{ $attendee['name'] }}</span>
+                                </div>
+                            </td>
+                            <td style="color:#787774;">{{ $attendee['age'] ?? '—' }}</td>
+                            <td>
+                                <span class="gender-chip {{ strtolower($attendee['gender'] ?? '') }}">
+                                    {{ $attendee['gender'] ?? '—' }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3">
+                                <div style="text-align:center;padding:40px 20px;color:#9b9b9b;">
+                                    <i class="bi bi-person-x" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+                                    No attendees registered yet.
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($paginatedAttendees->hasPages())
+        <div style="margin-top:16px;display:flex;justify-content:center;">
+            {{ $paginatedAttendees->links('pagination::bootstrap-5') }}
+        </div>
+        @endif
     </div>
 
-    <div class="d-flex justify-content-center mt-4">
-        {{ $paginatedAttendees->links('pagination::bootstrap-5') }}
-    </div>
 </div>
 
 <style>
-.table th, .table td {
-    vertical-align: middle;
+*, *::before, *::after { box-sizing: border-box; }
+
+.notion-card {
     background: #fff;
-    font-size: 1rem;
+    border: 1px solid #e9e9e7;
+    border-radius: 8px;
+    padding: 20px 24px;
 }
-.table thead th {
-    background: #1657c1;
-    font-weight: 600;
-    color: #fff;
-    border-bottom: 2px solid #1e6fd9;
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px 20px;
 }
-.table tr {
-    border-radius: 0.5rem;
+.info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
 }
-.table tbody tr {
-    border-top: none;
-    border-bottom: 1px solid #f1f1f1;
+.info-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    background: #f1f1ef;
+    color: #1657c1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .9rem;
+    flex-shrink: 0;
+    margin-top: 2px;
 }
-.back-btn {
-    transition: background 0.2s, color 0.2s, border 0.2s;
-    font-size: 1.08rem;
-    padding: 0.4rem 1.1rem;
-    border-radius: 0.5rem;
+.info-label {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    color: #9b9b9b;
+    margin-bottom: 2px;
 }
-.back-btn:hover, .back-btn:focus {
-    background: #1657c1;
-    color: #fff;
-    border-color: #1657c1;
+.info-value {
+    font-size: .88rem;
+    font-weight: 500;
+    color: #37352f;
+    line-height: 1.4;
+}
+
+/* ── Buttons ── */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .8rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: all .15s;
+    white-space: nowrap;
+}
+.action-btn-ghost {
+    background: #fff;
+    border-color: #e9e9e7;
+    color: #37352f;
+}
+.action-btn-ghost:hover {
+    background: #f1f1ef;
+    color: #37352f;
     text-decoration: none;
 }
-.table-blue th { background: #1657c1 !important; color: #fff !important; border-color: #1e6fd9 !important; }
+.action-btn-danger {
+    background: #fff;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+.action-btn-danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    text-decoration: none;
+}
+
+/* ── Table ── */
+.inv-table-wrap {
+    border: 1px solid #e9e9e7;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.inv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+.inv-table thead th {
+    background: #f7f7f5;
+    padding: 9px 14px;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    color: #787774;
+    border-bottom: 1px solid #e9e9e7;
+    text-align: left;
+}
+.inv-table tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid #f1f1ef;
+    vertical-align: middle;
+}
+.inv-table tbody tr:last-child td { border-bottom: none; }
+.inv-table tbody tr:hover { background: #fafaf9; }
+
+.attendee-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #1657c1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.gender-chip {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    background: #f1f1ef;
+    color: #787774;
+}
+.gender-chip.male   { background: #dbeafe; color: #1e40af; }
+.gender-chip.female { background: #fce7f3; color: #9d174d; }
 </style>
 @endsection
