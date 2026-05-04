@@ -22,19 +22,17 @@ class PersonnelController extends Controller
     public function index()
     {
         set_time_limit(60);
-        
+
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access personnel management.');
         }
-        
+
         $personnel = [];
         $availablePersonnel = [];
-        
+
         try {
-            \Log::info('RHU PersonnelController - Fetching personnel for user: ' . $user['id'] . ' with role: ' . $user['role']);
-            
             $personnelQuery = $this->firestore
                 ->collection($user['role'])
                 ->document($user['id'])
@@ -42,17 +40,12 @@ class PersonnelController extends Controller
                 ->limit(50)
                 ->documents();
 
-            $count = 0;
             foreach ($personnelQuery as $doc) {
                 if ($doc->exists()) {
                     $personnel[] = array_merge($doc->data(), ['id' => $doc->id()]);
-                    $count++;
                 }
             }
-            
-            \Log::info('RHU PersonnelController - Found ' . $count . ' personnel');
 
-            // Get staff accounts from account management for dropdown
             try {
                 $staffAccountsQuery = $this->firestore
                     ->collection($user['role'])
@@ -62,19 +55,15 @@ class PersonnelController extends Controller
 
                 foreach ($staffAccountsQuery as $doc) {
                     if ($doc->exists()) {
-                        $data = $doc->data();
-                        $availablePersonnel[] = array_merge(['id' => $doc->id()], $data);
+                        $availablePersonnel[] = array_merge(['id' => $doc->id()], $doc->data());
                     }
                 }
-                
-                \Log::info('RHU PersonnelController - Found ' . count($availablePersonnel) . ' available staff accounts');
             } catch (\Exception $e) {
-                \Log::error('Error fetching staff accounts: ' . $e->getMessage());
+                // continue with empty available personnel
             }
 
             return $this->view('personnel.index', compact('personnel', 'availablePersonnel'));
         } catch (\Exception $e) {
-            \Log::error('Error fetching personnel: ' . $e->getMessage());
             return $this->view('personnel.index', compact('personnel', 'availablePersonnel'))->with('error', 'Error loading personnel data. Please try again.');
         }
     }
@@ -179,9 +168,6 @@ class PersonnelController extends Controller
         return redirect()->route('rhu.personnel.index')->with('success', 'Personnel deleted successfully!');
     }
 
-    /**
-     * Upload personnel image from file or base64 (cropped). Returns URL or false on error.
-     */
     protected function uploadPersonnelImage(Request $request): ?string
     {
         $filePath = null;
@@ -224,7 +210,6 @@ class PersonnelController extends Controller
             }
             return $result['secure_url'];
         } catch (\Exception $e) {
-            \Log::error('Cloudinary upload error: ' . $e->getMessage());
             if ($deleteAfterUpload && $filePath) {
                 @unlink($filePath);
             }
@@ -232,5 +217,3 @@ class PersonnelController extends Controller
         }
     }
 }
-
-

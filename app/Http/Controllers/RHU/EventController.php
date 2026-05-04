@@ -28,9 +28,6 @@ class EventController extends Controller
         $this->storage = $firebase->getStorage();
     }
 
-    /**
-     * Get all barangays that belong to the same RHU as the authenticated user.
-     */
     private function getBarangaysWithinSameRhu(array $user): array
     {
         $barangays = [];
@@ -82,16 +79,12 @@ class EventController extends Controller
                 }
             }
         } catch (\Throwable $th) {
-            \Log::error('Failed to fetch barangays within RHU: ' . $th->getMessage());
+            // continue with empty barangays
         }
 
         return $barangays;
     }
 
-    /**
-     * Compute event status from date and time.
-     * Respects manual "Cancelled" status if already set.
-     */
     private function computeStatus(?string $date, ?string $startTime, ?string $endTime, ?string $existingStatus = null): string
     {
         if ($existingStatus === 'Cancelled') {
@@ -119,40 +112,32 @@ class EventController extends Controller
 
     public function index()
     {
-        // Set timeout to prevent execution timeout
         set_time_limit(60);
-        
+
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
-        
-        // Get RHU ID
+
         $rhuId = $this->getBarangayId();
-        
+
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
-        
-        // Initialize events as empty array
+
         $events = [];
         $barangaysWithinRhu = $this->getBarangaysWithinSameRhu($user);
-        
+
         try {
-            \Log::info('EventController - Fetching events for RHU: ' . $rhuId);
-            
-            // Get events from RHU collection
             $eventsQuery = $this->firestore
                 ->collection("rhu/{$rhuId}/events")
-                ->limit(50) // Limit results to prevent timeout
+                ->limit(50)
                 ->documents();
 
-            $count = 0;
             foreach ($eventsQuery as $doc) {
                 if ($doc->exists()) {
                     $data = $doc->data();
-                    // Compute status dynamically unless cancelled
                     $data['status'] = $this->computeStatus(
                         $data['date'] ?? null,
                         $data['start_time'] ?? null,
@@ -160,18 +145,14 @@ class EventController extends Controller
                         $data['status'] ?? null
                     );
                     $events[] = array_merge($data, ['id' => $doc->id()]);
-                    $count++;
                 }
             }
-            
-            \Log::info('EventController - Found ' . $count . ' events');
 
             return $this->view('events.index', [
                 'events' => $events,
                 'barangaysWithinRhu' => $barangaysWithinRhu,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching events: ' . $e->getMessage());
             return $this->view('events.index', [
                 'events' => $events,
                 'barangaysWithinRhu' => $barangaysWithinRhu,
@@ -219,7 +200,6 @@ class EventController extends Controller
         foreach ($attendeesQuery as $doc) {
             if ($doc->exists()) {
                 $data = $doc->data();
-                // Each doc represents one pre-registered attendee
                 $attendees[] = [
                     'name' => $data['name'] ?? '',
                     'gender' => $data['gender'] ?? '',
@@ -228,7 +208,6 @@ class EventController extends Controller
             }
         }
 
-        // Add computed age
         foreach ($attendees as &$attendee) {
             if (!empty($attendee['birthdate'])) {
                 $attendee['age'] = Carbon::parse($attendee['birthdate'])->age;
@@ -238,7 +217,6 @@ class EventController extends Controller
         }
         unset($attendee);
 
-        // Paginate attendees (10 per page)
         $page = request()->get('page', 1);
         $perPage = 5;
         $offset = ($page - 1) * $perPage;
@@ -252,23 +230,22 @@ class EventController extends Controller
 
         return $this->view('events.show', compact('event', 'attendees', 'paginatedAttendees', 'allowedBarangayNames'));
     }
-    
+
     public function create()
     {
-        return $this->view('events.create'); // You should have a Blade view for the form
+        return $this->view('events.create');
     }
-    
+
     public function store(Request $request)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
-        
-        // Get RHU ID from session
+
         $rhuId = $this->getBarangayId();
-        
+
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
@@ -310,7 +287,7 @@ class EventController extends Controller
                 ]);
                 $imageUrl = $result['secure_url'];
             } catch (\Exception $e) {
-                \Log::error('Cloudinary upload error: ' . $e->getMessage());
+                // image upload failed, continue without image
             }
         }
 
@@ -353,18 +330,16 @@ class EventController extends Controller
         return redirect()->route('rhu.events.index')->with('success', 'Event created successfully!');
     }
 
-    // GET: Edit event (for modal, returns event data)
     public function edit($id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
-        
-        // Get RHU ID from session
+
         $rhuId = $this->getBarangayId();
-        
+
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
@@ -382,18 +357,16 @@ class EventController extends Controller
         return response()->json($event);
     }
 
-    // PUT: Update event
     public function update(Request $request, $id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
-        
-        // Get RHU ID from session
+
         $rhuId = $this->getBarangayId();
-        
+
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
@@ -433,7 +406,6 @@ class EventController extends Controller
 
         $allowedBarangayNames = array_map(fn ($id) => $barangayMap[$id], $allowedBarangays);
 
-        // Get existing event data to check if date/time changed (rescheduling)
         $existingEventDoc = $this->firestore
             ->collection("rhu/{$rhuId}/events")
             ->document($id)
@@ -445,7 +417,6 @@ class EventController extends Controller
         $existingEndTime = $existingEvent['end_time'] ?? null;
         $existingTime = $existingEvent['time'] ?? null;
 
-        // Check if event is being rescheduled (date or time changed)
         $isRescheduled = false;
         if ($existingDate && $existingStartTime && $existingEndTime) {
             $dateChanged = $existingDate !== $request->date;
@@ -472,7 +443,6 @@ class EventController extends Controller
             'updated_at' => now()->toDateTimeString(),
         ];
 
-        // Add reschedule tracking if event was rescheduled
         if ($isRescheduled) {
             $currentRescheduleVersion = ($existingEvent['reschedule_version'] ?? 0) + 1;
             $eventData['rescheduled_at'] = now()->toDateTimeString();
@@ -496,7 +466,7 @@ class EventController extends Controller
                 ]);
                 $eventData['image_url'] = $result['secure_url'];
             } catch (\Exception $e) {
-                \Log::error('Cloudinary upload error: ' . $e->getMessage());
+                // image upload failed, continue without updating image
             }
         }
 
@@ -505,23 +475,21 @@ class EventController extends Controller
             ->document($id)
             ->set($eventData, ['merge' => true]);
 
-        $successMessage = $isRescheduled 
-            ? 'Event rescheduled successfully! Pre-registered attendees will be notified.' 
+        $successMessage = $isRescheduled
+            ? 'Event rescheduled successfully! Pre-registered attendees will be notified.'
             : 'Event updated successfully!';
 
         return redirect()->route('rhu.events.index')->with('success', $successMessage);
     }
 
-
-    // POST: Cancel event with reason
     public function cancel(Request $request, $id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to perform this action.');
         }
-        
+
         $rhuId = $this->getBarangayId();
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
@@ -544,18 +512,16 @@ class EventController extends Controller
         return redirect()->route('rhu.events.index')->with('success', 'Event has been cancelled.');
     }
 
-
-    // Export attendees as PDF (attendance sheet)
     public function exportPdf($id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access event management.');
         }
-        
+
         $rhuId = $this->getBarangayId();
-        
+
         if (!$rhuId) {
             return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
         }
@@ -596,13 +562,11 @@ class EventController extends Controller
         }
         unset($attendee);
 
-        // Render Blade to HTML
         $html = view('pages.events.attendees_pdf', [
             'event' => $event,
             'attendees' => $attendees,
         ])->render();
 
-        // Configure Dompdf
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
@@ -619,4 +583,3 @@ class EventController extends Controller
         ]);
     }
 }
-

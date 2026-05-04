@@ -21,19 +21,17 @@ class ServicesController extends Controller
     public function index()
     {
         set_time_limit(60);
-        
+
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access services management.');
         }
-        
+
         $currentServices = [];
         $predefinedServices = $this->getPredefinedServices();
-        
+
         try {
-            \Log::info('RHU ServicesController - Fetching services for user: ' . $user['id'] . ' with role: ' . $user['role']);
-            
             $servicesQuery = $this->firestore
                 ->collection($user['role'])
                 ->document($user['id'])
@@ -41,49 +39,25 @@ class ServicesController extends Controller
                 ->limit(50)
                 ->documents();
 
-            $count = 0;
             foreach ($servicesQuery as $doc) {
                 if ($doc->exists()) {
                     $currentServices[] = array_merge($doc->data(), ['id' => $doc->id()]);
-                    $count++;
-                }
-            }
-            
-            \Log::info('RHU ServicesController - Found ' . $count . ' services');
-
-            $activeServices = [];
-            $suspendedServices = [];
-            foreach ($currentServices as $s) {
-                if ($s['is_active'] ?? true) {
-                    $activeServices[] = $s;
-                } else {
-                    $suspendedServices[] = $s;
                 }
             }
 
-            return $this->view('services.index', compact('currentServices', 'activeServices', 'suspendedServices', 'predefinedServices'));
+            return $this->view('services.index', compact('currentServices', 'predefinedServices'));
         } catch (\Exception $e) {
-            \Log::error('Error fetching services: ' . $e->getMessage());
-            $activeServices = [];
-            $suspendedServices = [];
-
-            return $this->view('services.index', compact('currentServices', 'activeServices', 'suspendedServices', 'predefinedServices'))->with('error', 'Error loading services data. Please try again.');
+            return $this->view('services.index', compact('currentServices', 'predefinedServices'))->with('error', 'Error loading services data. Please try again.');
         }
     }
 
     public function store(Request $request)
     {
-        \Log::info('RHU ServicesController::store called');
-        \Log::info('Request data:', $request->all());
-        
         $user = session('user');
-        
+
         if (!$user) {
-            \Log::error('No user session found for service storage');
             return redirect()->route('login');
         }
-
-        \Log::info('User ID: ' . $user['id']);
 
         try {
             $validated = $request->validate([
@@ -96,8 +70,6 @@ class ServicesController extends Controller
                 'schedule.*' => 'nullable|array',
                 'schedule.*.*' => 'nullable|string'
             ]);
-
-            \Log::info('Validation passed:', $validated);
 
             $schedule = [];
             if (isset($validated['schedule'])) {
@@ -135,22 +107,16 @@ class ServicesController extends Controller
                 'updated_at' => now()->toISOString()
             ];
 
-            \Log::info('Service data to store:', $serviceData);
-
             $this->firestore
                 ->collection($user['role'])
                 ->document($user['id'])
                 ->collection('services')
                 ->add($serviceData);
 
-            \Log::info('Service stored successfully');
             return redirect()->back()->with('success', 'Service added successfully!');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed: ' . $e->getMessage());
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
-            \Log::error('Failed to add service: ' . $e->getMessage());
-            \Log::error('Exception trace: ' . $e->getTraceAsString());
             return redirect()->back()->with('error', 'Failed to add service: ' . $e->getMessage());
         }
     }
@@ -158,7 +124,7 @@ class ServicesController extends Controller
     public function update(Request $request, $id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login');
         }
@@ -217,7 +183,7 @@ class ServicesController extends Controller
     public function toggleStatus(Request $request, $id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login');
         }
@@ -272,7 +238,7 @@ class ServicesController extends Controller
     public function destroy($id)
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login');
         }
@@ -339,5 +305,3 @@ class ServicesController extends Controller
         ];
     }
 }
-
-

@@ -1,280 +1,226 @@
 @extends('layouts.app')
 
-@push('styles')
-<style>
-    .table-responsive {
-        overflow-x: auto;
-    }
-    
-    .table th, .table td {
-        white-space: nowrap;
-        vertical-align: middle;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 8px;
-        justify-content: center;
-    }
-    
-    .action-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        font-size: 14px;
-        color: white;
-        cursor: pointer;
-    }
-    
-    .edit-btn {
-        background-color: #0d6efd;
-    }
-    
-    .edit-btn:hover {
-        background-color: #0b5ed7;
-        transform: scale(1.05);
-        color: white;
-        text-decoration: none;
-    }
-    
-    .delete-btn {
-        background-color: #dc3545;
-    }
-    
-    .delete-btn:hover {
-        background-color: #bb2d3b;
-        transform: scale(1.05);
-    }
-    
-    .table-hover tbody tr:hover {
-        background-color: rgba(0,0,0,.075);
-    }
-</style>
-@endpush
-
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="fw-bold text-dark mb-0">Account Management</h2>
+<div class="container-fluid px-4">
+
+    {{-- Flash Toasts --}}
+    @if(session('success'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-success border-0 rounded-3 shadow" role="alert" id="successToast">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-danger border-0 rounded-3 shadow" role="alert" id="errorToast">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Page Header --}}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color:#1e293b;">Account Management</h2>
+            <p class="text-muted mb-0 small">Manage health center profile and staff accounts</p>
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {{-- Health Center Profile Card --}}
+    <div class="acct-card mb-4">
+        <div class="acct-card-header">
+            <div>
+                <div class="acct-badge">Health Center</div>
+                <div class="acct-card-title">{{ $healthCenter['healthCenterName'] ?? 'Health Center Profile' }}</div>
+            </div>
+            <a href="{{ route('rhu.accounts.profile.edit') }}" class="btn-acct-action">
+                <i class="bi bi-pencil me-1"></i>Edit Profile
+            </a>
         </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <div class="row">
-        <div class="col-12">
-            <!-- Health Center Profile Section -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="card-title mb-0">Health Center Profile</h4>
-                    <a href="{{ route('rhu.accounts.profile.edit') }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-edit me-2"></i>Edit Profile
-                    </a>
+        <div class="acct-card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="info-row"><div class="info-icon"><i class="bi bi-telephone-fill"></i></div><div><div class="info-label">Contact Number</div><div class="info-value">{{ $healthCenter['contact_number'] ?? $healthCenter['contactInfo'] ?? '—' }}</div></div></div>
+                    <div class="info-row"><div class="info-icon"><i class="bi bi-envelope-fill"></i></div><div><div class="info-label">Email Address</div><div class="info-value">{{ $healthCenter['email'] ?? '—' }}</div></div></div>
+                    <div class="info-row"><div class="info-icon"><i class="bi bi-geo-alt-fill"></i></div><div><div class="info-label">Address</div><div class="info-value">{{ $healthCenter['address'] ?? $healthCenter['fullAddress'] ?? '—' }}</div></div></div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Health Center Name:</label>
-                                <p class="mb-0">{{ $healthCenter['healthCenterName'] ?? 'Not set' }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Contact Number:</label>
-                                <p class="mb-0">{{ $healthCenter['contact_number'] ?? $healthCenter['contactInfo'] ?? 'Not set' }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Email Address:</label>
-                                <p class="mb-0">{{ $healthCenter['email'] ?? 'Not set' }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Address:</label>
-                                <p class="mb-0">{{ $healthCenter['address'] ?? $healthCenter['fullAddress'] ?? 'Not set' }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Open Days:</label>
-                                <div class="d-flex flex-wrap gap-1">
-                                    @if(isset($healthCenter['open_days']))
-                                        @if(is_array($healthCenter['open_days']))
-                                            @foreach($healthCenter['open_days'] as $day)
-                                                <span class="badge bg-primary">{{ $day }}</span>
-                                            @endforeach
-                                        @else
-                                            @php
-                                                $days = explode(',', $healthCenter['open_days']);
-                                            @endphp
-                                            @foreach($days as $day)
-                                                <span class="badge bg-primary">{{ trim($day) }}</span>
-                                            @endforeach
-                                        @endif
-                                    @else
-                                        <span class="text-muted">Not set</span>
-                                    @endif
+                <div class="col-md-6">
+                    <div class="info-row"><div class="info-icon"><i class="bi bi-calendar-week-fill"></i></div><div><div class="info-label">Open Days</div><div class="info-value">
+                        @if(isset($healthCenter['open_days']))
+                            @php $days = is_array($healthCenter['open_days']) ? $healthCenter['open_days'] : explode(',', $healthCenter['open_days']); @endphp
+                            <div class="d-flex flex-wrap gap-1 mt-1">@foreach($days as $d)<span class="day-pill">{{ trim($d) }}</span>@endforeach</div>
+                        @else —
+                        @endif
+                    </div></div></div>
+                    <div class="info-row"><div class="info-icon"><i class="bi bi-clock-fill"></i></div><div><div class="info-label">Operating Hours</div><div class="info-value">
+                        @if(isset($healthCenter['open_time']) && isset($healthCenter['close_time']))
+                            {{ $healthCenter['open_time'] }} – {{ $healthCenter['close_time'] }}
+                        @else — @endif
+                    </div></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Staff Accounts --}}
+    <div class="acct-card">
+        <div class="acct-card-header">
+            <div>
+                <div class="acct-badge">Staff</div>
+                <div class="acct-card-title">Staff Accounts</div>
+            </div>
+            <a href="{{ route('rhu.accounts.staff.create') }}" class="btn-acct-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add Staff
+            </a>
+        </div>
+        <div class="acct-card-body p-0">
+            @if(count($staffAccounts) > 0)
+            <div class="table-responsive">
+                <table class="acct-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Contact</th>
+                            <th>Address</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th style="width:80px;text-align:center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($staffAccounts as $staff)
+                        <tr>
+                            <td class="fw-semibold" style="color:#37352f;">{{ $staff['name'] }}</td>
+                            <td class="text-muted small">{{ $staff['email'] }}</td>
+                            <td>
+                                @php
+                                    $roleColors = ['doctor'=>'blue','midwife'=>'green','nurse'=>'teal','bhw'=>'gray'];
+                                    $roleColor = $roleColors[$staff['role']] ?? 'gray';
+                                    $roleDisplay = $staff['role'] === 'bhw' ? 'Barangay Health Worker' : ucfirst($staff['role']);
+                                @endphp
+                                <span class="role-pill {{ $roleColor }}">{{ $roleDisplay }}</span>
+                            </td>
+                            <td class="small">{{ $staff['contact_number'] }}</td>
+                            <td class="small text-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $staff['address'] ?? '' }}">{{ $staff['address'] ?? '—' }}</td>
+                            <td>
+                                <span class="status-pill {{ $staff['status'] === 'active' ? 'active' : 'inactive' }}">
+                                    {{ ucfirst($staff['status']) }}
+                                </span>
+                            </td>
+                            <td class="small text-muted">{{ \Carbon\Carbon::parse($staff['created_at'])->format('M d, Y') }}</td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a href="{{ route('rhu.accounts.staff.edit', $staff['id']) }}" class="tbl-btn edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    <button class="tbl-btn delete" onclick="deleteStaff('{{ $staff['id'] }}','{{ addslashes($staff['name']) }}')" title="Delete"><i class="bi bi-trash"></i></button>
                                 </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Operating Hours:</label>
-                                <p class="mb-0">
-                                    @if(isset($healthCenter['open_time']) && isset($healthCenter['close_time']))
-                                        {{ $healthCenter['open_time'] }} - {{ $healthCenter['close_time'] }}
-                                    @else
-                                        <span class="text-muted">Not set</span>
-                                    @endif
-                                </p>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-
-            <!-- Staff Accounts Management -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="card-title mb-0">Staff Accounts Management</h4>
-                    <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus me-2"></i>Add Staff
-                    </a>
-                </div>
-                <div class="card-body">
-                    @if(count($staffAccounts) > 0)
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th style="width: 15%;">Name</th>
-                                        <th style="width: 20%;">Email</th>
-                                        <th style="width: 10%;">Role</th>
-                                        <th style="width: 15%;">Contact Number</th>
-                                        <th style="width: 15%;">Specialization</th>
-                                        <th style="width: 10%;">Status</th>
-                                        <th style="width: 10%;">Created</th>
-                                        <th style="width: 10%;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($staffAccounts as $staff)
-                                    <tr>
-                                        <td>{{ $staff['name'] }}</td>
-                                        <td>{{ $staff['email'] }}</td>
-                                        <td>
-                                            @php
-                                                $roleBadge = match($staff['role']) {
-                                                    'doctor' => 'primary',
-                                                    'midwife' => 'success',
-                                                    'nurse' => 'info',
-                                                    'bhw' => 'secondary',
-                                                    default => 'secondary'
-                                                };
-                                                $roleDisplay = match($staff['role']) {
-                                                    'bhw' => 'Barangay Health Worker',
-                                                    default => ucfirst($staff['role'])
-                                                };
-                                            @endphp
-                                            <span class="badge bg-{{ $roleBadge }}">
-                                                {{ $roleDisplay }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $staff['contact_number'] }}</td>
-                                        <td>{{ $staff['specialization'] ?? 'N/A' }}</td>
-                                        <td>
-                                            <span class="badge bg-{{ $staff['status'] === 'active' ? 'success' : 'danger' }}">
-                                                {{ ucfirst($staff['status']) }}
-                                            </span>
-                                        </td>
-                                        <td>{{ \Carbon\Carbon::parse($staff['created_at'])->format('M d, Y') }}</td>
-                                        <td class="text-center">
-                                            <div class="action-buttons">
-                                                <a href="{{ route('rhu.accounts.staff.edit', $staff['id']) }}" 
-                                                   class="action-btn edit-btn" 
-                                                   title="Edit">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                <button type="button" 
-                                                        class="action-btn delete-btn" 
-                                                        onclick="deleteStaff('{{ $staff['id'] }}', '{{ $staff['name'] }}')"
-                                                        title="Delete">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @else
-                        <div class="text-center py-5">
-                            <i class="bi bi-people display-4 text-muted d-block mb-3"></i>
-                            <h5 class="text-muted">No Staff Accounts Found</h5>
-                            <p class="text-muted">Start by adding staff members to your health center.</p>
-                            <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Add First Staff Member
-                            </a>
-                        </div>
-                    @endif
-                </div>
+            @else
+            <div class="acct-empty">
+                <i class="bi bi-people"></i>
+                <div class="acct-empty-title">No Staff Accounts</div>
+                <div class="acct-empty-text">Add your first staff member to get started.</div>
+                <a href="{{ route('rhu.accounts.staff.create') }}" class="btn btn-dark rounded-pill px-4 mt-3 btn-sm">Add Staff Member</a>
             </div>
-
-
+            @endif
         </div>
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+{{-- Delete Modal --}}
 <div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-danger">Delete Staff Account</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="modal-header-custom" style="background:#b91c1c;">
+                <div>
+                    <div class="modal-type-badge" style="background:rgba(255,255,255,.15);">Confirm Delete</div>
+                    <h5 class="modal-title-custom">Delete Staff Account</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="staffName"></strong>? This action cannot be undone.</p>
+            <div class="modal-body p-4">
+                <p class="mb-1">Are you sure you want to delete <strong id="staffName"></strong>?</p>
+                <p class="text-muted small mb-0">This action cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="POST" style="display: inline;">
+            <div class="modal-footer border-0 pb-4 px-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display:inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-danger">Delete Account</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4"><i class="bi bi-trash me-1"></i>Delete</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
-@endsection
+
+<style>
+.acct-card { background:#fff; border:1px solid #e9e9e7; border-radius:8px; overflow:hidden; }
+.acct-card-header { display:flex; align-items:flex-start; justify-content:space-between; padding:16px 20px 12px; background:#1657c1; }
+.acct-badge { display:inline-block; font-size:.62rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.15); color:rgba(255,255,255,.85); padding:2px 7px; border-radius:3px; margin-bottom:4px; }
+.acct-card-title { font-size:.95rem; font-weight:600; color:#fff; }
+.btn-acct-action { background:rgba(255,255,255,.12); border:none; color:rgba(255,255,255,.9); font-size:.8rem; font-weight:500; padding:6px 14px; border-radius:6px; text-decoration:none; transition:background .1s; }
+.btn-acct-action:hover { background:rgba(255,255,255,.22); color:#fff; }
+.btn-acct-primary { background:#fff; border:none; color:#37352f; font-size:.8rem; font-weight:600; padding:6px 14px; border-radius:6px; text-decoration:none; transition:opacity .1s; }
+.btn-acct-primary:hover { opacity:.85; color:#37352f; }
+.acct-card-body { padding:16px 20px; }
+.info-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid #f1f1ef; }
+.info-row:last-child { border-bottom:none; }
+.info-icon { width:28px; height:28px; border-radius:5px; background:#f1f1ef; display:flex; align-items:center; justify-content:center; color:#787774; font-size:.85rem; flex-shrink:0; margin-top:1px; }
+.info-label { font-size:.65rem; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#9b9b9b; margin-bottom:2px; }
+.info-value { font-size:.85rem; font-weight:500; color:#37352f; }
+.day-pill { background:#f1f1ef; color:#787774; font-size:.68rem; font-weight:600; padding:2px 8px; border-radius:10px; }
+.acct-table { width:100%; border-collapse:collapse; }
+.acct-table thead tr { background:#1657c1; border-bottom:1px solid #1657c1; color:#fff; }
+.acct-table th { padding:10px 14px; font-size:.68rem; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#fff; white-space:nowrap; }
+.acct-table td { padding:11px 14px; font-size:.82rem; border-bottom:1px solid #f1f1ef; vertical-align:middle; }
+.acct-table tbody tr:last-child td { border-bottom:none; }
+.acct-table tbody tr:hover { background:#fafaf9; }
+.role-pill { font-size:.68rem; font-weight:600; padding:2px 8px; border-radius:10px; }
+.role-pill.blue { background:#dbeafe; color:#1e40af; }
+.role-pill.green { background:#dcfce7; color:#166534; }
+.role-pill.teal { background:#ccfbf1; color:#0f766e; }
+.role-pill.gray { background:#f1f1ef; color:#787774; }
+.status-pill { font-size:.68rem; font-weight:600; padding:2px 8px; border-radius:10px; }
+.status-pill.active { background:#dcfce7; color:#166534; }
+.status-pill.inactive { background:#fee2e2; color:#991b1b; }
+.tbl-btn { width:28px; height:28px; border-radius:5px; border:none; display:flex; align-items:center; justify-content:center; font-size:.75rem; cursor:pointer; text-decoration:none; transition:background .1s; }
+.tbl-btn.edit { background:#f1f1ef; color:#787774; }
+.tbl-btn.edit:hover { background:#dbeafe; color:#1e40af; }
+.tbl-btn.delete { background:#f1f1ef; color:#787774; }
+.tbl-btn.delete:hover { background:#fee2e2; color:#b91c1c; }
+.acct-empty { text-align:center; padding:50px 20px; }
+.acct-empty i { font-size:2.2rem; color:#c4c4c2; display:block; margin-bottom:10px; }
+.acct-empty-title { font-size:.95rem; font-weight:600; color:#37352f; margin-bottom:4px; }
+.acct-empty-text { font-size:.82rem; color:#9b9b9b; }
+.modal-header-custom { display:flex; align-items:flex-start; justify-content:space-between; background:#1657c1; padding:18px 22px; }
+.modal-type-badge { display:inline-block; font-size:.64rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.12); color:rgba(255,255,255,.75); padding:2px 8px; border-radius:4px; margin-bottom:5px; }
+.modal-title-custom { font-size:1rem; font-weight:600; color:#fff; margin:0; }
+</style>
 
 @push('scripts')
 <script>
-    // Delete staff function
-    function deleteStaff(staffId, staffName) {
-        document.getElementById('staffName').textContent = staffName;
-        document.getElementById('deleteForm').action = `/accounts/staff/${staffId}`;
-        
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        deleteModal.show();
-    }
+function deleteStaff(staffId, staffName) {
+    document.getElementById('staffName').textContent = staffName;
+    document.getElementById('deleteForm').action = `/rhu/accounts/staff/${staffId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.toast').forEach(t => setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000));
+});
 </script>
-@endpush 
+@endpush
+@endsection

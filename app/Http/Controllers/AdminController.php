@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Http;
 
 class AdminController extends Controller
 {
-    // List all approved and pending RHUs
     public function index(FirestoreService $firestore)
     {
         $documents = $firestore->getCollection('rhu');
@@ -17,7 +16,6 @@ class AdminController extends Controller
             $data = $document->data();
             $status = $data['status'] ?? 'pending';
             if ($status === 'approved' || $status === 'pending') {
-                // Resolve location names from PSGC codes
                 if (isset($data['region']) && isset($data['province']) && isset($data['city'])) {
                     $location = $this->getLocationFromPSGC($data['region'], $data['province'], $data['city']);
                     if ($location) {
@@ -27,7 +25,6 @@ class AdminController extends Controller
                 $ruralHealthUnits[] = array_merge(['id' => $document->id()], $data);
             }
         }
-        // Add pagination
         $page = request()->get('page', 1);
         $perPage = 8;
         $offset = ($page - 1) * $perPage;
@@ -42,20 +39,16 @@ class AdminController extends Controller
         return view('admin.index', compact('ruralHealthUnits'));
     }
 
-    // Helper to get location name with province and region from PSGC codes
     private function getLocationFromPSGC($regionCode, $provinceCode, $cityCode)
     {
         try {
             $locationParts = [];
-            
-            // Query the city/municipality
             $cityResponse = Http::get("https://psgc.gitlab.io/api/cities/{$cityCode}.json");
             if ($cityResponse->successful()) {
                 $cityData = $cityResponse->json();
                 $locationParts[] = $cityData['name'] ?? '';
             }
-            
-            // Get province name
+
             if ($provinceCode) {
                 try {
                     $provinceResponse = Http::get("https://psgc.gitlab.io/api/provinces/{$provinceCode}.json");
@@ -63,12 +56,9 @@ class AdminController extends Controller
                         $provinceData = $provinceResponse->json();
                         $locationParts[] = $provinceData['name'] ?? '';
                     }
-                } catch (\Exception $e) {
-                    // Continue without province
-                }
+                } catch (\Exception $e) {}
             }
-            
-            // Get region name
+
             if ($regionCode) {
                 try {
                     $regionResponse = Http::get("https://psgc.gitlab.io/api/regions/{$regionCode}.json");
@@ -76,9 +66,7 @@ class AdminController extends Controller
                         $regionData = $regionResponse->json();
                         $locationParts[] = $regionData['name'] ?? '';
                     }
-                } catch (\Exception $e) {
-                    // Continue without region
-                }
+                } catch (\Exception $e) {}
             }
             
             return implode(', ', array_filter($locationParts)) ?: null;
@@ -87,7 +75,6 @@ class AdminController extends Controller
         }
     }
 
-    // List all pending RHUs for approval
     public function indexApprovals(FirestoreService $firestore)
     {
         $documents = $firestore->getCollection('rhu');
@@ -101,13 +88,11 @@ class AdminController extends Controller
         return view('admin.indexApprovals', compact('ruralHealthUnits'));
     }
 
-    // Show create form
     public function create()
     {
         return view('admin.create');
     }
 
-    // Store a new RHU in Firestore
     public function store(Request $request, FirestoreService $firestore)
     {
         $validated = $request->validate([
@@ -173,7 +158,6 @@ class AdminController extends Controller
         return view('admin.show', compact('ruralHealthUnits'));
     }
 
-    // Show edit form for a specific RHU
     public function edit($id, FirestoreService $firestore)
     {
         $document = $firestore->db->collection('rhu')->document($id)->snapshot();
@@ -185,7 +169,6 @@ class AdminController extends Controller
         return view('admin.edit', compact('ruralHealthUnit', 'cityName'));
     }
 
-    // Update an RHU (e.g., approve)
     public function update(Request $request, $id, FirestoreService $firestore)
     {
         $document = $firestore->db->collection('rhu')->document($id);
@@ -202,7 +185,6 @@ class AdminController extends Controller
         return back()->with('error', 'No status provided.');
     }
 
-    // Delete an RHU
     public function destroy($id, FirestoreService $firestore)
     {
         $firestore->db->collection('rhu')->document($id)->delete();
@@ -216,6 +198,6 @@ class AdminController extends Controller
         if ($response->successful()) {
             return $response->json('name');
         }
-        return $cityCode; // fallback if not found
+        return $cityCode;
     }
 }

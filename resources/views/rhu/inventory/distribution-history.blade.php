@@ -1,204 +1,172 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
+<div class="container-fluid px-4">
+
+    {{-- Page Header --}}
+    <div class="d-flex align-items-center justify-content-between mb-4 pt-2 flex-wrap gap-2">
         <div>
-            <h2 class="fw-bold text-dark mb-0">Distribution History</h2>
-            <p class="text-muted mb-0">{{ $parentData['name'] }} - Lot No: {{ $batchData['lot_number'] ?? 'N/A' }}</p>
+            <p class="text-muted mb-0" style="font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;font-weight:600;">Inventory / Distribution History</p>
+            <h1 class="fw-bold mb-0" style="font-size:1.45rem;color:#37352f;">{{ $parentData['name'] }}</h1>
+            <p class="mb-0" style="font-size:.8rem;color:#9b9b9b;">Lot No: {{ $batchData['lot_number'] ?? 'N/A' }}</p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="{{ route('inventory.show', $parentData['id']) }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i>Back to {{ $parentData['name'] }}
-            </a>
-        </div>
+        <a href="{{ route('inventory.show', $parentData['id']) }}" class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left" style="font-size:.8rem;"></i>
+            <span style="font-size:.82rem;">Back to {{ $parentData['name'] }}</span>
+        </a>
     </div>
 
-    <!-- Success Message -->
+    {{-- Flash Messages --}}
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:1100;">
+        <div id="flashToast" class="toast show align-items-center border-0 text-bg-success" role="alert">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle"></i>{{ session('success') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
         </div>
+    </div>
     @endif
-
-    <!-- Error Message -->
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:1100;">
+        <div id="flashToast" class="toast show align-items-center border-0 text-bg-danger" role="alert">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle"></i>{{ session('error') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
         </div>
+    </div>
     @endif
 
-    <!-- Batch Summary Card -->
-    <div class="card mb-4 border-info">
-        <div class="card-header bg-info text-white">
-            <h5 class="card-title mb-0">
-                <i class="bi bi-info-circle me-2"></i>Batch Information
-            </h5>
+    {{-- Batch Summary Stat Cards --}}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-stack"></i></div>
+                <div class="stat-value">{{ $batchData['quantity'] }}</div>
+                <div class="stat-label">Current Stock</div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="text-center">
-                        <h3 class="text-info mb-1">{{ $batchData['quantity'] }}</h3>
-                        <p class="text-muted mb-0">Current Stock</p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center">
-                        <h3 class="text-success mb-1">{{ count($distributions) }}</h3>
-                        <p class="text-muted mb-0">Total Distributions</p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center">
-                        <h3 class="text-warning mb-1">
-                            {{ collect($distributions)->sum('quantity_distributed') }}
-                        </h3>
-                        <p class="text-muted mb-0">Total Distributed</p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center">
-                        <h3 class="text-primary mb-1">
-                            {{ \Carbon\Carbon::parse($batchData['expiration_date'])->format('M d, Y') }}
-                        </h3>
-                        <p class="text-muted mb-0">Expiration Date</p>
-                    </div>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-arrow-left-right"></i></div>
+                <div class="stat-value">{{ count($distributions) }}</div>
+                <div class="stat-label">Distributions</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-people"></i></div>
+                <div class="stat-value">{{ collect($distributions)->sum('quantity_distributed') }}</div>
+                <div class="stat-label">Total Distributed</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-calendar-check"></i></div>
+                <div class="stat-value" style="font-size:1rem;">{{ \Carbon\Carbon::parse($batchData['expiration_date'])->format('M d, Y') }}</div>
+                <div class="stat-label">Expiration Date</div>
             </div>
         </div>
     </div>
 
-    @if(count($distributions) > 0)
-        <!-- Distribution History Table Card -->
-        <div class="card shadow-sm border border-info-subtle" style="border-width:2px;">
-            <div class="card-header bg-info text-white">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-clock-history me-2"></i>Distribution History
-                </h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered mb-0 inventory-table">
-                        <thead class="table-light">
+    {{-- Distribution History Table --}}
+    <div class="inv-card p-0">
+        <div class="inv-section-header px-4 py-3">
+            <span class="inv-section-label">Distribution History</span>
+            @if(count($distributions) > 0)
+                <span class="inv-section-meta ms-2">{{ count($distributions) }} {{ count($distributions) === 1 ? 'record' : 'records' }}</span>
+            @endif
+        </div>
+        @if(count($distributions) > 0)
+            <div class="table-responsive">
+                <table class="table inv-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Resident Name</th>
+                            <th>Quantity</th>
+                            <th>Reason</th>
+                            <th>Distributed By</th>
+                            <th>Recorded At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($distributions as $distribution)
                             <tr>
-                                <th class="border-0 px-4 py-3 fw-semibold">Date</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Resident Name</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Quantity</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Reason</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Distributed By</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Recorded At</th>
+                                <td>
+                                    <div class="fw-semibold" style="font-size:.88rem;color:#37352f;">
+                                        {{ \Carbon\Carbon::parse($distribution['distribution_date'])->format('M d, Y') }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold" style="font-size:.88rem;color:#37352f;">{{ $distribution['resident_name'] }}</span>
+                                </td>
+                                <td>
+                                    <span class="inv-badge ok">{{ $distribution['quantity_distributed'] }} {{ ucfirst($parentData['unit_type']) }}</span>
+                                </td>
+                                <td>
+                                    <span style="font-size:.85rem;color:#787774;">{{ Str::limit($distribution['reason'] ?? 'No reason provided', 50) }}</span>
+                                </td>
+                                <td>
+                                    <span style="font-size:.82rem;color:#787774;">{{ $distribution['distributed_by'] ?? 'Health Worker' }}</span>
+                                </td>
+                                <td>
+                                    <span style="font-size:.78rem;color:#9b9b9b;">{{ \Carbon\Carbon::parse($distribution['distributed_at'])->format('M d, Y g:i A') }}</span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($distributions as $distribution)
-                                <tr class="border-bottom">
-                                    <td class="px-4 py-3">
-                                        <div class="fw-semibold text-dark">
-                                            {{ \Carbon\Carbon::parse($distribution['distribution_date'])->format('M d, Y') }}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="fw-semibold text-dark">{{ $distribution['resident_name'] }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="badge bg-success">{{ $distribution['quantity_distributed'] }} {{ ucfirst($parentData['unit_type']) }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="text-muted" style="max-width: 200px;">
-                                            {{ Str::limit($distribution['reason'] ?? 'No reason provided', 50) }}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="text-muted">{{ $distribution['distributed_by'] ?? 'Health Worker' }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <small class="text-muted">
-                                            {{ \Carbon\Carbon::parse($distribution['distributed_at'])->format('M d, Y g:i A') }}
-                                        </small>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        </div>
-    @else
-        <div class="text-center py-5">
-            <div class="text-muted">
-                <i class="bi bi-clock-history display-4 d-block mb-3"></i>
-                <h5>No distribution history found</h5>
-                <p class="mb-0">This batch hasn't been distributed yet.</p>
+        @else
+            <div class="inv-empty m-4">
+                <i class="bi bi-clock-history inv-empty-icon"></i>
+                <div class="inv-empty-title">No distribution history</div>
+                <div class="inv-empty-text">This batch hasn't been distributed yet.</div>
             </div>
-        </div>
-    @endif
+        @endif
+    </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toast = document.getElementById('flashToast');
+    if (toast) { setTimeout(() => { bootstrap.Toast.getOrCreateInstance(toast).hide(); }, 4000); }
+});
+</script>
+
 <style>
-.card {
-    border-radius: 0.75rem;
-    overflow: hidden;
-}
+.stat-card { border: 1px solid #e9e9e7; border-radius: 8px; background: #fff; transition: box-shadow .15s; }
+.stat-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.stat-icon { width: 36px; height: 36px; border-radius: 6px; background: #f1f1ef; color: #787774; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.stat-value { font-size: 1.4rem; font-weight: 700; color: #37352f; line-height: 1.2; }
+.stat-label { font-size: .72rem; color: #9b9b9b; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
 
-.table th, .table td {
-    vertical-align: middle;
-    background: #fff;
-    font-size: 1rem;
-}
+.inv-card { border: 1px solid #e9e9e7; border-radius: 8px; background: #fff; }
+.inv-section-header { border-bottom: 1px solid #f1f1ef; }
+.inv-section-label { font-size: .82rem; font-weight: 600; color: #37352f; }
+.inv-section-meta { font-size: .75rem; color: #9b9b9b; }
 
-.table thead th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #e9ecef;
-}
+.inv-badge { display: inline-flex; align-items: center; font-size: .72rem; font-weight: 600; border-radius: 4px; padding: 2px 8px; }
+.inv-badge.ok     { background: #dcfce7; color: #15803d; }
+.inv-badge.warn   { background: #fef9c3; color: #a16207; }
+.inv-badge.danger { background: #fee2e2; color: #b91c1c; }
+.inv-badge.neutral { background: #f1f1ef; color: #787774; }
 
-.table tr {
-    border-radius: 0.5rem;
-}
+.inv-table { font-size: .88rem; }
+.inv-table thead th { background: #f8fafc; color: #6b7280; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid #e9e9e7; padding: 10px 16px; }
+.inv-table tbody td { border-bottom: 1px solid #f5f5f4; padding: 12px 16px; vertical-align: middle; color: #37352f; background: #fff; }
+.inv-table tbody tr:last-child td { border-bottom: none; }
+.inv-table tbody tr:hover td { background: #fafaf9; }
 
-.table tbody tr {
-    border-top: none;
-    border-bottom: 1px solid #f1f1f1;
-}
-
-.alert {
-    border: none;
-    border-radius: 0.5rem;
-}
-
-.badge {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.75rem;
-}
-
-/* Add visible outline inside the table */
-.inventory-table th, .inventory-table td {
-    border-left: none !important;
-    border-right: none !important;
-    background: #fff;
-}
-
-.inventory-table thead th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #17a2b8 !important;
-}
-
-.inventory-table tr {
-    border-radius: 0.5rem;
-}
-
-.inventory-table tbody tr {
-    border-top: none;
-    border-bottom: 1.5px solid #b6e3e8 !important;
-}
+.inv-empty { border: 1px dashed #e9e9e7; border-radius: 8px; padding: 48px 24px; text-align: center; background: #fafaf9; }
+.inv-empty-icon { font-size: 2rem; color: #d4d4d0; display: block; margin-bottom: 12px; }
+.inv-empty-title { font-size: .95rem; font-weight: 600; color: #787774; margin-bottom: 4px; }
+.inv-empty-text { font-size: .82rem; color: #9b9b9b; }
 </style>
-@endsection 
+@endsection

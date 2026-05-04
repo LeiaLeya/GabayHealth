@@ -67,7 +67,7 @@
 
     <div class="table-responsive">
         <table class="table mb-0" style="border-collapse:separate;border-spacing:0 0.25rem;">
-            <thead class="table-light">
+            <thead class="table-blue">
                 <tr style="border-bottom:2px solid #e9ecef;">
                     <th class="fw-semibold" style="border:none;">Name</th>
                     <th class="fw-semibold" style="border:none;">Age</th>
@@ -100,10 +100,10 @@
     font-size: 1rem;
 }
 .table thead th {
-    background: #f8f9fa;
+    background: #1657c1;
     font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #e9ecef;
+    color: #fff;
+    border-bottom: 2px solid #1e6fd9;
 }
 .table tr {
     border-radius: 0.5rem;
@@ -124,5 +124,6 @@
     border-color: #1657c1;
     text-decoration: none;
 }
+.table-blue th { background: #1657c1 !important; color: #fff !important; border-color: #1e6fd9 !important; }
 </style>
 @endsection

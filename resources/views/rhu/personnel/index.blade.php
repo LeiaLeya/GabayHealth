@@ -1,278 +1,325 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
+<div class="container-fluid px-4">
+
+    {{-- Flash Toasts --}}
+    @if(session('success'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-success border-0 rounded-3 shadow" role="alert" id="successToast">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-danger border-0 rounded-3 shadow" role="alert" id="errorToast">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Page Header --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-dark mb-1">Personnel Management</h2>
+            <h2 class="fw-bold mb-1" style="color:#1e293b;">Personnel</h2>
+            <p class="text-muted mb-0 small">Manage health center personnel</p>
         </div>
-        <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addPersonnelModal">
-            <i class="bi bi-plus-circle"></i> Add Personnel
+        <button class="btn-add-personnel" data-bs-toggle="modal" data-bs-target="#addPersonnelModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Personnel
         </button>
     </div>
 
-    <!-- Success Message -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <!-- Error Message -->
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <!-- Personnel Cards -->
-    <div class="d-flex flex-wrap" style="gap: 1rem;">
-        @forelse($personnel as $person)
-            <div>
-                <div class="card border position-relative personnel-card h-100">
-                    <!-- Status Badge -->
-                    <div class="position-absolute top-0 end-0 m-2">
-                        @php
-                            $status = $person['status'] ?? 'Active';
-                            $statusClass = $status === 'Active' ? 'success' : ($status === 'Inactive' ? 'secondary' : 'warning');
-                        @endphp
-                        <span class="badge bg-{{ $statusClass }}">{{ $status }}</span>
-                    </div>
-
-                    <!-- Personnel Image and Info -->
-                    <div class="card-body d-flex flex-column text-center pt-5">
-                        <!-- Profile Image -->
-                        <div class="mb-3 d-flex justify-content-center">
-                            @if(isset($person['image_url']))
-                                <img src="{{ $person['image_url'] }}" alt="Personnel Photo" class="rounded-circle" style="width:120px;height:120px;object-fit:cover;border:1px solid #000;">
-                            @else
-                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width:120px;height:120px;border:1px solid #000;">
-                                    <i class="bi bi-person display-4 text-dark"></i>
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Name -->
-                        <h5 class="fw-bold mb-1 text-dark">{{ $person['name'] ?? 'Unknown' }}</h5>
-                        
-                        <!-- Position -->
-                        <div class="text-dark fw-semibold mb-2">{{ $person['position'] ?? 'No Position' }}</div>
-
-                        <!-- Address -->
-                        @if(isset($person['address']) && $person['address'])
-                            <div class="mb-3">
-                                <div class="d-flex align-items-center justify-content-center gap-2">
-                                    <i class="bi bi-geo-alt text-muted flex-shrink-0"></i>
-                                    <span class="text-dark small text-start">{{ Str::limit($person['address'], 100) }}</span>
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- Action Buttons -->
-                        <div class="mt-auto d-flex gap-2">
-                            <button type="button" class="btn btn-primary btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#editPersonnelModal{{ $person['id'] }}">
-                                <i class="bi bi-pencil me-1"></i>Edit
-                            </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deletePersonnel('{{ $person['id'] }}', {{ json_encode($person['name'] ?? 'Unknown') }})" title="Delete Personnel">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
+    {{-- Personnel Grid --}}
+    @if(count($personnel) > 0)
+    <div class="personnel-grid">
+        @foreach($personnel as $person)
+        <div class="p-card">
+            <div class="p-card-header">
+                <div class="p-avatar">
+                    @if(isset($person['image_url']))
+                        <img src="{{ $person['image_url'] }}" alt="{{ $person['name'] ?? '' }}" class="p-avatar-img">
+                    @else
+                        <div class="p-avatar-placeholder"><i class="bi bi-person-fill"></i></div>
+                    @endif
                 </div>
+                @php
+                    $status = $person['status'] ?? 'Active';
+                    $statusOk = strtolower($status) === 'active';
+                @endphp
+                <span class="p-status-pill {{ $statusOk ? 'active' : 'inactive' }}">{{ ucfirst($status) }}</span>
+            </div>
+            <div class="p-card-body">
+                <div class="p-name">{{ $person['name'] ?? 'Unknown' }}</div>
+                <div class="p-position">{{ $person['position'] ?? 'No Position' }}</div>
+                @if(!empty($person['address']))
+                <div class="p-address"><i class="bi bi-geo-alt me-1"></i>{{ Str::limit($person['address'], 80) }}</div>
+                @endif
+            </div>
+            <div class="p-card-footer">
+                <button class="p-btn edit" data-bs-toggle="modal" data-bs-target="#editPersonnelModal{{ $person['id'] }}">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </button>
+                <button class="p-btn delete" onclick="deletePersonnel('{{ $person['id'] }}', {{ json_encode($person['name'] ?? 'Unknown') }})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
 
-                <!-- Edit Personnel Modal -->
-                <div class="modal fade" id="editPersonnelModal{{ $person['id'] }}" tabindex="-1" aria-labelledby="editPersonnelModalLabel{{ $person['id'] }}" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <form method="POST" action="{{ route('rhu.personnel.update', $person['id']) }}" class="modal-content" enctype="multipart/form-data">
-                            @csrf
-                            @method('PUT')
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="editPersonnelModalLabel{{ $person['id'] }}">
-                                    <i class="bi bi-pencil-square me-2"></i>Edit Personnel
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                                        <input type="text" name="name" class="form-control" value="{{ $person['name'] ?? '' }}" required>
+        {{-- Edit Modal --}}
+        <div class="modal fade" id="editPersonnelModal{{ $person['id'] }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+                    <div class="modal-header-custom">
+                        <div>
+                            <div class="modal-type-badge">Edit Personnel</div>
+                            <h5 class="modal-title-custom">{{ $person['name'] ?? 'Personnel' }}</h5>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ route('rhu.personnel.update', $person['id']) }}" enctype="multipart/form-data">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-body p-4">
+                            <div class="modal-form-section mb-3">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                        <input type="text" name="name" class="form-control rounded-3" value="{{ $person['name'] ?? '' }}" required>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-semibold">Position <span class="text-danger">*</span></label>
-                                        <input type="text" name="position" class="form-control" value="{{ $person['position'] ?? '' }}" required>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Position <span class="text-danger">*</span></label>
+                                        <input type="text" name="position" class="form-control rounded-3" value="{{ $person['position'] ?? '' }}" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold">Address <span class="text-danger">*</span></label>
+                                        <input type="text" name="address" class="form-control rounded-3" value="{{ $person['address'] ?? '' }}" required placeholder="House/Unit No., Street, Barangay, City">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold">Profile Photo</label>
+                                        <input type="file" name="image" class="form-control rounded-3 personnel-image-input" accept="image/*">
+                                        <div class="image-preview-container mt-2" style="display:none;"></div>
+                                        <div class="text-muted" style="font-size:.75rem;margin-top:4px;">Leave empty to keep current photo.</div>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
-                                    <input type="text" name="address" class="form-control" placeholder="Enter address" value="{{ $person['address'] ?? '' }}" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Profile Photo</label>
-                                    <input type="file" name="image" class="form-control personnel-image-input" accept="image/*">
-                                    <div class="image-preview-container mt-2" style="display:none;"></div>
-                                    <small class="text-muted">Leave empty to keep current photo. Click to select, then crop.</small>
-                                </div>
                             </div>
-                            <div class="modal-footer">
-                                <button class="btn btn-secondary" data-bs-dismiss="modal">
-                                    <i class="bi bi-x-circle me-1"></i> Cancel
-                                </button>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-check-circle me-1"></i> Update Personnel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-            </div>
-        @empty
-            <div class="col-12">
-                <div class="text-center text-muted py-5">
-                    <i class="bi bi-people display-4 d-block mb-3"></i>
-                    <h5>No personnel found.</h5>
-                    <p class="mb-0">Start by adding your first personnel using the button above.</p>
+                        </div>
+                        <div class="modal-footer border-0 pb-4 px-4 gap-2">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-dark rounded-pill px-4"><i class="bi bi-check2 me-1"></i>Update Personnel</button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        @endforelse
+        </div>
+        @endforeach
     </div>
+    @else
+    <div class="p-empty">
+        <i class="bi bi-people"></i>
+        <div class="p-empty-title">No Personnel Added</div>
+        <div class="p-empty-text">Add your first personnel member to get started.</div>
+        <button class="btn btn-dark rounded-pill px-4 mt-3 btn-sm" data-bs-toggle="modal" data-bs-target="#addPersonnelModal">Add Personnel</button>
+    </div>
+    @endif
 </div>
 
-<!-- Add Personnel Modal -->
-<div class="modal fade" id="addPersonnelModal" tabindex="-1" aria-labelledby="addPersonnelModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form method="POST" action="{{ route('rhu.personnel.store') }}" class="modal-content" enctype="multipart/form-data">
-            @csrf
-            <div class="modal-header">
-                <h5 class="modal-title" id="addPersonnelModalLabel">
-                    <i class="bi bi-person-plus me-2"></i>Add New Personnel
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+{{-- Add Personnel Modal --}}
+<div class="modal fade" id="addPersonnelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="modal-header-custom">
+                <div>
+                    <div class="modal-type-badge">New Personnel</div>
+                    <h5 class="modal-title-custom">Add Personnel</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Select from Account Management</label>
-                        <select class="form-select" id="personnelSelect" onchange="fillPersonnelData()">
-                            <option value="">Choose personnel from account management</option>
-                            @foreach($availablePersonnel as $person)
-                                <option value="{{ $person['id'] }}" 
-                                        data-name="{{ $person['name'] ?? $person['full_name'] ?? '' }}"
-                                        data-position="{{ $person['role'] ?? '' }}"
-                                        data-address="{{ $person['address'] ?? '' }}">
-                                    {{ $person['name'] ?? $person['full_name'] ?? 'Unknown' }} ({{ ucfirst($person['role'] ?? 'Unknown') }})
+            <form method="POST" action="{{ route('rhu.personnel.store') }}" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="modal-form-section mb-3">
+                        <div class="modal-section-title"><i class="bi bi-person-check me-2"></i>Autofill from Account Management</div>
+                        <select class="form-select rounded-3" id="personnelSelect" onchange="fillPersonnelData()">
+                            <option value="">— Choose to auto-fill —</option>
+                            @foreach($availablePersonnel as $ap)
+                                <option value="{{ $ap['id'] }}"
+                                        data-name="{{ $ap['name'] ?? $ap['full_name'] ?? '' }}"
+                                        data-position="{{ $ap['role'] ?? '' }}"
+                                        data-address="{{ $ap['address'] ?? '' }}">
+                                    {{ $ap['name'] ?? $ap['full_name'] ?? 'Unknown' }} ({{ ucfirst($ap['role'] ?? 'Unknown') }})
                                 </option>
                             @endforeach
                         </select>
-                        <small class="text-muted">Select to auto-fill personnel information</small>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Position <span class="text-danger">*</span></label>
-                        <input type="text" name="position" id="positionInput" class="form-control" required placeholder="Enter position">
+                    <div class="modal-form-section">
+                        <div class="modal-section-title"><i class="bi bi-person me-2"></i>Personnel Information</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" id="nameInput" class="form-control rounded-3" required placeholder="Enter full name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Position <span class="text-danger">*</span></label>
+                                <input type="text" name="position" id="positionInput" class="form-control rounded-3" required placeholder="Enter position">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Address <span class="text-danger">*</span></label>
+                                <div class="mb-address-wrap">
+                                    <input type="text" name="address" id="addressInput" class="form-control rounded-3" required placeholder="Search address or type manually…" autocomplete="off">
+                                    <div id="addressSuggestions" class="mb-suggest"></div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Profile Photo</label>
+                                <input type="file" name="image" class="form-control rounded-3 personnel-image-input" accept="image/*">
+                                <div class="image-preview-container mt-2" style="display:none;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="nameInput" class="form-control" required placeholder="Enter full name">
-                    </div>
+                <div class="modal-footer border-0 pb-4 px-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4"><i class="bi bi-check2 me-1"></i>Save Personnel</button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
-                    <input type="text" name="address" class="form-control" placeholder="Enter address" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Profile Photo</label>
-                    <input type="file" name="image" class="form-control personnel-image-input" accept="image/*">
-                    <div class="image-preview-container mt-2" style="display:none;"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i> Cancel
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle me-1"></i> Save Personnel
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
-@include('partials.personnel_image_crop')
-
-<!-- Delete Confirmation Modal -->
+{{-- Delete Modal --}}
 <div class="modal fade" id="deletePersonnelModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-danger">Delete Personnel</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="modal-header-custom" style="background:#b91c1c;">
+                <div>
+                    <div class="modal-type-badge" style="background:rgba(255,255,255,.15);">Confirm Delete</div>
+                    <h5 class="modal-title-custom">Delete Personnel</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="personnelName"></strong>? This action cannot be undone.</p>
+            <div class="modal-body p-4">
+                <p class="mb-1">Are you sure you want to delete <strong id="personnelName"></strong>?</p>
+                <p class="text-muted small mb-0">This action cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deletePersonnelForm" method="POST" style="display: inline;">
+            <div class="modal-footer border-0 pb-4 px-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <form id="deletePersonnelForm" method="POST" style="display:inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-danger">Delete Personnel</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4"><i class="bi bi-trash me-1"></i>Delete</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.personnel-card {
-    width: 320px;
-    min-height: 360px;
-    transition: box-shadow 0.2s;
-}
+@include('partials.personnel_image_crop')
 
-.personnel-card:hover {
-    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-}
+<style>
+.btn-add-personnel { background:#1657c1; border:none; color:#fff; font-size:.82rem; font-weight:600; padding:8px 18px; border-radius:6px; cursor:pointer; text-decoration:none; transition:opacity .1s; }
+.btn-add-personnel:hover { opacity:.85; }
+.personnel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.p-card { background:#fff; border:1px solid #e9e9e7; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s; }
+.p-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.08); }
+.p-card-header { background:#1657c1; padding:20px 16px 16px; display:flex; flex-direction:column; align-items:center; gap:10px; position:relative; }
+.p-avatar { width:72px; height:72px; border-radius:50%; overflow:hidden; border:2px solid rgba(255,255,255,.25); flex-shrink:0; }
+.p-avatar-img { width:100%; height:100%; object-fit:cover; }
+.p-avatar-placeholder { width:100%; height:100%; background:rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.7); font-size:2rem; }
+.p-status-pill { font-size:.62rem; font-weight:600; padding:2px 8px; border-radius:10px; }
+.p-status-pill.active { background:#dcfce7; color:#166534; }
+.p-status-pill.inactive { background:#fee2e2; color:#991b1b; }
+.p-card-body { padding:14px 16px; flex:1; }
+.p-name { font-size:.9rem; font-weight:700; color:#37352f; margin-bottom:2px; }
+.p-position { font-size:.75rem; font-weight:600; color:#787774; text-transform:uppercase; letter-spacing:.3px; margin-bottom:8px; }
+.p-address { font-size:.75rem; color:#9b9b9b; display:flex; align-items:flex-start; gap:2px; }
+.p-card-footer { padding:10px 16px 14px; display:flex; gap:8px; border-top:1px solid #f1f1ef; }
+.p-btn { flex:1; height:30px; border-radius:6px; border:none; font-size:.75rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .1s; }
+.p-btn.edit { background:#f1f1ef; color:#37352f; }
+.p-btn.edit:hover { background:#dbeafe; color:#1e40af; }
+.p-btn.delete { flex:0 0 30px; background:#f1f1ef; color:#787774; }
+.p-btn.delete:hover { background:#fee2e2; color:#b91c1c; }
+.p-empty { text-align:center; padding:60px 20px; background:#fff; border:1px solid #e9e9e7; border-radius:8px; }
+.p-empty i { font-size:2.5rem; color:#c4c4c2; display:block; margin-bottom:12px; }
+.p-empty-title { font-size:.95rem; font-weight:600; color:#37352f; margin-bottom:4px; }
+.p-empty-text { font-size:.82rem; color:#9b9b9b; }
+.modal-header-custom { display:flex; align-items:flex-start; justify-content:space-between; background:#1657c1; padding:18px 22px; }
+.modal-type-badge { display:inline-block; font-size:.64rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.12); color:rgba(255,255,255,.75); padding:2px 8px; border-radius:4px; margin-bottom:5px; }
+.modal-title-custom { font-size:1rem; font-weight:600; color:#fff; margin:0; }
+.modal-form-section { background:#fafaf9; border-radius:6px; padding:16px; border:1px solid #f1f1ef; margin-bottom:12px; }
+.modal-section-title { font-size:.7rem; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#787774; margin-bottom:12px; }
+.mb-address-wrap { position:relative; }
+.mb-suggest { position:absolute; top:calc(100% + 2px); left:0; right:0; background:#fff; border:1px solid #e9e9e7; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.12); z-index:300; max-height:200px; overflow-y:auto; display:none; }
+.mb-suggest-item { padding:9px 12px; font-size:.82rem; cursor:pointer; color:#37352f; border-bottom:1px solid #f1f1ef; line-height:1.3; }
+.mb-suggest-item:last-child { border-bottom:none; }
+.mb-suggest-item:hover { background:#fafaf9; }
 </style>
 
+@push('scripts')
 <script>
 function deletePersonnel(personnelId, personnelName) {
     document.getElementById('personnelName').textContent = personnelName;
     document.getElementById('deletePersonnelForm').action = '{{ url("rhu/personnel") }}/' + personnelId;
-    const deleteModal = new bootstrap.Modal(document.getElementById('deletePersonnelModal'));
-    deleteModal.show();
+    new bootstrap.Modal(document.getElementById('deletePersonnelModal')).show();
 }
 
 function fillPersonnelData() {
     const select = document.getElementById('personnelSelect');
-    const selectedOption = select.options[select.selectedIndex];
-    
-    if (selectedOption.value) {
-        // Auto-fill the form fields
-        document.getElementById('nameInput').value = selectedOption.dataset.name || '';
-        
-        // Capitalize first letter of position, with special handling for BHW
-        const position = selectedOption.dataset.position || '';
-        let capitalizedPosition;
-        if (position.toLowerCase() === 'bhw') {
-            capitalizedPosition = 'Barangay Health Worker';
-        } else {
-            capitalizedPosition = position.charAt(0).toUpperCase() + position.slice(1).toLowerCase();
-        }
-        document.getElementById('positionInput').value = capitalizedPosition;
-        
-        // You can also auto-fill address if needed
-        // document.getElementById('addressInput').value = selectedOption.dataset.address || '';
+    const opt = select.options[select.selectedIndex];
+    if (opt.value) {
+        document.getElementById('nameInput').value = opt.dataset.name || '';
+        const pos = opt.dataset.position || '';
+        document.getElementById('positionInput').value =
+            pos.toLowerCase() === 'bhw' ? 'Barangay Health Worker'
+            : pos.charAt(0).toUpperCase() + pos.slice(1).toLowerCase();
+        document.getElementById('addressInput').value = opt.dataset.address || '';
     } else {
-        // Clear the fields if no option is selected
         document.getElementById('nameInput').value = '';
         document.getElementById('positionInput').value = '';
+        document.getElementById('addressInput').value = '';
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.toast').forEach(t => setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000));
+});
+
+(function() {
+    const token = @json(env('MAPBOX_ACCESS_TOKEN'));
+    const input = document.getElementById('addressInput');
+    const list  = document.getElementById('addressSuggestions');
+    if (!token || !input) return;
+    let t;
+    input.addEventListener('input', function() {
+        // If this was auto-filled, don't show suggestions until user edits
+        const q = this.value.trim();
+        if (q.length < 2) { list.innerHTML=''; list.style.display='none'; return; }
+        clearTimeout(t);
+        t = setTimeout(() => {
+            fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${token}&country=PH&limit=6`)
+                .then(r => r.json())
+                .then(d => {
+                    list.innerHTML = '';
+                    if (!d.features || !d.features.length) { list.style.display='none'; return; }
+                    d.features.forEach(f => {
+                        const div = document.createElement('div');
+                        div.className = 'mb-suggest-item';
+                        div.textContent = f.place_name;
+                        div.addEventListener('mousedown', e => { e.preventDefault(); input.value = f.place_name; list.innerHTML=''; list.style.display='none'; });
+                        list.appendChild(div);
+                    });
+                    list.style.display = 'block';
+                }).catch(() => { list.innerHTML=''; list.style.display='none'; });
+        }, 300);
+    });
+    document.addEventListener('click', e => { if (!input.contains(e.target) && !list.contains(e.target)) { list.innerHTML=''; list.style.display='none'; } });
+})();
 </script>
-@endsection 
+@endpush
+@endsection

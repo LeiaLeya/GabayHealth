@@ -1,82 +1,112 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
+<style>
+    :root {
+        --nb: #f7f8fc; --ns: #ffffff; --nbr: #e3e8f0;
+        --nt: #1e293b; --nm: #64748b; --nbl: #1657c1;
+        --nblt: #eff4ff; --nbmd: #dbeafe; --nbdk: #1e40af;
+    }
+    .n-page-title { font-size:1.35rem; font-weight:700; color:var(--nt); letter-spacing:-0.3px; }
+    .n-page-sub   { font-size:0.825rem; color:var(--nm); margin-top:2px; }
+    .n-back-link  { font-size:0.8rem; color:var(--nm); text-decoration:none; display:inline-flex;
+                     align-items:center; gap:5px; margin-bottom:8px; transition:color 0.15s; }
+    .n-back-link:hover { color:var(--nbl); }
+    .n-table-wrap { border:1px solid var(--nbr); border-radius:10px; overflow:hidden; }
+    .n-table { width:100%; border-collapse:collapse; }
+    .n-table thead th { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;
+                         color:#fff; background:var(--nbl); padding:11px 16px;
+                         border-bottom:2px solid #1e6fd9; white-space:nowrap; }
+    .n-table thead th:first-child { padding-left:20px; }
+    .n-table thead th:last-child  { padding-right:20px; }
+    .n-table tbody tr { border-bottom:1px solid #f1f5f9; transition:background 0.12s; }
+    .n-table tbody tr:last-child { border-bottom:none; }
+    .n-table tbody tr:hover { background:var(--nblt); }
+    .n-table td { padding:12px 16px; font-size:0.85rem; color:var(--nt); vertical-align:middle; }
+    .n-table td:first-child { padding-left:20px; }
+    .n-table td:last-child  { padding-right:20px; }
+    .n-avatar   { width:34px; height:34px; border-radius:8px; background:var(--nbmd);
+                   display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .n-avatar i { color:var(--nbl); font-size:1rem; }
+    .n-badge-green { background:#d1fae5; color:#065f46; font-size:0.7rem; font-weight:600;
+                      padding:3px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; }
+    .n-btn-sm { font-size:0.775rem; padding:5px 12px; border-radius:6px; font-weight:500;
+                 border:1px solid var(--nbr); background:var(--ns); color:var(--nbl); cursor:pointer;
+                 transition:background 0.15s,border-color 0.15s; text-decoration:none;
+                 display:inline-flex; align-items:center; gap:4px; }
+    .n-btn-sm:hover { background:var(--nbmd); border-color:var(--nbl); color:var(--nbl); }
+    .n-btn-info-sm  { border-color:#bae6fd; color:#0369a1; }
+    .n-btn-info-sm:hover { background:#e0f2fe; border-color:#0369a1; color:#0369a1; }
+    .n-empty { padding:48px 20px; text-align:center; color:var(--nm); }
+    .n-empty i { font-size:2rem; display:block; margin-bottom:10px; color:#cbd5e1; }
+    .n-empty p { font-size:0.875rem; margin:0; }
+</style>
+
+<div class="container-fluid" style="max-width:1100px;">
 
     <!-- Page Header -->
     <div class="mb-4">
-        <a href="{{ route('admin.system-admin.dashboard') }}"
-           class="d-inline-flex align-items-center gap-1 text-muted small text-decoration-none mb-2"
-           style="transition: color 0.2s;"
-           onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color=''">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        <a href="{{ route('admin.system-admin.dashboard') }}" class="n-back-link">
+            <i class="bi bi-arrow-left"></i> Dashboard
         </a>
-        <h4 class="fw-bold mb-1" style="color: #1a1a2e;">Approved RHUs — Credentials Sent</h4>
-        <p class="text-muted mb-0 small">RHUs waiting to activate their accounts</p>
+        <h1 class="n-page-title mb-0">Approved RHUs — Credentials Sent</h1>
+        <p class="n-page-sub">RHUs waiting to activate their accounts</p>
     </div>
 
-    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+    <div class="n-table-wrap">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background: #f8fafc;">
+            <table class="n-table">
+                <thead>
                     <tr>
-                        <th class="ps-4 py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">RHU Name</th>
-                        <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Username</th>
-                        <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Email</th>
-                        <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Approved</th>
-                        <th class="py-3 text-muted small fw-semibold" style="border-bottom: 1px solid #e5e7eb;">Status</th>
-                        <th class="py-3 text-muted small fw-semibold pe-4" style="border-bottom: 1px solid #e5e7eb;">Actions</th>
+                        <th>RHU Name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Credentials Sent</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($approvedRhus as $rhu)
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td class="ps-4 py-3">
+                        <tr>
+                            <td>
                                 <div class="d-flex align-items-center gap-2">
                                     @if($rhu['logo_url'] ?? false)
                                         <img src="{{ $rhu['logo_url'] }}" alt="Logo"
-                                             class="rounded-circle flex-shrink-0"
-                                             width="36" height="36" style="object-fit: cover;">
+                                             class="n-avatar" style="object-fit:cover;">
                                     @else
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                             style="width: 36px; height: 36px; background: #dbeafe;">
-                                            <i class="bi bi-hospital" style="color: #2563eb; font-size: 0.9rem;"></i>
-                                        </div>
+                                        <div class="n-avatar"><i class="bi bi-hospital"></i></div>
                                     @endif
                                     <div>
-                                        <div class="fw-semibold" style="color: #1a1a2e;">{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</div>
-                                        <div class="text-muted small">{{ $rhu['city'] ?? 'N/A' }}{{ isset($rhu['province']) && $rhu['province'] ? ', ' . $rhu['province'] : '' }}</div>
+                                        <div class="fw-semibold" style="color:var(--nt);">{{ $rhu['rhuName'] ?? $rhu['name'] ?? 'N/A' }}</div>
+                                        <div style="font-size:0.775rem;color:var(--nm);">
+                                            {{ $rhu['city'] ?? 'N/A' }}{{ isset($rhu['province']) && $rhu['province'] ? ', ' . $rhu['province'] : '' }}
+                                        </div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="py-3">
-                                <code class="px-2 py-1 rounded small" style="background:#f1f5f9; color:#1a1a2e;">{{ $rhu['username'] ?? 'N/A' }}</code>
+                            <td>
+                                <code style="background:#f1f5f9;color:var(--nt);padding:3px 8px;border-radius:5px;font-size:0.8rem;">{{ $rhu['username'] ?? 'N/A' }}</code>
                             </td>
-                            <td class="py-3">
-                                <a href="mailto:{{ $rhu['email'] }}" class="text-muted small text-decoration-none">{{ $rhu['email'] }}</a>
+                            <td>
+                                <a href="mailto:{{ $rhu['email'] }}" class="text-decoration-none" style="color:var(--nm);font-size:0.82rem;">{{ $rhu['email'] }}</a>
                             </td>
-                            <td class="py-3">
-                                <span class="text-muted small">{{ \Carbon\Carbon::parse($rhu['credentials_sent_at'])->format('M d, Y h:i A') }}</span>
+                            <td style="color:var(--nm);font-size:0.82rem;white-space:nowrap;">
+                                {{ \Carbon\Carbon::parse($rhu['credentials_sent_at'])->format('M d, Y h:i A') }}
                             </td>
-                            <td class="py-3">
-                                <span class="badge fw-medium px-2 py-1"
-                                      style="background:#d1fae5; color:#065f46; border-radius: 6px; font-size: 0.75rem;">
-                                    <i class="bi bi-clock me-1"></i> Awaiting Activation
+                            <td>
+                                <span class="n-badge-green">
+                                    <i class="bi bi-clock"></i> Awaiting Activation
                                 </span>
                             </td>
-                            <td class="py-3 pe-4">
+                            <td>
                                 <div class="d-flex gap-2">
                                     <a href="{{ route('admin.system-admin.view-application', $rhu['id']) }}"
-                                       class="btn btn-sm btn-outline-primary"
-                                       title="View details"
-                                       style="border-radius: 8px; font-size: 0.8rem;">
-                                        <i class="bi bi-eye me-1"></i> View
+                                       class="n-btn-sm" title="View details">
+                                        <i class="bi bi-eye"></i> View
                                     </a>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-info resend-btn"
-                                            data-rhu-id="{{ $rhu['id'] }}"
-                                            title="Resend credentials"
-                                            style="border-radius: 8px; font-size: 0.8rem;">
+                                    <button type="button" class="n-btn-sm n-btn-info-sm resend-btn"
+                                            data-rhu-id="{{ $rhu['id'] }}" title="Resend credentials">
                                         <i class="bi bi-arrow-repeat"></i>
                                     </button>
                                 </div>
@@ -84,9 +114,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox d-block mb-2" style="font-size: 2.5rem;"></i>
-                                No RHUs with credentials sent
+                            <td colspan="6">
+                                <div class="n-empty">
+                                    <i class="bi bi-inbox"></i>
+                                    <p>No RHUs with credentials sent</p>
+                                </div>
                             </td>
                         </tr>
                     @endforelse
@@ -96,49 +128,55 @@
     </div>
 </div>
 
-<!-- Toast Container -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+<!-- Toasts -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
     <div id="successToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true"
-         style="background: #059669; border-radius: 10px;">
+         style="background:#1657c1;border-radius:10px;min-width:280px;">
         <div class="d-flex">
             <div class="toast-body d-flex align-items-center gap-2">
                 <i class="bi bi-check-circle-fill flex-shrink-0"></i>
                 <span>Credentials resent successfully.</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
     <div id="errorToast" class="toast align-items-center text-white border-0 mt-2" role="alert" aria-live="assertive" aria-atomic="true"
-         style="background: #dc2626; border-radius: 10px;">
+         style="background:#dc2626;border-radius:10px;min-width:280px;">
         <div class="d-flex">
             <div class="toast-body d-flex align-items-center gap-2">
                 <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
                 <span id="errorMsg">Failed to resend credentials.</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
-<!-- Resend Confirmation Modal -->
+<!-- Resend Modal -->
 <div class="modal fade" id="resendModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="border-radius: 14px;">
-            <div class="modal-header border-0 pb-0">
-                <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mt-2"
-                     style="width: 56px; height: 56px; background: #dbeafe;">
-                    <i class="bi bi-arrow-repeat" style="font-size: 1.8rem; color: #2563eb;"></i>
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content border-0" style="border-radius:12px;border:1px solid #e3e8f0;">
+            <div class="modal-body p-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div style="width:44px;height:44px;border-radius:10px;background:#eff4ff;
+                                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-arrow-repeat" style="font-size:1.3rem;color:#1657c1;"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold" style="color:#1e293b;">Resend Credentials?</div>
+                        <div class="small" style="color:#64748b;">The login credentials will be re-sent to the RHU's registered email.</div>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-body text-center px-4 py-3">
-                <h5 class="fw-bold mb-1">Resend Credentials?</h5>
-                <p class="text-muted small mb-0">The login credentials will be re-sent to the RHU's registered email address.</p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
-                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
-                <button type="button" class="btn btn-primary px-4" id="confirmResendBtn" style="border-radius: 8px;">
-                    <i class="bi bi-arrow-repeat me-1"></i> Yes, Resend
-                </button>
+                <div class="d-flex gap-2 justify-content-end mt-4">
+                    <button type="button" class="n-btn-sm" data-bs-dismiss="modal"
+                            style="padding:7px 16px;font-size:0.825rem;">Cancel</button>
+                    <button type="button" id="confirmResendBtn"
+                            style="font-size:0.825rem;padding:7px 16px;border-radius:7px;border:1px solid #1657c1;
+                                   background:#1657c1;color:#fff;font-weight:500;cursor:pointer;
+                                   display:inline-flex;align-items:center;gap:5px;">
+                        <i class="bi bi-arrow-repeat"></i> Yes, Resend
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -162,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!pendingId) return;
         const btn = this;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending…';
 
         fetch(`/admin/system-admin/${pendingId}/resend-credentials`, {
             method: 'POST',
@@ -172,8 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             resendModal.hide();
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Yes, Resend';
-
+            btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Yes, Resend';
             if (data.success) {
                 new bootstrap.Toast(document.getElementById('successToast'), { delay: 4000 }).show();
             } else {
@@ -184,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(() => {
             resendModal.hide();
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Yes, Resend';
+            btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Yes, Resend';
             document.getElementById('errorMsg').textContent = 'Request failed. Check your connection.';
             new bootstrap.Toast(document.getElementById('errorToast'), { delay: 4000 }).show();
         });

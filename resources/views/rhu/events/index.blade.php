@@ -1,1117 +1,959 @@
 @extends('layouts.app')
 
-@section('content')
-@php
-    $barangayOptions = collect($barangaysWithinRhu ?? [])->keyBy('id');
-@endphp
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-dark mb-1">Events</h2>
-        <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addEventModal">
-            <i class="bi bi-plus-circle"></i> Add Event
-        </button>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <div class="row g-4">
-        @forelse($events as $event)
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm position-relative event-card">
-                    <!-- Edit Icon and Status Badge -->
-                    <div class="position-absolute top-0 end-0 m-2 d-flex align-items-center gap-2">
-                        @php
-                            $status = $event['status'] ?? 'Upcoming';
-                            $statusClass = match($status) {
-                                'Upcoming' => 'primary',
-                                'Ongoing' => 'warning',
-                                'Done' => 'success',
-                                'Cancelled' => 'secondary',
-                                default => 'secondary',
-                            };
-                        @endphp
-                        <span class="badge bg-{{ $statusClass }}">{{ $status }}</span>
-                        <button class="btn btn-light btn-sm p-1" title="Edit Event" data-bs-toggle="modal" data-bs-target="#editEventModal{{ $event['id'] }}">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex align-items-center mb-3">
-                            @if(isset($event['image_url']))
-                                <img src="{{ $event['image_url'] }}" alt="Event Image" class="rounded me-3" style="width:80px;height:80px;object-fit:contain;background-color:#f3f4f6;border:1px solid #e5e7eb;">
-                            @else
-                                <div class="bg-light rounded d-flex align-items-center justify-content-center me-3" style="width:80px;height:80px;">
-                                    <i class="bi bi-calendar-event display-6 text-secondary"></i>
-                                </div>
-                            @endif
-                            <div style="padding-right: 100px;">
-                                <h5 class="fw-bold mb-1">{{ $event['title'] ?? 'Untitled' }}</h5>
-                                <div class="text-muted small">{{ $event['description'] ?? 'No description' }}</div>
-                            </div>
-                        </div>
-                        <hr class="my-2">
-                        <div class="mb-2 d-flex align-items-center gap-2">
-                            <i class="bi bi-geo-alt text-primary"></i>
-                            <span class="text-dark small">{{ $event['location'] ?? 'N/A' }}</span>
-                        </div>
-                        <div class="mb-3 d-flex align-items-center gap-2">
-                            <i class="bi bi-clock text-primary"></i>
-                            <span class="text-dark small">
-                                {{ isset($event['date']) ? \Carbon\Carbon::parse($event['date'])->format('F d, Y') : 'N/A' }},
-                                @if(isset($event['start_time']) && isset($event['end_time']))
-                                    {{ \Carbon\Carbon::parse($event['start_time'])->format('h:iA') }} - {{ \Carbon\Carbon::parse($event['end_time'])->format('h:iA') }}
-                                @else
-                                    {{ $event['time'] ?? 'N/A' }}
-                                @endif
-                            </span>
-                        </div>
-                        @if(isset($event['targetAttendees']) && $event['targetAttendees'])
-                            <div class="mb-2 d-flex align-items-center gap-2">
-                                <i class="bi bi-people text-success"></i>
-                                <span class="text-dark small">{{ $event['targetAttendees'] }}</span>
-                            </div>
-                        @endif
-                        @if(isset($event['isOpenToAll']) && $event['isOpenToAll'])
-                            <div class="mb-2 d-flex align-items-center gap-2">
-                                <i class="bi bi-globe text-info"></i>
-                                <span class="text-dark small">Open to All Barangays</span>
-                            </div>
-                        @endif
-                        @php
-                            $allowedBarangayNames = $event['allowed_barangay_names'] ?? [];
-                            if (empty($allowedBarangayNames) && !empty($event['allowed_barangays'] ?? [])) {
-                                $allowedBarangayNames = collect($event['allowed_barangays'])
-                                    ->filter(fn($id) => $barangayOptions->has($id))
-                                    ->map(fn($id) => $barangayOptions[$id]['name'])
-                                    ->values()
-                                    ->all();
-                            }
-                        @endphp
-                        @if(!empty($allowedBarangayNames))
-                            <div class="mb-2 d-flex align-items-start gap-2">
-                                <i class="bi bi-geo-alt text-info"></i>
-                                <span class="text-dark small">
-                                    Allowed Barangays: {{ implode(', ', $allowedBarangayNames) }}
-                                </span>
-                            </div>
-                        @endif
-                        @if(isset($event['in_charge']) && $event['in_charge'])
-                            <div class="mb-2 d-flex align-items-center gap-2">
-                                <i class="bi bi-person-badge text-primary"></i>
-                                <span class="text-dark small">In Charge: {{ $event['in_charge'] }}</span>
-                            </div>
-                        @endif
-                        @if(($event['status'] ?? '') === 'Cancelled' && !empty($event['cancellation_reason'] ?? ''))
-                            <div class="mb-2 d-flex align-items-start gap-2">
-                                <i class="bi bi-exclamation-octagon text-danger"></i>
-                                <span class="text-danger small">Reason: {{ $event['cancellation_reason'] }}</span>
-                            </div>
-                        @endif
-                        <div class="mt-auto d-flex gap-2">
-                            <a href="{{ route('rhu.events.show', $event['id']) }}" class="btn btn-outline-secondary btn-sm">View Details</a>
-                            @if(($event['status'] ?? '') !== 'Cancelled' && ($event['status'] ?? '') !== 'Done')
-                                <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#cancelEventModal{{ $event['id'] }}">Cancel</button>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Edit Event Modal -->
-            <div class="modal fade" id="editEventModal{{ $event['id'] }}" tabindex="-1" aria-labelledby="editEventModalLabel{{ $event['id'] }}" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <form method="POST" action="{{ route('rhu.events.update', $event['id']) }}" class="modal-content" enctype="multipart/form-data">
-                        @csrf
-                        @method('PUT')
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editEventModalLabel{{ $event['id'] }}"><i class="bi bi-pencil-square me-2"></i>Edit Event</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Event Title <span class="text-danger">*</span></label>
-                                    <input type="text" name="title" class="form-control" value="{{ $event['title'] ?? '' }}" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="date" class="form-control" value="{{ $event['date'] ?? '' }}" min="{{ \Carbon\Carbon::today()->toDateString() }}" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Start Time <span class="text-danger">*</span></label>
-                                    <input type="time" name="start_time" class="form-control" value="{{ $event['start_time'] ?? '' }}" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">End Time <span class="text-danger">*</span></label>
-                                    <input type="time" name="end_time" class="form-control" value="{{ $event['end_time'] ?? '' }}" required>
-                                    <div class="invalid-feedback">
-                                        End time must be after start time.
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="form-label fw-semibold mb-0">Location <span class="text-danger">*</span></label>
-                                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="toggleEditLocationMode" onclick="toggleLocationInput('edit')">
-                                        <small class="text-primary">Enter manually</small>
-                                    </button>
-                                </div>
-                                <div id="editLocationGeocoderContainer"></div>
-                                <input type="text" name="location" id="edit_location" class="form-control" value="{{ $event['location'] ?? '' }}" style="display: none;">
-                                <input type="hidden" name="latitude" id="edit_latitude" value="{{ $event['latitude'] ?? '' }}">
-                                <input type="hidden" name="longitude" id="edit_longitude" value="{{ $event['longitude'] ?? '' }}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Description</label>
-                                <textarea name="description" class="form-control" rows="3">{{ $event['description'] ?? '' }}</textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Event Image</label>
-                                <div class="event-image-upload-section" id="editEventImageUploadSection{{ $event['id'] }}">
-                                    <div id="editEventImageUploadArea{{ $event['id'] }}" style="{{ isset($event['image_url']) && $event['image_url'] ? 'display: none;' : 'display: flex; flex-direction: column; align-items: center; gap: 8px;' }}">
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                            <polyline points="17 8 12 3 7 8"></polyline>
-                                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                                        </svg>
-                                        <p>Upload event image</p>
-                                        <p>PNG or JPG, up to 5MB</p>
-                                    </div>
-                                    <div id="editEventImagePreview{{ $event['id'] }}" style="{{ isset($event['image_url']) && $event['image_url'] ? 'display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;' : 'display: none;' }}">
-                                        <img id="editEventImagePreviewImg{{ $event['id'] }}" src="{{ $event['image_url'] ?? '' }}" alt="Event Image Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto 12px auto; object-fit: contain; background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: 8px; display: block;">
-                                        <button type="button" class="btn btn-sm btn-secondary edit-event-image-change-btn" data-event-id="{{ $event['id'] }}">Change Image</button>
-                                    </div>
-                                </div>
-                                <input type="file" id="editEventImageUpload{{ $event['id'] }}" name="image" accept="image/*" style="display: none;">
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Target Attendees</label>
-                                    <select name="targetAttendees" class="form-select">
-                                        <option value="">Select target audience...</option>
-                                        <option value="All Residents" {{ ($event['targetAttendees'] ?? '') == 'All Residents' ? 'selected' : '' }}>All Residents</option>
-                                        <option value="Seniors Only" {{ ($event['targetAttendees'] ?? '') == 'Seniors Only' ? 'selected' : '' }}>Seniors Only</option>
-                                        <option value="Children Only" {{ ($event['targetAttendees'] ?? '') == 'Children Only' ? 'selected' : '' }}>Children Only</option>
-                                        <option value="Pregnant Women" {{ ($event['targetAttendees'] ?? '') == 'Pregnant Women' ? 'selected' : '' }}>Pregnant Women</option>
-                                        <option value="Adults Only" {{ ($event['targetAttendees'] ?? '') == 'Adults Only' ? 'selected' : '' }}>Adults Only</option>
-                                        <option value="Health Workers" {{ ($event['targetAttendees'] ?? '') == 'Health Workers' ? 'selected' : '' }}>Health Workers</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">In Charge / Head of Event</label>
-                                    <input type="text" name="in_charge" class="form-control" value="{{ $event['in_charge'] ?? '' }}" placeholder="Enter name of person in charge">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="isOpenToAll" id="isOpenToAll{{ $event['id'] }}" value="1" data-allowed-target="allowedBarangays{{ $event['id'] }}" {{ ($event['isOpenToAll'] ?? false) ? 'checked' : '' }}>
-                                    <label class="form-check-label fw-semibold" for="isOpenToAll{{ $event['id'] }}">
-                                        <i class="bi bi-globe me-1"></i>Open to All Barangays
-                                    </label>
-                                    <small class="form-text text-muted d-block">Check this if the event is open to residents from other barangays</small>
-                                </div>
-                            </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Allow Other Barangays Within RHU</label>
-                            @if(!empty($barangaysWithinRhu))
-                                <div class="dropdown w-100 multi-select-dropdown" data-multi-select="allowedBarangays{{ $event['id'] }}">
-                                    <button class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                        <span class="multi-select-label" id="allowedBarangays{{ $event['id'] }}Label" data-placeholder="Select barangays">
-                                            Select barangays
-                                        </span>
-                                        <i class="bi bi-chevron-down small"></i>
-                                    </button>
-                                    <div class="dropdown-menu w-100 p-3 shadow-sm">
-                                        @foreach($barangaysWithinRhu as $barangay)
-                                            @php
-                                                $isSelected = in_array($barangay['id'], $event['allowed_barangays'] ?? []);
-                                            @endphp
-                                            <div class="form-check">
-                                                <input class="form-check-input allowed-barangay-option" type="checkbox" name="allowed_barangays[]" value="{{ $barangay['id'] }}" id="allowedBarangays{{ $event['id'] }}Option{{ $loop->index }}" data-label-target="allowedBarangays{{ $event['id'] }}Label" data-option-name="{{ $barangay['name'] }}" {{ $isSelected ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="allowedBarangays{{ $event['id'] }}Option{{ $loop->index }}">{{ $barangay['name'] }}</label>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                <small class="form-text text-muted d-block">Click to open and use the checkboxes to select barangays.</small>
-                            @else
-                                <div class="text-muted small">No other barangays available within your RHU.</div>
-                            @endif
-                        </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-secondary" data-bs-dismiss="modal">
-                                Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                Update Event
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Cancel Event Modal -->
-            <div class="modal fade" id="cancelEventModal{{ $event['id'] }}" tabindex="-1" aria-labelledby="cancelEventLabel{{ $event['id'] }}" aria-hidden="true">
-                <div class="modal-dialog">
-                    <form method="POST" action="{{ route('rhu.events.cancel', $event['id']) }}" class="modal-content">
-                        @csrf
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="cancelEventLabel{{ $event['id'] }}"><i class="bi bi-exclamation-octagon me-2"></i>Cancel Event</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="mb-2">Please provide a reason for cancelling <strong>{{ $event['title'] ?? 'this event' }}</strong>.</p>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Cancellation Reason <span class="text-danger">*</span></label>
-                                <textarea name="reason" class="form-control" rows="3" required maxlength="500" placeholder="Enter reason..."></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-danger">Confirm Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        @empty
-            <div class="col-12">
-                <div class="text-center text-muted py-5">
-                    <i class="bi bi-calendar-x display-4 d-block mb-3"></i>
-                    <h5>No events found.</h5>
-                    <p class="mb-0">Start by adding your first event using the button above.</p>
-                </div>
-            </div>
-        @endforelse
-    </div>
-</div>
-
-<!-- Add Event Modal -->
-<div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form method="POST" action="{{ route('rhu.events.store') }}" class="modal-content" enctype="multipart/form-data">
-            @csrf
-            <div class="modal-header">
-                <h5 class="modal-title" id="addEventModalLabel"><i class="bi bi-calendar-plus me-2"></i>Add New Event</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Event Title <span class="text-danger">*</span></label>
-                        <input type="text" name="title" class="form-control" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-                        <input type="date" name="date" class="form-control" min="{{ \Carbon\Carbon::today()->toDateString() }}" required>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Start Time <span class="text-danger">*</span></label>
-                        <input type="time" name="start_time" id="start_time" class="form-control" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">End Time <span class="text-danger">*</span></label>
-                        <input type="time" name="end_time" id="end_time" class="form-control" required>
-                        <div class="invalid-feedback" id="end_time_error">
-                            End time must be after start time.
-                        </div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label fw-semibold mb-0">Location</label>
-                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="toggleLocationMode" onclick="toggleLocationInput('add')">
-                            <small class="text-primary">Enter manually</small>
-                        </button>
-                    </div>
-                    <div id="locationGeocoderContainer"></div>
-                    <input type="text" name="location" id="location" class="form-control" style="display: none;">
-                    <input type="hidden" name="latitude" id="latitude">
-                    <input type="hidden" name="longitude" id="longitude">
-                    <small class="text-muted">Search with Mapbox or enter address manually</small>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Description</label>
-                    <textarea name="description" class="form-control" rows="3"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Event Image</label>
-                    <div class="event-image-upload-section" id="eventImageUploadSection">
-                        <div id="eventImageUploadArea">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            <p>Upload event image</p>
-                            <p>PNG or JPG, up to 5MB</p>
-                        </div>
-                        <div id="eventImagePreview">
-                            <img id="eventImagePreviewImg" src="" alt="Event Image Preview">
-                            <button type="button" class="btn btn-sm btn-secondary mt-2 event-image-change-btn">Change Image</button>
-                        </div>
-                    </div>
-                    <input type="file" id="eventImageUpload" name="image" accept="image/*" style="display: none;">
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Target Attendees</label>
-                        <select name="targetAttendees" class="form-select">
-                            <option value="">Select target audience...</option>
-                            <option value="All Residents">All Residents</option>
-                            <option value="Seniors Only">Seniors Only</option>
-                            <option value="Children Only">Children Only</option>
-                            <option value="Pregnant Women">Pregnant Women</option>
-                            <option value="Adults Only">Adults Only</option>
-                            <option value="Health Workers">Health Workers</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">In Charge / Head of Event</label>
-                        <input type="text" name="in_charge" class="form-control" placeholder="Enter name of person in charge">
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="isOpenToAll" id="isOpenToAll" value="1" data-allowed-target="allowedBarangaysCreate">
-                        <label class="form-check-label fw-semibold" for="isOpenToAll">
-                            <i class="bi bi-globe me-1"></i>Open to All Barangays
-                        </label>
-                        <small class="form-text text-muted d-block">Check this if the event is open to residents from other barangays</small>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Allow Other Barangays Within RHU</label>
-                    @if(!empty($barangaysWithinRhu))
-                        <div class="dropdown w-100 multi-select-dropdown" data-multi-select="allowedBarangaysCreate">
-                            <button class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                <span class="multi-select-label" id="allowedBarangaysCreateLabel" data-placeholder="Select barangays">Select barangays</span>
-                                <i class="bi bi-chevron-down small"></i>
-                            </button>
-                            <div class="dropdown-menu w-100 p-3 shadow-sm">
-                                @foreach($barangaysWithinRhu as $barangay)
-                                    <div class="form-check">
-                                        <input class="form-check-input allowed-barangay-option" type="checkbox" name="allowed_barangays[]" value="{{ $barangay['id'] }}" id="allowedBarangaysCreateOption{{ $loop->index }}" data-label-target="allowedBarangaysCreateLabel" data-option-name="{{ $barangay['name'] }}">
-                                        <label class="form-check-label" for="allowedBarangaysCreateOption{{ $loop->index }}">{{ $barangay['name'] }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                        <small class="form-text text-muted d-block">Click to open and use the checkboxes to select barangays.</small>
-                    @else
-                        <div class="text-muted small">No other barangays available within your RHU.</div>
-                    @endif
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    Save Event
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<style>
-.event-card {
-    border-radius: 1rem;
-    transition: box-shadow 0.2s;
-}
-.event-card:hover {
-    box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.08);
-    border-color: #0d6efd22;
-}
-.multi-select-dropdown .dropdown-menu {
-    max-height: 220px;
-    overflow-y: auto;
-}
-.multi-select-dropdown .form-check {
-    margin-bottom: 0.35rem;
-}
-.multi-select-dropdown .form-check:last-child {
-    margin-bottom: 0;
-}
-.multi-select-dropdown.dropdown-disabled button {
-    pointer-events: none;
-    opacity: 0.65;
-}
-.multi-select-dropdown.dropdown-disabled .multi-select-label {
-    color: #6c757d;
-}
-
-/* Event Image Upload Styles */
-.event-image-upload-section {
-    background: #f3f4f6;
-    border: 2px dashed #d1d5db;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 10px;
-}
-
-.event-image-upload-section:hover {
-    border-color: #2563eb;
-    background: #eff6ff;
-}
-
-.event-image-upload-section.dragging {
-    border-color: #2563eb;
-    background: #dbeafe;
-}
-
-#eventImageUploadArea, [id^="editEventImageUploadArea"] {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-#eventImageUploadArea svg, [id^="editEventImageUploadArea"] svg {
-    color: #9ca3af;
-}
-
-#eventImageUploadArea p, [id^="editEventImageUploadArea"] p {
-    color: #6b7280;
-    font-size: 13px;
-    margin: 0;
-}
-
-#eventImageUploadArea p:first-child, [id^="editEventImageUploadArea"] p:first-child {
-    font-weight: 600;
-    color: #374151;
-}
-
-#eventImagePreview, [id^="editEventImagePreview"] {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-}
-
-#eventImagePreviewImg, [id^="editEventImagePreviewImg"], [id^="editEventImageNewPreviewImg"] {
-    max-width: 100%;
-    max-height: 200px;
-    border-radius: 8px;
-    margin: 0 auto 12px auto;
-    object-fit: contain;
-    background-color: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    padding: 8px;
-    display: block;
-}
-
-.event-image-change-btn, .edit-event-image-change-btn {
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.event-image-change-btn:hover, .edit-event-image-change-btn:hover {
-    background: #e5e7eb;
-}
-</style>
-
-<script>
-// Time validation for add event form
-document.addEventListener('DOMContentLoaded', function() {
-    const startTimeInput = document.getElementById('start_time');
-    const endTimeInput = document.getElementById('end_time');
-    
-    if (startTimeInput && endTimeInput) {
-        function validateTime() {
-            const startTime = startTimeInput.value;
-            const endTime = endTimeInput.value;
-            
-            if (startTime && endTime) {
-                if (startTime >= endTime) {
-                    endTimeInput.setCustomValidity('End time must be after start time.');
-                    endTimeInput.classList.add('is-invalid');
-                } else {
-                    endTimeInput.setCustomValidity('');
-                    endTimeInput.classList.remove('is-invalid');
-                }
-            }
-        }
-        
-        startTimeInput.addEventListener('change', validateTime);
-        endTimeInput.addEventListener('change', validateTime);
-        endTimeInput.addEventListener('input', validateTime);
-    }
-    
-    function updateAllowedBarangayLabel(dropdown) {
-        if (!dropdown) return;
-        const label = dropdown.querySelector('.multi-select-label');
-        const checkboxes = dropdown.querySelectorAll('.allowed-barangay-option');
-        if (!label || !checkboxes.length) return;
-
-        const placeholder = label.getAttribute('data-placeholder') || 'Select options';
-        const selectedNames = Array.from(checkboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.getAttribute('data-option-name'));
-
-        label.textContent = selectedNames.length ? selectedNames.join(', ') : placeholder;
-    }
-
-    function toggleAllowedBarangays(checkbox) {
-        const targetKey = checkbox.getAttribute('data-allowed-target');
-        if (!targetKey) return;
-
-        const dropdown = document.querySelector(`.multi-select-dropdown[data-multi-select="${targetKey}"]`);
-        if (!dropdown) return;
-
-        const checkboxes = dropdown.querySelectorAll('.allowed-barangay-option');
-        const triggerButton = dropdown.querySelector('button');
-
-        if (checkbox.checked) {
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-                cb.disabled = true;
-            });
-            if (triggerButton) {
-                triggerButton.classList.add('disabled');
-                triggerButton.setAttribute('disabled', 'disabled');
-            }
-            dropdown.classList.add('dropdown-disabled');
-        } else {
-            checkboxes.forEach(cb => cb.disabled = false);
-            if (triggerButton) {
-                triggerButton.classList.remove('disabled');
-                triggerButton.removeAttribute('disabled');
-            }
-            dropdown.classList.remove('dropdown-disabled');
-        }
-
-        updateAllowedBarangayLabel(dropdown);
-    }
-
-    const multiSelectDropdowns = document.querySelectorAll('.multi-select-dropdown');
-    multiSelectDropdowns.forEach(dropdown => {
-        updateAllowedBarangayLabel(dropdown);
-        dropdown.querySelectorAll('.allowed-barangay-option').forEach(cb => {
-            cb.addEventListener('change', () => updateAllowedBarangayLabel(dropdown));
-        });
-    });
-
-    const openToAllCheckboxes = document.querySelectorAll('input[name="isOpenToAll"][data-allowed-target]');
-    openToAllCheckboxes.forEach(checkbox => {
-        toggleAllowedBarangays(checkbox);
-        checkbox.addEventListener('change', () => toggleAllowedBarangays(checkbox));
-    });
-
-    // Time validation for edit event forms
-    const editForms = document.querySelectorAll('form[action*="/events/"]');
-    editForms.forEach(form => {
-        const startTimeField = form.querySelector('input[name="start_time"]');
-        const endTimeField = form.querySelector('input[name="end_time"]');
-        
-        if (startTimeField && endTimeField) {
-            function validateEditTime() {
-                const startTime = startTimeField.value;
-                const endTime = endTimeField.value;
-                
-                if (startTime && endTime) {
-                    if (startTime >= endTime) {
-                        endTimeField.setCustomValidity('End time must be after start time.');
-                        endTimeField.classList.add('is-invalid');
-                    } else {
-                        endTimeField.setCustomValidity('');
-                        endTimeField.classList.remove('is-invalid');
-                    }
-                }
-            }
-            
-            startTimeField.addEventListener('change', validateEditTime);
-            endTimeField.addEventListener('change', validateEditTime);
-            endTimeField.addEventListener('input', validateEditTime);
-        }
-    });
-
-    // Event Image Upload - Add Event Modal
-    const eventImageUploadSection = document.getElementById('eventImageUploadSection');
-    const eventImageUpload = document.getElementById('eventImageUpload');
-    const eventImageUploadArea = document.getElementById('eventImageUploadArea');
-    const eventImagePreview = document.getElementById('eventImagePreview');
-    const eventImagePreviewImg = document.getElementById('eventImagePreviewImg');
-
-    if (eventImageUploadSection && eventImageUpload) {
-        // Click to upload
-        eventImageUploadSection.addEventListener('click', () => eventImageUpload.click());
-
-        // File selected
-        eventImageUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Validate file type
-                if (!file.type.match('image.*')) {
-                    alert('Please select an image file.');
-                    return;
-                }
-                
-                // Validate file size (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB.');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    eventImagePreviewImg.src = e.target.result;
-                    eventImagePreviewImg.style.display = 'block';
-                    eventImageUploadArea.style.display = 'none';
-                    eventImagePreview.style.display = 'flex';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Change image button
-        const changeBtn = eventImagePreview.querySelector('.event-image-change-btn');
-        if (changeBtn) {
-            changeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                eventImageUpload.value = '';
-                eventImageUploadArea.style.display = 'flex';
-                eventImagePreview.style.display = 'none';
-                eventImageUpload.click();
-            });
-        }
-        
-        // Drag and drop
-        eventImageUploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            eventImageUploadSection.classList.add('dragging');
-        });
-        
-        eventImageUploadSection.addEventListener('dragleave', () => {
-            eventImageUploadSection.classList.remove('dragging');
-        });
-        
-        eventImageUploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            eventImageUploadSection.classList.remove('dragging');
-            if (e.dataTransfer.files.length > 0) {
-                const file = e.dataTransfer.files[0];
-                if (!file.type.match('image.*')) {
-                    alert('Please drop an image file.');
-                    return;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB.');
-                    return;
-                }
-                eventImageUpload.files = e.dataTransfer.files;
-                const event = new Event('change', { bubbles: true });
-                eventImageUpload.dispatchEvent(event);
-            }
-        });
-        
-        // Reset preview when modal is closed
-        const addEventModal = document.getElementById('addEventModal');
-        if (addEventModal) {
-            addEventModal.addEventListener('hidden.bs.modal', function() {
-                eventImageUpload.value = '';
-                eventImageUploadArea.style.display = 'flex';
-                eventImagePreview.style.display = 'none';
-                eventImagePreviewImg.src = '';
-            });
-        }
-    }
-
-    // Event Image Upload - Edit Event Modals
-    document.querySelectorAll('[id^="editEventImageUploadSection"]').forEach(section => {
-        const eventId = section.id.replace('editEventImageUploadSection', '');
-        const uploadInput = document.getElementById(`editEventImageUpload${eventId}`);
-        const uploadArea = document.getElementById(`editEventImageUploadArea${eventId}`);
-        const preview = document.getElementById(`editEventImagePreview${eventId}`);
-
-        if (!uploadInput || !section) return;
-
-        // Click to upload
-        section.addEventListener('click', () => uploadInput.click());
-
-        // File selected
-        uploadInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Validate file type
-                if (!file.type.match('image.*')) {
-                    alert('Please select an image file.');
-                    return;
-                }
-                
-                // Validate file size (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB.');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const previewImg = document.getElementById(`editEventImagePreviewImg${eventId}`);
-                    if (previewImg) {
-                        previewImg.src = e.target.result;
-                        previewImg.style.display = 'block';
-                    }
-                    if (uploadArea) uploadArea.style.display = 'none';
-                    if (preview) preview.style.display = 'flex';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Change image buttons
-        document.querySelectorAll(`.edit-event-image-change-btn[data-event-id="${eventId}"]`).forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                uploadInput.value = '';
-                uploadArea.style.display = 'flex';
-                preview.style.display = 'none';
-                uploadInput.click();
-            });
-        });
-        
-        // Drag and drop
-        section.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            section.classList.add('dragging');
-        });
-        
-        section.addEventListener('dragleave', () => {
-            section.classList.remove('dragging');
-        });
-        
-        section.addEventListener('drop', (e) => {
-            e.preventDefault();
-            section.classList.remove('dragging');
-            if (e.dataTransfer.files.length > 0) {
-                const file = e.dataTransfer.files[0];
-                if (!file.type.match('image.*')) {
-                    alert('Please drop an image file.');
-                    return;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB.');
-                    return;
-                }
-                uploadInput.files = e.dataTransfer.files;
-                const event = new Event('change', { bubbles: true });
-                uploadInput.dispatchEvent(event);
-            }
-        });
-    });
-    });
-</script>
-
 @push('styles')
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
-<style>
-    .mapboxgl-ctrl-geocoder {
-        width: 100%;
-        max-width: 100%;
-        border-radius: 4px;
-        position: relative;
-        z-index: 1;
-    }
-    .mapboxgl-ctrl-geocoder input {
-        padding: 8px 12px;
-    }
-    .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--icon-search {
-        display: none !important;
-    }
-    .mapboxgl-ctrl-geocoder .mapboxgl-ctrl-geocoder--pin-right {
-        right: 10px;
-    }
-    /* Ensure suggestions dropdown appears above modal content */
-    .mapboxgl-ctrl-geocoder .suggestions {
-        z-index: 1050 !important;
-        position: absolute !important;
-    }
-    /* Hide suggestions initially only in edit modal to prevent auto-opening */
-    #editLocationGeocoderContainer .mapboxgl-ctrl-geocoder .suggestions {
-        display: none !important;
-    }
-    #editLocationGeocoderContainer .mapboxgl-ctrl-geocoder .suggestions.active {
-        display: block !important;
-    }
-    /* Don't interfere with suggestions in add modal - let Mapbox control visibility */
-</style>
 @endpush
+
+@section('content')
+@php
+    $barangayOptions = collect($barangaysWithinRhu ?? [])->keyBy('id');
+    $statusCounts = ['All' => count($events), 'Upcoming' => 0, 'Ongoing' => 0, 'Done' => 0, 'Cancelled' => 0];
+    foreach ($events as $ev) { $s = $ev['status'] ?? 'Upcoming'; if (isset($statusCounts[$s])) $statusCounts[$s]++; }
+    $eventsForJs = collect($events)->map(function($e) {
+        return [
+            'id'               => $e['id'],
+            'title'            => $e['title'] ?? '',
+            'date'             => $e['date'] ?? '',
+            'start_time'       => $e['start_time'] ?? '',
+            'end_time'         => $e['end_time'] ?? '',
+            'location'         => $e['location'] ?? '',
+            'latitude'         => $e['latitude'] ?? '',
+            'longitude'        => $e['longitude'] ?? '',
+            'description'      => $e['description'] ?? '',
+            'targetAttendees'  => $e['targetAttendees'] ?? '',
+            'in_charge'        => $e['in_charge'] ?? '',
+            'isOpenToAll'      => $e['isOpenToAll'] ?? false,
+            'allowed_barangays'=> $e['allowed_barangays'] ?? [],
+            'image_url'        => $e['image_url'] ?? '',
+            'status'           => $e['status'] ?? 'Upcoming',
+        ];
+    })->values();
+@endphp
+
+{{-- Pass event data to JS --}}
+<script>
+window.__events = @json($eventsForJs);
+</script>
+
+<div class="container-fluid px-4">
+
+    {{-- Toasts --}}
+    @if(session('success'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-success border-0 rounded-3 shadow" role="alert">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-danger border-0 rounded-3 shadow" role="alert">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Page Header --}}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1" style="color:#1e293b;">Events</h2>
+            <p class="text-muted mb-0 small">Manage health center events and community activities</p>
+        </div>
+        <button class="btn btn-add-ev" onclick="openAddModal()">
+            <i class="bi bi-plus-lg me-1"></i>Add Event
+        </button>
+    </div>
+
+    {{-- Stats --}}
+    <div class="row g-3 mb-4">
+        @php
+        $stats = [
+            ['label'=>'Total Events',  'value'=>$statusCounts['All'],      'icon'=>'bi-calendar2-week-fill', 'bg'=>'#f1f1ef', 'color'=>'#787774'],
+            ['label'=>'Upcoming',      'value'=>$statusCounts['Upcoming'], 'icon'=>'bi-calendar-check-fill', 'bg'=>'#dbeafe', 'color'=>'#1d4ed8'],
+            ['label'=>'Ongoing',       'value'=>$statusCounts['Ongoing'],  'icon'=>'bi-play-circle-fill',    'bg'=>'#fef9c3', 'color'=>'#d97706'],
+            ['label'=>'Done',          'value'=>$statusCounts['Done'],     'icon'=>'bi-check-circle-fill',   'bg'=>'#dcfce7', 'color'=>'#16a34a'],
+        ];
+        @endphp
+        @foreach($stats as $stat)
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:{{ $stat['bg'] }};color:{{ $stat['color'] }};"><i class="bi {{ $stat['icon'] }}"></i></div>
+                <div class="stat-info"><div class="stat-value">{{ $stat['value'] }}</div><div class="stat-label">{{ $stat['label'] }}</div></div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Status Tabs --}}
+    <div class="ev-tabs mb-3">
+        @foreach(['All','Upcoming','Ongoing','Done','Cancelled'] as $tab)
+        <button class="ev-tab {{ $tab === 'All' ? 'active' : '' }}" data-tab="{{ $tab }}" onclick="filterTab(this)">
+            {{ $tab }}
+            <span class="ev-tab-count">{{ $statusCounts[$tab] }}</span>
+        </button>
+        @endforeach
+    </div>
+
+    {{-- Events Grid --}}
+    @if(count($events) > 0)
+    <div class="ev-grid" id="evGrid">
+        @foreach($events as $event)
+        @php
+            $status = $event['status'] ?? 'Upcoming';
+            $statusMeta = [
+                'Upcoming'  => ['class' => 'st-upcoming',  'label' => 'Upcoming'],
+                'Ongoing'   => ['class' => 'st-ongoing',   'label' => 'Ongoing'],
+                'Done'      => ['class' => 'st-done',      'label' => 'Done'],
+                'Cancelled' => ['class' => 'st-cancelled', 'label' => 'Cancelled'],
+            ][$status] ?? ['class' => 'st-upcoming', 'label' => $status];
+
+            $allowedBarangayNames = $event['allowed_barangay_names'] ?? [];
+            if (empty($allowedBarangayNames) && !empty($event['allowed_barangays'] ?? [])) {
+                $allowedBarangayNames = collect($event['allowed_barangays'])
+                    ->filter(fn($id) => $barangayOptions->has($id))
+                    ->map(fn($id) => $barangayOptions[$id]['name'])
+                    ->values()->all();
+            }
+        @endphp
+        <div class="ev-card {{ $status === 'Cancelled' ? 'ev-card-cancelled' : '' }}" data-status="{{ $status }}">
+
+            {{-- Banner --}}
+            <div class="ev-banner" style="{{ isset($event['image_url']) && $event['image_url'] ? 'background-image:url('.e($event['image_url']).');background-size:cover;background-position:center;' : '' }}">
+                @if(!isset($event['image_url']) || !$event['image_url'])
+                <div class="ev-banner-placeholder"><i class="bi bi-calendar-event"></i></div>
+                @endif
+                <div class="ev-status-badge {{ $statusMeta['class'] }}">{{ $statusMeta['label'] }}</div>
+            </div>
+
+            {{-- Body --}}
+            <div class="ev-body">
+                <h6 class="ev-title">{{ $event['title'] ?? 'Untitled' }}</h6>
+
+                @if(!empty($event['description']))
+                <p class="ev-desc">{{ Str::limit($event['description'], 80) }}</p>
+                @endif
+
+                <div class="ev-meta">
+                    @if(isset($event['date']))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-calendar3 ev-meta-icon"></i>
+                        <span>{{ \Carbon\Carbon::parse($event['date'])->format('F d, Y') }}</span>
+                    </div>
+                    @endif
+
+                    @if(isset($event['start_time']) && isset($event['end_time']))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-clock ev-meta-icon"></i>
+                        <span>{{ \Carbon\Carbon::parse($event['start_time'])->format('g:i A') }} – {{ \Carbon\Carbon::parse($event['end_time'])->format('g:i A') }}</span>
+                    </div>
+                    @endif
+
+                    @if(!empty($event['location']))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-geo-alt ev-meta-icon"></i>
+                        <span>{{ Str::limit($event['location'], 50) }}</span>
+                    </div>
+                    @endif
+
+                    @if(!empty($event['targetAttendees']))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-people ev-meta-icon"></i>
+                        <span>{{ $event['targetAttendees'] }}</span>
+                    </div>
+                    @endif
+
+                    @if(!empty($event['in_charge']))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-person-badge ev-meta-icon"></i>
+                        <span>{{ $event['in_charge'] }}</span>
+                    </div>
+                    @endif
+
+                    @if(!empty($event['isOpenToAll']))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-globe ev-meta-icon" style="color:#0891b2;"></i>
+                        <span style="color:#0891b2;font-weight:500;">Open to all barangays</span>
+                    </div>
+                    @elseif(!empty($allowedBarangayNames))
+                    <div class="ev-meta-row">
+                        <i class="bi bi-geo-alt-fill ev-meta-icon" style="color:#7c3aed;"></i>
+                        <span>{{ implode(', ', array_slice($allowedBarangayNames, 0, 2)) }}{{ count($allowedBarangayNames) > 2 ? ' +'.( count($allowedBarangayNames)-2).' more' : '' }}</span>
+                    </div>
+                    @endif
+
+                    @if($status === 'Cancelled' && !empty($event['cancellation_reason']))
+                    <div class="ev-cancel-reason">
+                        <i class="bi bi-exclamation-octagon me-1"></i>{{ Str::limit($event['cancellation_reason'], 70) }}
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Footer --}}
+            <div class="ev-footer">
+                <a href="{{ route('rhu.events.show', $event['id']) }}" class="ev-action-btn ev-btn-view">
+                    <i class="bi bi-eye me-1"></i>View
+                </a>
+                @if($status !== 'Cancelled' && $status !== 'Done')
+                <button class="ev-action-btn ev-btn-edit" onclick="openEditModal('{{ $event['id'] }}')">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </button>
+                <button class="ev-action-btn ev-btn-cancel" onclick="openCancelModal('{{ $event['id'] }}','{{ addslashes($event['title'] ?? 'this event') }}')">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                @endif
+            </div>
+        </div>
+        @endforeach
+    </div>
+
+    <div class="ev-empty d-none" id="evEmpty">
+        <i class="bi bi-calendar-x"></i>
+        <div class="ev-empty-title">No events in this category</div>
+        <div class="ev-empty-text">Try a different filter tab.</div>
+    </div>
+
+    @else
+    <div class="ev-empty">
+        <i class="bi bi-calendar-x"></i>
+        <div class="ev-empty-title">No Events Yet</div>
+        <div class="ev-empty-text">Start by adding your first event using the button above.</div>
+    </div>
+    @endif
+</div>
+
+{{-- ─────────────────────────────────────
+     Add Event Modal
+───────────────────────────────────── --}}
+<div class="modal fade" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="ev-modal-hd">
+                <div><div class="ev-modal-eyebrow">New Event</div><h5 class="ev-modal-title">Add Event</h5></div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ route('rhu.events.store') }}" class="d-flex flex-column" enctype="multipart/form-data" id="addEventForm">
+                @csrf
+                <div class="modal-body p-4">
+                    {{-- Title + Date --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label class="ev-field-label">Event Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control rounded-3" required placeholder="e.g. Blood Donation Drive">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="ev-field-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="date" class="form-control rounded-3" min="{{ \Carbon\Carbon::today()->toDateString() }}" required>
+                        </div>
+                    </div>
+                    {{-- Time --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="ev-field-label">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" name="start_time" id="add_start_time" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="ev-field-label">End Time <span class="text-danger">*</span></label>
+                            <input type="time" name="end_time" id="add_end_time" class="form-control rounded-3" required>
+                            <div class="invalid-feedback">End time must be after start time.</div>
+                        </div>
+                    </div>
+                    {{-- Location --}}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="ev-field-label mb-0">Location</label>
+                            <button type="button" class="btn-link-sm" id="toggleLocationMode" onclick="toggleLocationInput('add')">Enter manually</button>
+                        </div>
+                        <div id="locationGeocoderContainer"></div>
+                        <input type="text" name="location" id="location" class="form-control rounded-3" style="display:none;" placeholder="Enter address">
+                        <input type="hidden" name="latitude" id="latitude">
+                        <input type="hidden" name="longitude" id="longitude">
+                        <small class="text-muted" style="font-size:.75rem;">Search with Mapbox or enter manually</small>
+                    </div>
+                    {{-- Description --}}
+                    <div class="mb-3">
+                        <label class="ev-field-label">Description</label>
+                        <textarea name="description" class="form-control rounded-3" rows="3" placeholder="Describe the event…"></textarea>
+                    </div>
+                    {{-- Image --}}
+                    <div class="mb-3">
+                        <label class="ev-field-label">Event Image <span class="text-muted fw-normal">(Optional)</span></label>
+                        <div class="ev-upload-zone" id="addUploadZone" onclick="document.getElementById('eventImageUpload').click()">
+                            <div id="addUploadPlaceholder">
+                                <i class="bi bi-image ev-upload-icon"></i>
+                                <div class="ev-upload-text">Click or drag to upload</div>
+                                <div class="ev-upload-hint">PNG or JPG, max 5MB</div>
+                            </div>
+                            <div id="addUploadPreview" class="d-none">
+                                <img id="addPreviewImg" src="" alt="Preview" class="ev-preview-img">
+                                <button type="button" class="ev-change-img-btn" onclick="resetAddImage(event)">Change Image</button>
+                            </div>
+                        </div>
+                        <input type="file" id="eventImageUpload" name="image" accept="image/*" class="d-none">
+                    </div>
+                    {{-- Target Attendees + In Charge --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="ev-field-label">Target Attendees</label>
+                            <select name="targetAttendees" class="form-select rounded-3">
+                                <option value="">All residents (default)</option>
+                                <option value="All Residents">All Residents</option>
+                                <option value="Seniors Only">Seniors Only</option>
+                                <option value="Children Only">Children Only</option>
+                                <option value="Pregnant Women">Pregnant Women</option>
+                                <option value="Adults Only">Adults Only</option>
+                                <option value="Health Workers">Health Workers</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="ev-field-label">In Charge / Head of Event</label>
+                            <input type="text" name="in_charge" class="form-control rounded-3" placeholder="Person responsible">
+                        </div>
+                    </div>
+                    {{-- Open to All --}}
+                    <div class="ev-toggle-row mb-3">
+                        <label class="ev-toggle-label" for="addIsOpenToAll">
+                            <i class="bi bi-globe me-2 text-info"></i>
+                            <div>
+                                <div class="fw-semibold" style="font-size:.88rem;">Open to All Barangays</div>
+                                <div style="font-size:.76rem;color:#94a3b8;">Event is accessible to residents from any barangay</div>
+                            </div>
+                        </label>
+                        <div class="form-check form-switch ms-auto">
+                            <input class="form-check-input" type="checkbox" name="isOpenToAll" id="addIsOpenToAll" value="1" data-allowed-target="allowedBarangaysCreate" style="width:2.4em;height:1.3em;">
+                        </div>
+                    </div>
+                    {{-- Allowed Barangays --}}
+                    @if(!empty($barangaysWithinRhu))
+                    <div class="mb-1" id="addBarangayDropdownWrap">
+                        <label class="ev-field-label">Allow Specific Barangays</label>
+                        <div class="bgy-dropdown" id="addBgyDropdown">
+                            <button type="button" class="bgy-trigger" id="addBgyTrigger" onclick="toggleBgyPanel('add')">
+                                <i class="bi bi-geo-alt me-2 text-muted"></i>
+                                <span id="addBgyTriggerText">Select barangay(s)…</span>
+                                <i class="bi bi-chevron-down ms-auto bgy-chevron" id="addBgyChevron"></i>
+                            </button>
+                            <div class="bgy-panel" id="addBgyPanel">
+                                <div class="bgy-search-wrap">
+                                    <i class="bi bi-search bgy-search-icon"></i>
+                                    <input type="text" class="bgy-search-input" placeholder="Search barangay…" oninput="filterBgy(this,'add')">
+                                </div>
+                                <div class="bgy-options-list">
+                                    @foreach($barangaysWithinRhu as $barangay)
+                                    <label class="bgy-option" data-name="{{ strtolower($barangay['name']) }}">
+                                        <input type="checkbox" name="allowed_barangays[]" value="{{ $barangay['id'] }}" class="add-bgy-cb" onchange="updateBgyLabel('add')">
+                                        <i class="bi bi-geo-alt-fill bgy-icon"></i>
+                                        <span class="bgy-option-name">{{ $barangay['name'] }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bgy-tags" id="addBgyTags"></div>
+                    </div>
+                    @endif
+                </div>
+                <div class="modal-footer border-top px-4 py-3 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4" id="addSubmitBtn">
+                        <span class="add-submit-label"><i class="bi bi-check2 me-1"></i>Save Event</span>
+                        <span class="add-submit-loading d-none"><span class="spinner-border spinner-border-sm me-1"></span>Saving…</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ─────────────────────────────────────
+     Edit Event Modal (single, populated by JS)
+───────────────────────────────────── --}}
+<div class="modal fade" id="editEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="ev-modal-hd">
+                <div><div class="ev-modal-eyebrow">Edit Event</div><h5 class="ev-modal-title" id="editModalTitle">Edit Event</h5></div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" class="d-flex flex-column" enctype="multipart/form-data" id="editEventForm">
+                @csrf
+                @method('PUT')
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label class="ev-field-label">Event Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" id="edit_title" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="ev-field-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="date" id="edit_date" class="form-control rounded-3" min="{{ \Carbon\Carbon::today()->toDateString() }}" required>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="ev-field-label">Start Time <span class="text-danger">*</span></label>
+                            <input type="time" name="start_time" id="edit_start_time" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="ev-field-label">End Time <span class="text-danger">*</span></label>
+                            <input type="time" name="end_time" id="edit_end_time" class="form-control rounded-3" required>
+                            <div class="invalid-feedback">End time must be after start time.</div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="ev-field-label mb-0">Location</label>
+                            <button type="button" class="btn-link-sm" id="toggleEditLocationMode" onclick="toggleLocationInput('edit')">Enter manually</button>
+                        </div>
+                        <div id="editLocationGeocoderContainer"></div>
+                        <input type="text" name="location" id="edit_location" class="form-control rounded-3" style="display:none;" placeholder="Enter address">
+                        <input type="hidden" name="latitude"  id="edit_latitude">
+                        <input type="hidden" name="longitude" id="edit_longitude">
+                    </div>
+                    <div class="mb-3">
+                        <label class="ev-field-label">Description</label>
+                        <textarea name="description" id="edit_description" class="form-control rounded-3" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="ev-field-label">Event Image <span class="text-muted fw-normal">(Optional)</span></label>
+                        <div class="ev-upload-zone" id="editUploadZone" onclick="document.getElementById('editImageUpload').click()">
+                            <div id="editUploadPlaceholder">
+                                <i class="bi bi-image ev-upload-icon"></i>
+                                <div class="ev-upload-text">Click or drag to upload</div>
+                                <div class="ev-upload-hint">PNG or JPG, max 5MB</div>
+                            </div>
+                            <div id="editUploadPreview" class="d-none">
+                                <img id="editPreviewImg" src="" alt="Preview" class="ev-preview-img">
+                                <button type="button" class="ev-change-img-btn" onclick="resetEditImage(event)">Change Image</button>
+                            </div>
+                        </div>
+                        <input type="file" id="editImageUpload" name="image" accept="image/*" class="d-none">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="ev-field-label">Target Attendees</label>
+                            <select name="targetAttendees" id="edit_targetAttendees" class="form-select rounded-3">
+                                <option value="">All residents (default)</option>
+                                <option value="All Residents">All Residents</option>
+                                <option value="Seniors Only">Seniors Only</option>
+                                <option value="Children Only">Children Only</option>
+                                <option value="Pregnant Women">Pregnant Women</option>
+                                <option value="Adults Only">Adults Only</option>
+                                <option value="Health Workers">Health Workers</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="ev-field-label">In Charge / Head of Event</label>
+                            <input type="text" name="in_charge" id="edit_in_charge" class="form-control rounded-3" placeholder="Person responsible">
+                        </div>
+                    </div>
+                    <div class="ev-toggle-row mb-3">
+                        <label class="ev-toggle-label" for="editIsOpenToAll">
+                            <i class="bi bi-globe me-2 text-info"></i>
+                            <div>
+                                <div class="fw-semibold" style="font-size:.88rem;">Open to All Barangays</div>
+                                <div style="font-size:.76rem;color:#94a3b8;">Event is accessible to residents from any barangay</div>
+                            </div>
+                        </label>
+                        <div class="form-check form-switch ms-auto">
+                            <input class="form-check-input" type="checkbox" name="isOpenToAll" id="editIsOpenToAll" value="1" data-allowed-target="editAllowedBarangays" style="width:2.4em;height:1.3em;">
+                        </div>
+                    </div>
+                    @if(!empty($barangaysWithinRhu))
+                    <div class="mb-1" id="editBarangayDropdownWrap">
+                        <label class="ev-field-label">Allow Specific Barangays</label>
+                        <div class="bgy-dropdown" id="editBgyDropdown">
+                            <button type="button" class="bgy-trigger" id="editBgyTrigger" onclick="toggleBgyPanel('edit')">
+                                <i class="bi bi-geo-alt me-2 text-muted"></i>
+                                <span id="editBgyTriggerText">Select barangay(s)…</span>
+                                <i class="bi bi-chevron-down ms-auto bgy-chevron" id="editBgyChevron"></i>
+                            </button>
+                            <div class="bgy-panel" id="editBgyPanel">
+                                <div class="bgy-search-wrap">
+                                    <i class="bi bi-search bgy-search-icon"></i>
+                                    <input type="text" class="bgy-search-input" placeholder="Search barangay…" oninput="filterBgy(this,'edit')">
+                                </div>
+                                <div class="bgy-options-list">
+                                    @foreach($barangaysWithinRhu as $barangay)
+                                    <label class="bgy-option" data-name="{{ strtolower($barangay['name']) }}">
+                                        <input type="checkbox" name="allowed_barangays[]" value="{{ $barangay['id'] }}" class="edit-bgy-cb" onchange="updateBgyLabel('edit')">
+                                        <i class="bi bi-geo-alt-fill bgy-icon"></i>
+                                        <span class="bgy-option-name">{{ $barangay['name'] }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bgy-tags" id="editBgyTags"></div>
+                    </div>
+                    @endif
+                </div>
+                <div class="modal-footer border-top px-4 py-3 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4" id="editSubmitBtn">
+                        <span class="edit-submit-label"><i class="bi bi-check2 me-1"></i>Update Event</span>
+                        <span class="edit-submit-loading d-none"><span class="spinner-border spinner-border-sm me-1"></span>Saving…</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ─── Cancel Event Modal ─── --}}
+<div class="modal fade" id="cancelEventModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="ev-modal-hd" style="background:#dc2626;">
+                <div><div class="ev-modal-eyebrow">Confirm</div><h5 class="ev-modal-title">Cancel Event</h5></div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="cancelEventForm">
+                @csrf
+                <div class="modal-body p-4">
+                    <p class="mb-3">Please provide a reason for cancelling <strong id="cancelEventTitle"></strong>.</p>
+                    <label class="ev-field-label">Cancellation Reason <span class="text-danger">*</span></label>
+                    <textarea name="reason" class="form-control rounded-3" rows="3" required maxlength="500" placeholder="Enter reason…"></textarea>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Go Back</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4"><i class="bi bi-x-circle me-1"></i>Confirm Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+.btn-add-ev { background:#1657c1; border:none; color:#fff; font-size:.82rem; font-weight:500; padding:6px 16px; border-radius:6px; transition:opacity .1s; }
+.btn-add-ev:hover { opacity:.82; color:#fff; }
+
+.stat-card { display:flex; align-items:center; gap:12px; padding:14px 18px; border-radius:6px; background:#fff; border:1px solid #e9e9e7; }
+.stat-icon { width:36px; height:36px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+.stat-value { font-size:1.5rem; font-weight:700; color:#37352f; line-height:1; }
+.stat-label { font-size:.72rem; color:#9b9b9b; font-weight:400; margin-top:2px; }
+
+/* ── Tabs ── */
+.ev-tabs { display:flex; gap:4px; border-bottom:1px solid #e9e9e7; }
+.ev-tab { background:none; border:none; padding:8px 14px 10px; font-size:.84rem; font-weight:500; color:#787774; border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; transition:all .15s; border-radius:4px 4px 0 0; display:flex; align-items:center; gap:6px; }
+.ev-tab:hover { color:#37352f; background:#f7f7f5; }
+.ev-tab.active { color:#37352f; border-bottom-color:#37352f; }
+.ev-tab-count { font-size:.66rem; font-weight:700; background:#f1f1ef; color:#787774; padding:1px 7px; border-radius:10px; }
+.ev-tab.active .ev-tab-count { background:#37352f; color:#fff; }
+
+/* ── Grid ── */
+.ev-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; }
+
+/* ── Card ── */
+.ev-card { background:#fff; border:1px solid #e9e9e7; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s; }
+.ev-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.ev-card-cancelled { opacity:.75; }
+.ev-card-cancelled .ev-title { text-decoration:line-through; color:#9b9b9b; }
+
+.ev-banner { height:140px; background:#f1f5f9; position:relative; display:flex; align-items:center; justify-content:center; }
+.ev-banner-placeholder { display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+.ev-banner-placeholder i { font-size:2.5rem; color:#cbd5e1; }
+.ev-status-badge { position:absolute; top:10px; left:10px; font-size:.66rem; font-weight:700; letter-spacing:.4px; text-transform:uppercase; padding:3px 9px; border-radius:20px; }
+.st-upcoming  { background:#dbeafe; color:#1d4ed8; }
+.st-ongoing   { background:#fef9c3; color:#d97706; }
+.st-done      { background:#dcfce7; color:#16a34a; }
+.st-cancelled { background:#f1f5f9; color:#64748b; }
+
+.ev-body { padding:14px 16px; flex:1; }
+.ev-title { font-size:.9rem; font-weight:700; color:#1e293b; margin-bottom:6px; line-height:1.3; }
+.ev-desc { font-size:.77rem; color:#6b7280; margin-bottom:8px; line-height:1.4; }
+.ev-meta { display:flex; flex-direction:column; gap:4px; }
+.ev-meta-row { display:flex; align-items:flex-start; gap:7px; font-size:.78rem; color:#475569; }
+.ev-meta-icon { font-size:.8rem; color:#94a3b8; flex-shrink:0; margin-top:1px; }
+.ev-cancel-reason { font-size:.75rem; color:#dc2626; background:#fef2f2; border:1px solid #fecaca; border-radius:5px; padding:5px 9px; margin-top:8px; }
+
+.ev-footer { display:flex; gap:6px; padding:12px 16px; border-top:1px solid #f1f5f9; }
+.ev-action-btn { display:inline-flex; align-items:center; font-size:.76rem; font-weight:500; padding:5px 11px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; text-decoration:none; transition:all .12s; }
+.ev-action-btn:hover { background:#f8fafc; color:#1e293b; }
+.ev-btn-view:hover  { border-color:#1657c1; color:#1657c1; }
+.ev-btn-edit:hover  { border-color:#1657c1; background:#eff6ff; color:#1657c1; }
+.ev-btn-cancel:hover { border-color:#dc2626; background:#fef2f2; color:#dc2626; }
+
+/* ── Empty ── */
+.ev-empty { text-align:center; padding:60px 20px; color:#94a3b8; background:#fff; border:1px solid #e9e9e7; border-radius:8px; }
+.ev-empty i { font-size:2.5rem; display:block; margin-bottom:12px; }
+.ev-empty-title { font-size:.95rem; font-weight:600; color:#374151; margin-bottom:4px; }
+.ev-empty-text { font-size:.82rem; }
+
+/* ── Modal chrome ── */
+.ev-modal-hd { display:flex; align-items:flex-start; justify-content:space-between; background:#1657c1; padding:18px 22px; }
+.ev-modal-eyebrow { font-size:.64rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.12); color:rgba(255,255,255,.75); padding:2px 8px; border-radius:4px; margin-bottom:5px; display:inline-block; }
+.ev-modal-title { font-size:1rem; font-weight:600; color:#fff; margin:0; }
+.ev-field-label { font-size:.8rem; font-weight:600; color:#374151; display:block; margin-bottom:5px; }
+.btn-link-sm { background:none; border:none; color:#1657c1; font-size:.76rem; cursor:pointer; padding:0; }
+.btn-link-sm:hover { text-decoration:underline; }
+
+/* ── Upload zone ── */
+.ev-upload-zone { border:2px dashed #e2e8f0; border-radius:8px; background:#fafafa; cursor:pointer; min-height:90px; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:all .15s; text-align:center; padding:16px; }
+.ev-upload-zone:hover { border-color:#1657c1; background:#f8fafc; }
+.ev-upload-icon { font-size:1.8rem; color:#cbd5e1; display:block; margin-bottom:6px; }
+.ev-upload-text { font-size:.83rem; font-weight:500; color:#475569; }
+.ev-upload-hint { font-size:.73rem; color:#94a3b8; margin-top:2px; }
+.ev-preview-img { max-width:100%; max-height:180px; border-radius:6px; object-fit:contain; display:block; margin-bottom:8px; }
+.ev-change-img-btn { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:4px 12px; font-size:.76rem; cursor:pointer; color:#374151; }
+.ev-change-img-btn:hover { background:#e2e8f0; }
+
+/* ── Open-to-all toggle row ── */
+.ev-toggle-row { display:flex; align-items:center; gap:12px; padding:12px 14px; background:#fafaf9; border:1px solid #f1f1ef; border-radius:8px; }
+.ev-toggle-label { display:flex; align-items:center; gap:8px; cursor:pointer; flex:1; }
+
+/* ── Barangay dropdown ── */
+.bgy-dropdown { position:relative; }
+.bgy-trigger { width:100%; display:flex; align-items:center; gap:6px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; font-size:.85rem; color:#374151; cursor:pointer; text-align:left; transition:border-color .15s; }
+.bgy-trigger:hover, .bgy-trigger.open { border-color:#1657c1; }
+.bgy-chevron { font-size:.7rem; transition:transform .2s; color:#94a3b8; }
+.bgy-trigger.open .bgy-chevron { transform:rotate(180deg); }
+.bgy-panel { position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.1); display:none; flex-direction:column; max-height:240px; overflow:hidden; }
+.bgy-panel.open { display:flex; }
+.bgy-search-wrap { position:relative; padding:8px 8px 4px; flex-shrink:0; }
+.bgy-search-icon { position:absolute; left:16px; top:50%; transform:translateY(-30%); color:#94a3b8; font-size:.78rem; pointer-events:none; }
+.bgy-search-input { width:100%; padding:5px 10px 5px 28px; border:1px solid #e2e8f0; border-radius:6px; font-size:.82rem; outline:none; }
+.bgy-search-input:focus { border-color:#1657c1; }
+.bgy-options-list { overflow-y:auto; flex:1; padding:4px 8px 8px; }
+.bgy-option { display:flex; align-items:center; gap:8px; padding:6px 6px; cursor:pointer; border-radius:5px; font-size:.83rem; color:#374151; transition:background .1s; }
+.bgy-option:hover { background:#f8fafc; }
+.bgy-option.bgy-hidden { display:none; }
+.bgy-option input[type="checkbox"] { accent-color:#1657c1; flex-shrink:0; cursor:pointer; }
+.bgy-icon { color:#1657c1; font-size:.76rem; flex-shrink:0; }
+.bgy-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+.bgy-tag { display:inline-flex; align-items:center; gap:4px; background:#eff6ff; color:#1657c1; border:1px solid #bfdbfe; font-size:.73rem; font-weight:500; padding:2px 8px 2px 6px; border-radius:20px; }
+.bgy-tag-remove { background:none; border:none; color:#93c5fd; padding:0; cursor:pointer; font-size:.78rem; line-height:1; }
+.bgy-tag-remove:hover { color:#1657c1; }
+
+.form-control, .form-select { border-color:#e2e8f0; font-size:.88rem; }
+.form-control:focus, .form-select:focus { border-color:#1657c1; box-shadow:0 0 0 3px rgba(22,87,193,.12); }
+
+.mapboxgl-ctrl-geocoder { width:100%; max-width:100%; border-radius:8px !important; }
+.mapboxgl-ctrl-geocoder input { padding:8px 12px !important; }
+.mapboxgl-ctrl-geocoder .suggestions { z-index:1050 !important; position:absolute !important; }
+#editLocationGeocoderContainer .mapboxgl-ctrl-geocoder .suggestions { display:none !important; }
+#editLocationGeocoderContainer .mapboxgl-ctrl-geocoder .suggestions.active { display:block !important; }
+</style>
+
+<script>
+// ── Status tab filter ────────────────────────────────
+function filterTab(btn) {
+    document.querySelectorAll('.ev-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    const cards = document.querySelectorAll('.ev-card');
+    let visible = 0;
+    cards.forEach(card => {
+        const show = tab === 'All' || card.dataset.status === tab;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const empty = document.getElementById('evEmpty');
+    if (empty) empty.classList.toggle('d-none', visible > 0);
+}
+
+// ── Open Add Modal ────────────────────────────────────
+function openAddModal() {
+    new bootstrap.Modal(document.getElementById('addEventModal')).show();
+}
+
+// ── Open Edit Modal ───────────────────────────────────
+function openEditModal(id) {
+    const ev = (window.__events || []).find(e => e.id === id || e.id == id);
+    if (!ev) return;
+
+    document.getElementById('editModalTitle').textContent = ev.title;
+    document.getElementById('editEventForm').action = `/rhu/events/${id}`;
+
+    document.getElementById('edit_title').value           = ev.title || '';
+    document.getElementById('edit_date').value            = ev.date || '';
+    document.getElementById('edit_start_time').value      = ev.start_time || '';
+    document.getElementById('edit_end_time').value        = ev.end_time || '';
+    document.getElementById('edit_description').value     = ev.description || '';
+    document.getElementById('edit_location').value        = ev.location || '';
+    document.getElementById('edit_latitude').value        = ev.latitude || '';
+    document.getElementById('edit_longitude').value       = ev.longitude || '';
+    document.getElementById('edit_in_charge').value       = ev.in_charge || '';
+    document.getElementById('edit_targetAttendees').value = ev.targetAttendees || '';
+    document.getElementById('editIsOpenToAll').checked    = !!ev.isOpenToAll;
+
+    // Image
+    const placeholder = document.getElementById('editUploadPlaceholder');
+    const preview     = document.getElementById('editUploadPreview');
+    const previewImg  = document.getElementById('editPreviewImg');
+    if (ev.image_url) {
+        previewImg.src = ev.image_url;
+        placeholder.classList.add('d-none');
+        preview.classList.remove('d-none');
+    } else {
+        placeholder.classList.remove('d-none');
+        preview.classList.add('d-none');
+        previewImg.src = '';
+    }
+
+    // Barangay checkboxes
+    document.querySelectorAll('.edit-bgy-cb').forEach(cb => {
+        cb.checked = (ev.allowed_barangays || []).includes(cb.value);
+    });
+    updateBgyLabel('edit');
+
+    // Reset submit button
+    document.querySelector('.edit-submit-label').classList.remove('d-none');
+    document.querySelector('.edit-submit-loading').classList.add('d-none');
+    document.getElementById('editSubmitBtn').disabled = false;
+
+    new bootstrap.Modal(document.getElementById('editEventModal')).show();
+}
+
+// ── Open Cancel Modal ─────────────────────────────────
+function openCancelModal(id, title) {
+    document.getElementById('cancelEventTitle').textContent = title;
+    document.getElementById('cancelEventForm').action = `/rhu/events/${id}/cancel`;
+    new bootstrap.Modal(document.getElementById('cancelEventModal')).show();
+}
+
+// ── Barangay dropdown ─────────────────────────────────
+function toggleBgyPanel(prefix) {
+    const panel   = document.getElementById(prefix + 'BgyPanel');
+    const trigger = document.getElementById(prefix + 'BgyTrigger');
+    const open    = panel.classList.toggle('open');
+    trigger.classList.toggle('open', open);
+}
+
+document.addEventListener('click', function(e) {
+    ['add','edit'].forEach(prefix => {
+        const dropdown = document.getElementById(prefix + 'BgyDropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+            document.getElementById(prefix + 'BgyPanel')?.classList.remove('open');
+            document.getElementById(prefix + 'BgyTrigger')?.classList.remove('open');
+        }
+    });
+});
+
+function filterBgy(input, prefix) {
+    const q = input.value.toLowerCase();
+    input.closest('.bgy-panel').querySelectorAll('.bgy-option').forEach(opt => {
+        opt.classList.toggle('bgy-hidden', !opt.dataset.name.includes(q));
+    });
+}
+
+function updateBgyLabel(prefix) {
+    const checked = [...document.querySelectorAll(`.${prefix}-bgy-cb`)].filter(c => c.checked);
+    const triggerText = document.getElementById(prefix + 'BgyTriggerText');
+    const tags = document.getElementById(prefix + 'BgyTags');
+
+    if (triggerText) {
+        triggerText.textContent = checked.length
+            ? checked.length + ' barangay' + (checked.length > 1 ? 's' : '') + ' selected'
+            : 'Select barangay(s)…';
+    }
+    if (tags) {
+        tags.innerHTML = '';
+        checked.forEach(cb => {
+            const name = cb.closest('.bgy-option')?.querySelector('.bgy-option-name')?.textContent?.trim() || cb.value;
+            const tag = document.createElement('span');
+            tag.className = 'bgy-tag';
+            tag.innerHTML = `<i class="bi bi-geo-alt-fill" style="font-size:.62rem"></i>${name}<button type="button" class="bgy-tag-remove" onclick="removeBgyTag('${prefix}','${cb.value}')"><i class="bi bi-x"></i></button>`;
+            tags.appendChild(tag);
+        });
+    }
+}
+
+function removeBgyTag(prefix, val) {
+    const cb = document.querySelector(`.${prefix}-bgy-cb[value="${val}"]`);
+    if (cb) { cb.checked = false; updateBgyLabel(prefix); }
+}
+
+// ── Image upload ──────────────────────────────────────
+function setupImageUpload(zoneId, inputId, placeholderId, previewId, previewImgId) {
+    const zone        = document.getElementById(zoneId);
+    const input       = document.getElementById(inputId);
+    const placeholder = document.getElementById(placeholderId);
+    const preview     = document.getElementById(previewId);
+    const previewImg  = document.getElementById(previewImgId);
+    if (!zone || !input) return;
+
+    input.addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        if (!file.type.match('image.*')) { alert('Please select an image file.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('File size must be less than 5MB.'); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            previewImg.src = e.target.result;
+            placeholder.classList.add('d-none');
+            preview.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    });
+
+    ['dragover','dragleave','drop'].forEach(evt => zone.addEventListener(evt, e => {
+        e.preventDefault();
+        if (evt === 'dragover') zone.style.borderColor = '#1657c1';
+        if (evt === 'dragleave') zone.style.borderColor = '';
+        if (evt === 'drop') {
+            zone.style.borderColor = '';
+            const file = e.dataTransfer.files[0];
+            if (file) { const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files; input.dispatchEvent(new Event('change', {bubbles:true})); }
+        }
+    }));
+}
+
+function resetAddImage(e) {
+    e.stopPropagation();
+    document.getElementById('eventImageUpload').value = '';
+    document.getElementById('addUploadPlaceholder').classList.remove('d-none');
+    document.getElementById('addUploadPreview').classList.add('d-none');
+}
+
+function resetEditImage(e) {
+    e.stopPropagation();
+    document.getElementById('editImageUpload').value = '';
+    document.getElementById('editUploadPlaceholder').classList.remove('d-none');
+    document.getElementById('editUploadPreview').classList.add('d-none');
+}
+
+// ── Time validation ───────────────────────────────────
+function setupTimeValidation(startId, endId) {
+    const start = document.getElementById(startId);
+    const end   = document.getElementById(endId);
+    if (!start || !end) return;
+    const validate = () => {
+        if (start.value && end.value) {
+            const invalid = start.value >= end.value;
+            end.setCustomValidity(invalid ? 'End time must be after start time.' : '');
+            end.classList.toggle('is-invalid', invalid);
+        }
+    };
+    start.addEventListener('change', validate);
+    end.addEventListener('change', validate);
+}
+
+// ── Submit loading states ─────────────────────────────
+document.getElementById('addEventForm')?.addEventListener('submit', function() {
+    document.querySelector('.add-submit-label').classList.add('d-none');
+    document.querySelector('.add-submit-loading').classList.remove('d-none');
+    document.getElementById('addSubmitBtn').disabled = true;
+});
+document.getElementById('editEventForm')?.addEventListener('submit', function() {
+    document.querySelector('.edit-submit-label').classList.add('d-none');
+    document.querySelector('.edit-submit-loading').classList.remove('d-none');
+    document.getElementById('editSubmitBtn').disabled = true;
+});
+
+// ── Init ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    setupImageUpload('addUploadZone',  'eventImageUpload', 'addUploadPlaceholder',  'addUploadPreview',  'addPreviewImg');
+    setupImageUpload('editUploadZone', 'editImageUpload',  'editUploadPlaceholder', 'editUploadPreview', 'editPreviewImg');
+    setupTimeValidation('add_start_time', 'add_end_time');
+    setupTimeValidation('edit_start_time', 'edit_end_time');
+    updateBgyLabel('add');
+    updateBgyLabel('edit');
+
+    // Reset add modal on close
+    document.getElementById('addEventModal')?.addEventListener('hidden.bs.modal', function() {
+        document.getElementById('addEventForm').reset();
+        document.getElementById('addUploadPlaceholder').classList.remove('d-none');
+        document.getElementById('addUploadPreview').classList.add('d-none');
+        document.getElementById('addPreviewImg').src = '';
+        updateBgyLabel('add');
+        const lbl = document.querySelector('.add-submit-label');
+        const spn = document.querySelector('.add-submit-loading');
+        if (lbl) lbl.classList.remove('d-none');
+        if (spn) spn.classList.add('d-none');
+        document.getElementById('addSubmitBtn').disabled = false;
+    });
+
+    document.querySelectorAll('.toast').forEach(t => {
+        setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000);
+    });
+});
+</script>
 
 @push('scripts')
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 <script>
-    const mapboxToken = @json(config('services.mapbox.access_token'));
-    
-    console.log('Mapbox Token:', mapboxToken ? 'Found' : 'Not found');
-    
-    if (mapboxToken && mapboxToken !== '' && mapboxToken !== null) {
-        mapboxgl.accessToken = mapboxToken;
-        
-        let addGeocoder = null;
-        let editGeocoder = null;
-        
-        // Toggle between Mapbox search and manual input
-        window.toggleLocationInput = function(mode) {
-            const isAdd = mode === 'add';
-            const geocoderContainer = isAdd ? document.getElementById('locationGeocoderContainer') : document.getElementById('editLocationGeocoderContainer');
-            const locationInput = isAdd ? document.getElementById('location') : document.getElementById('edit_location');
-            const toggleBtn = isAdd ? document.getElementById('toggleLocationMode') : document.getElementById('toggleEditLocationMode');
-            
-            if (!geocoderContainer || !locationInput || !toggleBtn) return;
-            
-            if (geocoderContainer.style.display === 'none' || !geocoderContainer.innerHTML.trim()) {
-                // Switch to Mapbox search
-                geocoderContainer.style.display = 'block';
-                locationInput.style.display = 'none';
-                const small = toggleBtn.querySelector('small');
-                if (small) small.textContent = 'Enter manually';
-                
-                // Reinitialize geocoder if needed
-                if (isAdd && !addGeocoder) {
-                    initializeAddGeocoder();
-                } else if (!isAdd && !editGeocoder) {
-                    const modal = locationInput.closest('.modal');
-                    if (modal) initializeEditGeocoder(modal);
-                }
-            } else {
-                // Switch to manual input
-                geocoderContainer.style.display = 'none';
-                locationInput.style.display = 'block';
-                const small = toggleBtn.querySelector('small');
-                if (small) small.textContent = 'Use Mapbox search';
-                
-                // Clear coordinates when switching to manual
-                if (isAdd) {
-                    document.getElementById('latitude').value = '';
-                    document.getElementById('longitude').value = '';
-                } else {
-                    document.getElementById('edit_latitude').value = '';
-                    document.getElementById('edit_longitude').value = '';
-                }
-            }
-        };
-        
-        function initializeAddGeocoder() {
-            const geocoderContainer = document.getElementById('locationGeocoderContainer');
-            const locationInput = document.getElementById('location');
-            
-            if (!geocoderContainer || !locationInput) return;
-            
-            // Clear container if it has content
-            geocoderContainer.innerHTML = '';
-            geocoderContainer.style.width = '100%';
-            geocoderContainer.style.display = 'block';
-            locationInput.style.display = 'none';
-            
-            addGeocoder = new MapboxGeocoder({
-                accessToken: mapboxToken,
-                mapboxgl: mapboxgl,
-                placeholder: 'Search for a location...',
-                countries: 'ph',
-                proximity: [123.8854, 10.3157],
-                types: 'address,poi,place,locality,neighborhood',
-                marker: false,
-                minLength: 2,
-                limit: 10
-            });
-            
-            addGeocoder.addTo(geocoderContainer);
-            
-            addGeocoder.on('result', function(e) {
-                const result = e.result;
-                const coordinates = result.geometry.coordinates;
-                const address = result.place_name;
-                
-                locationInput.value = address;
-                document.getElementById('latitude').value = coordinates[1];
-                document.getElementById('longitude').value = coordinates[0];
-            });
-            
-            addGeocoder.on('clear', function() {
-                locationInput.value = '';
-                document.getElementById('latitude').value = '';
-                document.getElementById('longitude').value = '';
-            });
+const mapboxToken = @json(config('services.mapbox.access_token'));
+if (mapboxToken) {
+    mapboxgl.accessToken = mapboxToken;
+    let addGeocoder = null, editGeocoder = null;
+
+    window.toggleLocationInput = function(mode) {
+        const isAdd = mode === 'add';
+        const cont  = document.getElementById(isAdd ? 'locationGeocoderContainer' : 'editLocationGeocoderContainer');
+        const inp   = document.getElementById(isAdd ? 'location' : 'edit_location');
+        const btn   = document.getElementById(isAdd ? 'toggleLocationMode' : 'toggleEditLocationMode');
+        if (!cont || !inp || !btn) return;
+        const manualVisible = inp.style.display !== 'none';
+        if (manualVisible) {
+            inp.style.display = 'none'; cont.style.display = 'block';
+            btn.textContent = 'Enter manually';
+            if (isAdd && !addGeocoder) initAddGeocoder();
+            else if (!isAdd && !editGeocoder) initEditGeocoder();
+        } else {
+            cont.style.display = 'none'; inp.style.display = 'block';
+            btn.textContent = 'Use map search';
+            document.getElementById(isAdd ? 'latitude' : 'edit_latitude').value = '';
+            document.getElementById(isAdd ? 'longitude' : 'edit_longitude').value = '';
         }
-        
-        // Initialize geocoder for Add Event form when modal is shown
-        const addEventModal = document.getElementById('addEventModal');
-        if (addEventModal) {
-            addEventModal.addEventListener('shown.bs.modal', function() {
-                initializeAddGeocoder();
-            });
-            
-            // Clean up when modal is hidden
-            addEventModal.addEventListener('hidden.bs.modal', function() {
-                if (addGeocoder) {
-                    addGeocoder = null;
-                }
-                // Reset to Mapbox search mode
-                const geocoderContainer = document.getElementById('locationGeocoderContainer');
-                const locationInput = document.getElementById('location');
-                const toggleBtn = document.getElementById('toggleLocationMode');
-                if (geocoderContainer) {
-                    geocoderContainer.innerHTML = '';
-                    geocoderContainer.style.display = 'block';
-                }
-                if (locationInput) locationInput.style.display = 'none';
-                if (toggleBtn) {
-                    const small = toggleBtn.querySelector('small');
-                    if (small) small.textContent = 'Enter manually';
-                }
-            });
-        }
-        
-        function initializeEditGeocoder(modal) {
-            const editGeocoderContainer = modal.querySelector('#editLocationGeocoderContainer');
-            const editLocationInput = modal.querySelector('#edit_location');
-            
-            if (!editGeocoderContainer || !editLocationInput || editGeocoder) return;
-            
-            editGeocoderContainer.style.width = '100%';
-            
-            editGeocoder = new MapboxGeocoder({
-                accessToken: mapboxToken,
-                mapboxgl: mapboxgl,
-                placeholder: 'Search for a location...',
-                countries: 'ph',
-                proximity: [123.8854, 10.3157],
-                types: 'address,poi,place,locality,neighborhood',
-                marker: false,
-                minLength: 2,
-                limit: 10
-            });
-            
-            editGeocoder.addTo(editGeocoderContainer);
-            
-            // Prevent suggestions from auto-opening when setting initial value
-            let isSettingInitialValue = false;
-            
-            // Set initial value if editing (without triggering suggestions)
-            const existingLocation = editLocationInput.value;
-            if (existingLocation) {
-                isSettingInitialValue = true;
-                // Wait for geocoder to be fully initialized, then set value without triggering suggestions
-                setTimeout(() => {
-                    const geocoderInput = editGeocoderContainer.querySelector('input[type="text"]');
-                    if (geocoderInput) {
-                        // Prevent focus event from triggering suggestions
-                        geocoderInput.addEventListener('focus', function(e) {
-                            if (isSettingInitialValue) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                this.blur();
-                            }
-                        }, { once: true });
-                        
-                        // Set value without triggering input events
-                        geocoderInput.value = existingLocation;
-                        
-                        // Ensure suggestions are closed
-                        setTimeout(() => {
-                            const suggestions = editGeocoderContainer.querySelector('.suggestions');
-                            if (suggestions) {
-                                suggestions.style.display = 'none';
-                                suggestions.classList.remove('active');
-                            }
-                            // Blur the input to ensure suggestions are closed
-                            geocoderInput.blur();
-                            isSettingInitialValue = false;
-                        }, 100);
-                    }
-                }, 200);
-            }
-            
-            // Check if coordinates exist - if not, show manual input by default
-            const existingLat = modal.querySelector('#edit_latitude')?.value;
-            const existingLng = modal.querySelector('#edit_longitude')?.value;
-            if (!existingLat || !existingLng) {
-                editGeocoderContainer.style.display = 'none';
-                editLocationInput.style.display = 'block';
-                const toggleBtn = modal.querySelector('#toggleEditLocationMode');
-                if (toggleBtn) toggleBtn.querySelector('small').textContent = 'Use Mapbox search';
-            } else {
-                editLocationInput.style.display = 'none';
-            }
-            
-            editGeocoder.on('result', function(e) {
-                const result = e.result;
-                const coordinates = result.geometry.coordinates;
-                const address = result.place_name;
-                
-                editLocationInput.value = address;
-                modal.querySelector('#edit_latitude').value = coordinates[1];
-                modal.querySelector('#edit_longitude').value = coordinates[0];
-            });
-            
-            editGeocoder.on('clear', function() {
-                editLocationInput.value = '';
-                modal.querySelector('#edit_latitude').value = '';
-                modal.querySelector('#edit_longitude').value = '';
-            });
-        }
-        
-        // Initialize geocoder for Edit Event form when modal is shown
-        document.addEventListener('shown.bs.modal', function(e) {
-            const modal = e.target;
-            const editLocationInput = modal.querySelector('#edit_location');
-            
-            if (editLocationInput && !editGeocoder) {
-                initializeEditGeocoder(modal);
-                
-                // Close suggestions dropdown after a short delay to prevent auto-opening
-                setTimeout(() => {
-                    const editGeocoderContainer = modal.querySelector('#editLocationGeocoderContainer');
-                    if (editGeocoderContainer) {
-                        const geocoderInput = editGeocoderContainer.querySelector('input[type="text"]');
-                        if (geocoderInput) {
-                            // Ensure input is not focused to prevent suggestions
-                            geocoderInput.blur();
-                        }
-                        // Close any suggestions that might have opened
-                        const suggestions = editGeocoderContainer.querySelector('.suggestions');
-                        if (suggestions) {
-                            suggestions.style.display = 'none';
-                            suggestions.classList.remove('active');
-                        }
-                    }
-                }, 300);
-            }
+    };
+
+    function initAddGeocoder() {
+        const cont = document.getElementById('locationGeocoderContainer');
+        if (!cont) return;
+        cont.innerHTML = '';
+        addGeocoder = new MapboxGeocoder({ accessToken: mapboxToken, mapboxgl, placeholder:'Search for a location…', countries:'ph', proximity:[123.8854,10.3157], types:'address,poi,place,locality,neighborhood', marker:false, minLength:2, limit:10 });
+        addGeocoder.addTo(cont);
+        addGeocoder.on('result', e => {
+            document.getElementById('location').value  = e.result.place_name;
+            document.getElementById('latitude').value  = e.result.geometry.coordinates[1];
+            document.getElementById('longitude').value = e.result.geometry.coordinates[0];
         });
-        
-        // Clean up when edit modal is hidden
-        document.addEventListener('hidden.bs.modal', function(e) {
-            if (e.target.querySelector('#edit_location')) {
-                editGeocoder = null;
-            }
+        addGeocoder.on('clear', () => {
+            document.getElementById('location').value = document.getElementById('latitude').value = document.getElementById('longitude').value = '';
         });
-    } else {
-        console.warn('Mapbox token not found or invalid');
     }
+
+    function initEditGeocoder() {
+        const cont = document.getElementById('editLocationGeocoderContainer');
+        if (!cont || editGeocoder) return;
+        cont.innerHTML = '';
+        editGeocoder = new MapboxGeocoder({ accessToken: mapboxToken, mapboxgl, placeholder:'Search for a location…', countries:'ph', proximity:[123.8854,10.3157], types:'address,poi,place,locality,neighborhood', marker:false, minLength:2, limit:10 });
+        editGeocoder.addTo(cont);
+        const loc = document.getElementById('edit_location').value;
+        if (loc) {
+            setTimeout(() => {
+                const inp = cont.querySelector('input[type="text"]');
+                if (inp) { inp.value = loc; setTimeout(() => { const s = cont.querySelector('.suggestions'); if(s){s.style.display='none';s.classList.remove('active');} inp.blur(); }, 150); }
+            }, 200);
+        }
+        const lat = document.getElementById('edit_latitude').value;
+        if (!lat) { cont.style.display = 'none'; document.getElementById('edit_location').style.display = 'block'; document.getElementById('toggleEditLocationMode').textContent = 'Use map search'; }
+        editGeocoder.on('result', e => {
+            document.getElementById('edit_location').value  = e.result.place_name;
+            document.getElementById('edit_latitude').value  = e.result.geometry.coordinates[1];
+            document.getElementById('edit_longitude').value = e.result.geometry.coordinates[0];
+        });
+        editGeocoder.on('clear', () => {
+            document.getElementById('edit_location').value = document.getElementById('edit_latitude').value = document.getElementById('edit_longitude').value = '';
+        });
+    }
+
+    document.getElementById('addEventModal')?.addEventListener('shown.bs.modal', initAddGeocoder);
+    document.getElementById('addEventModal')?.addEventListener('hidden.bs.modal', () => { addGeocoder = null; const c = document.getElementById('locationGeocoderContainer'); if(c) c.innerHTML=''; });
+    document.getElementById('editEventModal')?.addEventListener('shown.bs.modal', initEditGeocoder);
+    document.getElementById('editEventModal')?.addEventListener('hidden.bs.modal', () => { editGeocoder = null; });
+}
 </script>
 @endpush
 @endsection

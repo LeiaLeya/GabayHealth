@@ -62,12 +62,21 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
+                        <label for="lot_number" class="form-label fw-semibold">Lot Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control @error('lot_number') is-invalid @enderror" id="lot_number" name="lot_number" value="{{ old('lot_number') }}" required placeholder="Enter lot number">
+                        @error('lot_number')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6 mb-3">
                         <label for="quantity" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
                         <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity') }}" min="1" required placeholder="Enter quantity">
                         @error('quantity')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+                </div>
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="expiration_date" class="form-label fw-semibold">Expiration Date <span class="text-danger">*</span></label>
                         <input type="date" class="form-control @error('expiration_date') is-invalid @enderror" id="expiration_date" name="expiration_date" value="{{ old('expiration_date') }}" required>

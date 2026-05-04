@@ -54,10 +54,10 @@ class SystemAdminController extends Controller
 
             // Get statistics
             $stats = [
-                'pending' => count($pendingRhus),
-                'approved' => $this->countByStatus('approved'),
-                'active' => $this->countByStatus('active'),
-                'rejected' => $this->countByStatus('rejected'),
+                'pending'          => count($pendingRhus),
+                'credentials_sent' => $this->countByStatus('credentials_sent'),
+                'active'           => $this->countByStatus('active'),
+                'rejected'         => $this->countByStatus('rejected'),
             ];
 
             return view('admin.system-admin.dashboard', compact('pendingRhus', 'stats'));
@@ -157,7 +157,7 @@ class SystemAdminController extends Controller
                 }
             }
 
-            // Update Firestore document with username and UID, status to pending_setup
+            // Save username and UID first; mark as pending_setup until email is confirmed sent
             $this->firestore->collection('rhu')->document($rhuId)->update([
                 ['path' => 'username', 'value' => $username],
                 ['path' => 'uid', 'value' => $uid],
@@ -167,12 +167,19 @@ class SystemAdminController extends Controller
             ]);
 
             // Send setup email with token
-            $setupController = new \App\Http\Controllers\Auth\RhuAccountSetupController();
-            $emailSent = $setupController::sendSetupEmail($rhuId, $rhuEmail, $rhuName, $username);
+            $emailSent = \App\Http\Controllers\Auth\RhuAccountSetupController::sendSetupEmail(
+                $rhuId, $rhuEmail, $rhuName, $username
+            );
 
             if (!$emailSent) {
                 throw new Exception('Failed to send setup email');
             }
+
+            // Email confirmed sent — update status to credentials_sent
+            $this->firestore->collection('rhu')->document($rhuId)->update([
+                ['path' => 'status', 'value' => 'credentials_sent'],
+                ['path' => 'credentials_sent_at', 'value' => now()->toDateTimeString()],
+            ]);
 
             \Log::info('RHU approved and setup email sent', [
                 'rhu_id' => $rhuId,
@@ -334,27 +341,31 @@ class SystemAdminController extends Controller
             }
 
             $rhuData = $rhuDoc->data();
-            $username = $rhuData['username'];
-            $tempPassword = $rhuData['temp_password'];
+            $username = $rhuData['username'] ?? null;
+            $rhuEmail = $rhuData['email'] ?? null;
+            $rhuName = $rhuData['rhuName'] ?? $rhuData['name'] ?? 'RHU';
 
-            if (!$username || !$tempPassword) {
+            if (!$username || !$rhuEmail) {
                 return response()->json(['error' => 'Credentials not found for this RHU'], 422);
             }
 
-            $rhuEmail = $rhuData['email'];
-            $rhuName = $rhuData['rhuName'] ?? $rhuData['name'];
+            // Re-send a fresh setup email with a new token
+            $emailSent = \App\Http\Controllers\Auth\RhuAccountSetupController::sendSetupEmail(
+                $rhuId, $rhuEmail, $rhuName, $username
+            );
 
-            // Send email
-            $this->sendCredentialsEmail($rhuEmail, $username, $tempPassword, $rhuName);
+            if (!$emailSent) {
+                return response()->json(['error' => 'Failed to resend setup email'], 500);
+            }
 
-            // Update last sent time
+            // Update last resent time
             $this->firestore->collection('rhu')->document($rhuId)->update([
                 ['path' => 'credentials_resent_at', 'value' => now()->toDateTimeString()],
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Credentials resent successfully.',
+                'message' => 'Setup email resent successfully.',
             ]);
         } catch (Exception $e) {
             \Log::error('Error resending credentials: ' . $e->getMessage());

@@ -1,275 +1,297 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-        <div>
-            <h2 class="fw-bold text-dark mb-0">{{ $parentData['name'] }}</h2>
-            <p class="text-muted mb-0">Manage batches and track expiration dates</p>
+<div class="container-fluid px-4">
+
+    {{-- Toast Flash --}}
+    @if(session('success') || session('error'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:1100;">
+        <div id="flashToast" class="toast show align-items-center border-0 {{ session('success') ? 'text-bg-success' : 'text-bg-danger' }}" role="alert">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i class="bi {{ session('success') ? 'bi-check-circle' : 'bi-exclamation-triangle' }}"></i>
+                    {{ session('success') ?? session('error') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addBatchModal">
-                <i class="bi bi-plus-circle"></i>
-                Add New Batch
+    </div>
+    @endif
+
+    {{-- Page Header --}}
+    <div class="d-flex align-items-center justify-content-between mb-4 pt-2 flex-wrap gap-2">
+        <div>
+            <p class="text-muted mb-0" style="font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;font-weight:600;">Inventory</p>
+            <h1 class="fw-bold mb-0" style="font-size:1.45rem;color:#37352f;">{{ $parentData['name'] }}</h1>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('inventory.release-history', $parentData['id']) }}" class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center gap-1">
+                <i class="bi bi-clock-history" style="font-size:.8rem;"></i>
+                <span style="font-size:.82rem;">Release History</span>
+            </a>
+            <a href="{{ route('inventory.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center gap-1">
+                <i class="bi bi-arrow-left" style="font-size:.8rem;"></i>
+                <span style="font-size:.82rem;">Back to Inventory</span>
+            </a>
+            <button class="btn btn-inv-add btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addBatchModal">
+                <i class="bi bi-plus" style="font-size:.9rem;"></i>
+                <span style="font-size:.82rem;">Add Batch</span>
             </button>
-            <a href="{{ route('inventory.release-history', $parentData['id']) }}" class="btn btn-info d-flex align-items-center gap-2">
-                <i class="bi bi-clock-history"></i>
-                Release History
-            </a>
-            <a href="{{ route('inventory.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
-                <i class="bi bi-arrow-left"></i>
-                Back to Inventory
-            </a>
         </div>
     </div>
 
-    <!-- Success Message -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {{-- Item Summary Stat Cards --}}
+    @php
+        $statusBadgeClass = match($parentData['status'] ?? '') {
+            'available'    => 'ok',
+            'low_stock'    => 'warn',
+            'out_of_stock' => 'danger',
+            default        => 'neutral',
+        };
+        $statusLabel = ucwords(str_replace('_', ' ', $parentData['status'] ?? 'Unknown'));
+    @endphp
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-capsule"></i></div>
+                <div class="stat-value">{{ $parentData['type'] ?? 'N/A' }}</div>
+                <div class="stat-label">Type</div>
+            </div>
         </div>
-    @endif
-
-    <!-- Error Message -->
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-stack"></i></div>
+                <div class="stat-value">{{ $parentData['quantity'] ?? 0 }}</div>
+                <div class="stat-label">Total Stock ({{ ucfirst($parentData['unit_type'] ?? 'units') }})</div>
+            </div>
         </div>
-    @endif
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-archive"></i></div>
+                <div class="stat-value">{{ count($batches) }}</div>
+                <div class="stat-label">Active {{ count($batches) === 1 ? 'Batch' : 'Batches' }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card p-3">
+                <div class="stat-icon mb-2"><i class="bi bi-circle-fill" style="font-size:.55rem;"></i></div>
+                <div class="stat-value"><span class="inv-badge {{ $statusBadgeClass }}">{{ $statusLabel }}</span></div>
+                <div class="stat-label">Status</div>
+            </div>
+        </div>
+    </div>
 
     @if(count($batches) > 0)
-        <!-- Release Medicine Section -->
-        <div class="card mb-4 border-success">
-            <div class="card-header bg-success text-white">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-heart-pulse me-2"></i>Release Medicine
-                </h5>
+        {{-- Release Medicine Section --}}
+        <div class="inv-card mb-4 p-0">
+            <div class="inv-section-header px-4 py-3">
+                <div>
+                    <span class="inv-section-label">Release Medicine</span>
+                    <span class="inv-section-meta ms-2">Distribute to a resident</span>
+                </div>
             </div>
-            <div class="card-body">
+            <div class="px-4 pb-4 pt-3">
                 <div id="residentInlineAlert" class="alert d-none" role="alert"></div>
                 <form action="{{ route('inventory.release', $parentData['id']) }}" method="POST">
                     @csrf
                     @method('PUT')
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label for="resident_name" class="form-label fw-semibold">Resident Name <span class="text-danger">*</span></label>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="inv-form-label">Resident Name <span class="text-danger">*</span></label>
                             <div class="position-relative">
-                                <input type="text" class="form-control" id="resident_search" autocomplete="off" placeholder="Search resident name or email..." required>
+                                <input type="text" class="form-control inv-input" id="resident_search" autocomplete="off" placeholder="Search resident..." required>
                                 <input type="hidden" id="resident_name" name="resident_name" required>
                                 <input type="hidden" id="resident_id" name="resident_id">
-                                <div id="resident_dropdown" class="dropdown-menu w-100" style="max-height: 250px; overflow-y: auto; display: none; z-index: 1050; word-wrap: break-word;"></div>
+                                <div id="resident_dropdown" class="dropdown-menu w-100" style="max-height:250px;overflow-y:auto;display:none;z-index:1050;"></div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="quantity_to_release" class="form-label fw-semibold">Quantity to Release <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="quantity_to_release" name="quantity_to_release" min="1" max="{{ $parentData['quantity'] }}" required placeholder="Enter quantity">
+                        <div class="col-md-2">
+                            <label class="inv-form-label">Quantity <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control inv-input" id="quantity_to_release" name="quantity_to_release" min="1" max="{{ $parentData['quantity'] }}" required placeholder="Qty">
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="release_date" class="form-label fw-semibold">Release Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="release_date" name="release_date" value="{{ date('Y-m-d') }}" required>
+                        <div class="col-md-2">
+                            <label class="inv-form-label">Release Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control inv-input" id="release_date" name="release_date" value="{{ date('Y-m-d') }}" required>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="released_by" class="form-label fw-semibold">Released By <span class="text-danger">*</span></label>
+                        <div class="col-md-3">
+                            <label class="inv-form-label">Released By <span class="text-danger">*</span></label>
                             <div class="position-relative">
-                                <input type="text" class="form-control" id="personnel_search" autocomplete="off" placeholder="Search personnel name..." required>
+                                <input type="text" class="form-control inv-input" id="personnel_search" autocomplete="off" placeholder="Search personnel..." required>
                                 <input type="hidden" id="released_by" name="released_by" required>
                                 <input type="hidden" id="personnel_id" name="personnel_id">
-                                <div id="personnel_dropdown" class="dropdown-menu w-100" style="max-height: 250px; overflow-y: auto; display: none; z-index: 1050; word-wrap: break-word;"></div>
+                                <div id="personnel_dropdown" class="dropdown-menu w-100" style="max-height:250px;overflow-y:auto;display:none;z-index:1050;"></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="reason" class="form-label fw-semibold">Reason for Release</label>
-                            <input type="text" class="form-control" id="reason" name="reason" placeholder="e.g., fever, headache, etc.">
+                        <div class="col-md-2">
+                            <label class="inv-form-label">Reason</label>
+                            <input type="text" class="form-control inv-input" id="reason" name="reason" placeholder="e.g., fever">
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-heart-pulse me-1"></i>Release Medicine
-                            </button>
-                        </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-inv-add btn-sm d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-heart-pulse" style="font-size:.85rem;"></i>
+                            <span style="font-size:.82rem;">Release Medicine</span>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Batches Table Card -->
-        <div class="card shadow-sm border border-primary-subtle" style="border-width:2px;">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-list-ul me-2"></i>Medicine Batches
-                </h5>
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-light btn-sm dropdown-toggle" id="sortExpirationBtn" onclick="toggleExpirationSort()">
-                        <i class="bi bi-funnel me-1"></i>
-                        <span id="sortText">Sort by Expiration</span>
-                    </button>
+        {{-- Batches Table --}}
+        <div class="inv-card mb-4 p-0">
+            <div class="inv-section-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="inv-section-label">Medicine Batches</span>
+                    <span class="inv-section-meta ms-2">{{ count($batches) }} {{ count($batches) === 1 ? 'batch' : 'batches' }}</span>
                 </div>
+                <button class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center gap-1" id="sortExpirationBtn" onclick="toggleExpirationSort()">
+                    <i class="bi bi-funnel" style="font-size:.78rem;"></i>
+                    <span id="sortText" style="font-size:.78rem;">Sort by Expiry</span>
+                </button>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered mb-0 inventory-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="border-0 px-4 py-3 fw-semibold">Item Name</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Type</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Quantity</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Unit Type</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Expiration Date</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Status</th>
-                                <th class="border-0 px-4 py-3 fw-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($batches as $batch)
-                                @php
-                                    $expirationDate = strtotime($batch['expiration_date']);
-                                    $today = strtotime('today');
-                                    $thirtyDays = strtotime('+30 days');
-                                    
-                                    if ($expirationDate <= $today) {
-                                        $status = 'expired';
-                                        $statusText = 'Expired';
-                                        $badgeClass = 'danger';
-                                    } elseif ($expirationDate <= $thirtyDays) {
-                                        $status = 'expiring_soon';
-                                        $statusText = 'Expiring Soon';
-                                        $badgeClass = 'warning';
-                                    } else {
-                                        $status = 'good';
-                                        $statusText = 'Good';
-                                        $badgeClass = 'success';
-                                    }
-                                    
-                                    $daysLeft = ceil(($expirationDate - $today) / (60 * 60 * 24));
-                                @endphp
-                                <tr class="border-bottom {{ $status === 'expired' ? 'table-danger' : ($status === 'expiring_soon' ? 'table-warning' : '') }}">
-                                    <td class="px-4 py-3">
-                                        <div class="fw-semibold text-dark">{{ $parentData['name'] }}</div>
-                                        <small class="text-muted">Lot No: {{ $batch['lot_number'] ?? 'N/A' }}</small>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="text-muted">{{ $parentData['type'] }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="fw-semibold text-dark">{{ $batch['quantity'] }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="text-muted">{{ ucfirst($parentData['unit_type']) }}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="d-flex align-items-center">
-                                            <span class="fw-semibold">{{ \Carbon\Carbon::parse($batch['expiration_date'])->format('M d, Y') }}</span>
-                                            @if($status === 'expired')
-                                                <span class="badge bg-danger ms-2">Expired</span>
-                                            @elseif($status === 'expiring_soon')
-                                                <span class="badge bg-warning ms-2">{{ $daysLeft }} days left</span>
-                                            @else
-                                                <span class="badge bg-success ms-2">{{ $daysLeft }} days left</span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="badge bg-{{ $badgeClass }}">{{ $statusText }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-end">
-                                        <div class="btn-group" role="group" style="gap: 0.4rem;">
-                                            <button class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editBatchModal{{ $batch['id'] }}" 
-                                                    title="Edit Batch">
-                                                <i class="bi bi-pencil"></i>
+            <div class="table-responsive">
+                <table class="table inv-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Item / Lot No.</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Expiration Date</th>
+                            <th>Status</th>
+                            <th style="width:80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($batches as $batch)
+                            @php
+                                $expTs   = strtotime($batch['expiration_date']);
+                                $todayTs = strtotime('today');
+                                $thirtyTs = strtotime('+30 days');
+                                if ($expTs <= $todayTs) {
+                                    $bStatus = 'expired'; $bBadge = 'danger'; $bText = 'Expired';
+                                } elseif ($expTs <= $thirtyTs) {
+                                    $bStatus = 'expiring_soon'; $bBadge = 'warn'; $bText = 'Expiring Soon';
+                                } else {
+                                    $bStatus = 'good'; $bBadge = 'ok'; $bText = 'Good';
+                                }
+                                $daysLeft = ceil(($expTs - $todayTs) / 86400);
+                            @endphp
+                            <tr class="{{ $bStatus === 'expired' ? 'row-expired' : ($bStatus === 'expiring_soon' ? 'row-expiring' : '') }}">
+                                <td>
+                                    <div class="fw-semibold" style="color:#37352f;font-size:.9rem;">{{ $parentData['name'] }}</div>
+                                    <div style="font-size:.75rem;color:#9b9b9b;">Lot: {{ $batch['lot_number'] ?? 'N/A' }}</div>
+                                </td>
+                                <td><span class="inv-chip">{{ $parentData['type'] }}</span></td>
+                                <td><span class="fw-semibold" style="color:#37352f;">{{ $batch['quantity'] }}</span></td>
+                                <td><span class="inv-chip">{{ ucfirst($parentData['unit_type']) }}</span></td>
+                                <td>
+                                    <div class="fw-semibold" style="font-size:.88rem;color:#37352f;">
+                                        {{ \Carbon\Carbon::parse($batch['expiration_date'])->format('M d, Y') }}
+                                    </div>
+                                    @if($bStatus === 'expired')
+                                        <div style="font-size:.72rem;color:#b91c1c;">Expired</div>
+                                    @else
+                                        <div style="font-size:.72rem;color:#9b9b9b;">{{ $daysLeft }} days left</div>
+                                    @endif
+                                </td>
+                                <td><span class="inv-badge {{ $bBadge }}">{{ $bText }}</span></td>
+                                <td>
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button class="inv-action-btn edit"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editBatchModal{{ $batch['id'] }}"
+                                                title="Edit Batch">
+                                            <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+                                        </button>
+                                        <form action="{{ route('inventory.batches.destroy', [$parentData['id'], $batch['id']]) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inv-action-btn del"
+                                                    onclick="return confirm('Delete this batch?')"
+                                                    title="Delete Batch">
+                                                <i class="bi bi-trash" style="font-size:.75rem;"></i>
                                             </button>
-                                            <form action="{{ route('inventory.batches.destroy', [$parentData['id'], $batch['id']]) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center" 
-                                                        onclick="return confirm('Are you sure you want to delete this batch?')" 
-                                                        title="Delete Batch">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                                        </form>
+                                        <a href="{{ route('inventory.batches.history', [$parentData['id'], $batch['id']]) }}"
+                                           class="inv-action-btn"
+                                           title="Distribution History">
+                                            <i class="bi bi-clock-history" style="font-size:.75rem;"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     @else
-        <div class="text-center py-5">
-            <div class="text-muted">
-                <i class="bi bi-box display-4 d-block mb-3"></i>
-                <h5>No batches found for {{ $parentData['name'] }}</h5>
-                <p class="mb-0">Start by adding your first batch using the button above.</p>
-            </div>
+        <div class="inv-empty">
+            <i class="bi bi-box inv-empty-icon"></i>
+            <div class="inv-empty-title">No batches yet</div>
+            <div class="inv-empty-text">Add the first batch for {{ $parentData['name'] }} using the button above.</div>
         </div>
     @endif
 </div>
 
-<!-- Add Resident Modal -->
-<div class="modal fade" id="newResidentModal" tabindex="-1" aria-labelledby="newResidentModalLabel" aria-hidden="true">
+{{-- Add New Resident Modal --}}
+<div class="modal fade" id="newResidentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="newResidentModalLabel">
-                    <i class="bi bi-person-plus me-2"></i>Add New Resident
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="modal-header-custom d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="modal-type-badge mb-1">INVENTORY</div>
+                    <div class="modal-title-custom">Add New Resident</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white mt-1" data-bs-dismiss="modal"></button>
             </div>
             <form id="newResidentForm">
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div id="newResidentFormAlert" class="alert d-none" role="alert"></div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="newResidentFirstName" class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="newResidentFirstName" name="first_name" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="newResidentLastName" class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="newResidentLastName" name="last_name" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="newResidentEmail" class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="newResidentEmail" name="email" placeholder="name@example.com" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="newResidentPurok" class="form-label fw-semibold">Purok / Street <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="newResidentPurok" name="purok" placeholder="e.g., Purok Sunflower" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="newResidentPassword" class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="newResidentPassword" name="password" minlength="8" autocomplete="new-password" required>
-                            <small class="text-muted">Minimum of 8 characters.</small>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="newResidentPasswordConfirmation" class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="newResidentPasswordConfirmation" name="password_confirmation" minlength="8" autocomplete="new-password" required>
+                    <div class="modal-form-section mb-3">
+                        <div class="modal-section-title mb-3">Personal Info</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="inv-form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control inv-input" id="newResidentFirstName" name="first_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control inv-input" id="newResidentLastName" name="last_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control inv-input" id="newResidentEmail" name="email" placeholder="name@example.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Purok / Street <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control inv-input" id="newResidentPurok" name="purok" placeholder="e.g., Purok Sunflower" required>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold">Role</label>
-                        <input type="text" class="form-control" value="User" readonly>
+                    <div class="modal-form-section">
+                        <div class="modal-section-title mb-3">Account</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Password <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control inv-input" id="newResidentPassword" name="password" minlength="8" autocomplete="new-password" required>
+                                <small class="text-muted" style="font-size:.72rem;">Minimum 8 characters.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Confirm Password <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control inv-input" id="newResidentPasswordConfirmation" name="password_confirmation" minlength="8" autocomplete="new-password" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Role</label>
+                                <input type="text" class="form-control inv-input" value="User" readonly>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="newResidentSubmitBtn">
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4" id="newResidentSubmitBtn">
                         <span class="submit-label">Create Resident Account</span>
                     </button>
                 </div>
@@ -278,219 +300,191 @@
     </div>
 </div>
 
-<!-- Add Batch Modal -->
-<div class="modal fade" id="addBatchModal" tabindex="-1" aria-labelledby="addBatchModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addBatchModalLabel">
-                    <i class="bi bi-plus-circle me-2"></i>Add New Batch
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+{{-- Add Batch Modal --}}
+<div class="modal fade" id="addBatchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="modal-header-custom d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="modal-type-badge mb-1">INVENTORY</div>
+                    <div class="modal-title-custom">Add New Batch</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white mt-1" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ route('inventory.batches.store') }}">
                 @csrf
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="parent_medicine_id" class="form-label fw-semibold">Select Medicine <span class="text-danger">*</span></label>
-                            <select class="form-control" id="parent_medicine_id" name="parent_medicine_id" required>
-                                <option value="">Select a medicine...</option>
-                                @foreach($allMedicines as $medicine)
-                                    <option value="{{ $medicine['id'] }}" 
-                                            {{ $medicine['id'] === $parentData['id'] ? 'selected' : '' }}>
-                                        {{ $medicine['name'] }} ({{ ucfirst($medicine['unit_type']) }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="lot_number" class="form-label fw-semibold">Lot Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="lot_number" name="lot_number" required placeholder="Enter lot number">
+                <div class="modal-body p-4">
+                    <div class="modal-form-section mb-3">
+                        <div class="modal-section-title mb-3">Batch Details</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Medicine <span class="text-danger">*</span></label>
+                                <select class="form-select inv-input" id="parent_medicine_id" name="parent_medicine_id" required>
+                                    <option value="">Select a medicine...</option>
+                                    @foreach($allMedicines as $medicine)
+                                        <option value="{{ $medicine['id'] }}" {{ $medicine['id'] === $parentData['id'] ? 'selected' : '' }}>
+                                            {{ $medicine['name'] }} ({{ ucfirst($medicine['unit_type']) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Lot Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control inv-input" name="lot_number" required placeholder="Enter lot number">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Quantity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control inv-input" name="quantity" min="1" required placeholder="Enter quantity">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="inv-form-label">Expiration Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control inv-input" name="expiration_date" required>
+                            </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="quantity" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="quantity" name="quantity" min="1" required placeholder="Enter quantity">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="expiration_date" class="form-label fw-semibold">Expiration Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="expiration_date" name="expiration_date" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="notes" class="form-label fw-semibold">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Enter batch notes..."></textarea>
+                    <div class="modal-form-section">
+                        <label class="inv-form-label">Notes</label>
+                        <textarea class="form-control inv-input mt-2" name="notes" rows="3" placeholder="Batch notes (optional)..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Save Batch
-                    </button>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4">Save Batch</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Edit Batch Modals (Outside Table Structure) -->
+{{-- Edit Batch Modals --}}
 @if(count($batches) > 0)
     @foreach($batches as $batch)
-        <div class="modal fade" id="editBatchModal{{ $batch['id'] }}" tabindex="-1" aria-labelledby="editBatchModalLabel{{ $batch['id'] }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="editBatchModalLabel{{ $batch['id'] }}">
-                            <i class="bi bi-pencil me-2"></i>Edit Batch
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal fade" id="editBatchModal{{ $batch['id'] }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+                <div class="modal-header-custom d-flex align-items-start justify-content-between">
+                    <div>
+                        <div class="modal-type-badge mb-1">BATCH</div>
+                        <div class="modal-title-custom">Edit Batch</div>
+                        <div style="font-size:.75rem;color:rgba(255,255,255,.6);margin-top:2px;">Lot: {{ $batch['lot_number'] ?? 'N/A' }}</div>
                     </div>
-                    <form action="{{ route('inventory.batches.update', [$parentData['id'], $batch['id']]) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="lot_number_{{ $batch['id'] }}" class="form-label fw-semibold">Lot Number <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="lot_number_{{ $batch['id'] }}" name="lot_number" value="{{ $batch['lot_number'] ?? '' }}" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="quantity_{{ $batch['id'] }}" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="quantity_{{ $batch['id'] }}" name="quantity" min="0" value="{{ $batch['quantity'] }}" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="expiration_date_{{ $batch['id'] }}" class="form-label fw-semibold">Expiration Date <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control" id="expiration_date_{{ $batch['id'] }}" name="expiration_date" value="{{ $batch['expiration_date'] }}" required>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="notes_{{ $batch['id'] }}" class="form-label fw-semibold">Notes</label>
-                                <textarea class="form-control" id="notes_{{ $batch['id'] }}" name="notes" rows="3" placeholder="Enter batch notes...">{{ $batch['notes'] ?? '' }}</textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                Update Batch
-                            </button>
-                        </div>
-                    </form>
+                    <button type="button" class="btn-close btn-close-white mt-1" data-bs-dismiss="modal"></button>
                 </div>
+                <form action="{{ route('inventory.batches.update', [$parentData['id'], $batch['id']]) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-body p-4">
+                        <div class="modal-form-section mb-3">
+                            <div class="modal-section-title mb-3">Batch Details</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="inv-form-label">Lot Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control inv-input" name="lot_number" value="{{ $batch['lot_number'] ?? '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="inv-form-label">Quantity <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control inv-input" name="quantity" min="0" value="{{ $batch['quantity'] }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="inv-form-label">Expiration Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control inv-input" name="expiration_date" value="{{ $batch['expiration_date'] }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-form-section">
+                            <label class="inv-form-label">Notes</label>
+                            <textarea class="form-control inv-input mt-2" name="notes" rows="3">{{ $batch['notes'] ?? '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-dark rounded-pill px-4">Update Batch</button>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
     @endforeach
 @endif
 
 <style>
-.table th, .table td {
-    vertical-align: middle;
-    background: #fff;
+/* ── Notion Design Tokens ── */
+.btn-inv-add {
+    background: #1657c1; color: #fff; border: none;
+    border-radius: 6px; font-size: .82rem; font-weight: 500;
+    padding: 6px 14px; transition: background .15s;
+}
+.btn-inv-add:hover { background: #1249a8; color: #fff; }
+
+.stat-card {
+    border: 1px solid #e9e9e7; border-radius: 8px;
+    background: #fff; transition: box-shadow .15s;
+}
+.stat-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.stat-icon {
+    width: 36px; height: 36px; border-radius: 6px;
+    background: #f1f1ef; color: #787774;
+    display: flex; align-items: center; justify-content: center;
     font-size: 1rem;
 }
-.table thead th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #e9ecef;
-}
-.table tr {
-    border-radius: 0.5rem;
-}
-.table tbody tr {
-    border-top: none;
-    border-bottom: 1px solid #f1f1f1;
-}
+.stat-value { font-size: 1.4rem; font-weight: 700; color: #37352f; line-height: 1.2; }
+.stat-label { font-size: .72rem; color: #9b9b9b; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
 
-.btn-group .btn {
-    border-radius: 0.5rem !important;
-}
+.inv-card { border: 1px solid #e9e9e7; border-radius: 8px; background: #fff; }
+.inv-section-header { border-bottom: 1px solid #f1f1ef; }
+.inv-section-label { font-size: .82rem; font-weight: 600; color: #37352f; }
+.inv-section-meta { font-size: .75rem; color: #9b9b9b; }
 
-.modal-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
+.inv-badge { display: inline-flex; align-items: center; font-size: .72rem; font-weight: 600; border-radius: 4px; padding: 2px 8px; }
+.inv-badge.ok     { background: #dcfce7; color: #15803d; }
+.inv-badge.warn   { background: #fef9c3; color: #a16207; }
+.inv-badge.danger { background: #fee2e2; color: #b91c1c; }
+.inv-badge.neutral { background: #f1f1ef; color: #787774; }
 
-.form-label {
-    color: #495057;
-    margin-bottom: 0.5rem;
-}
+.inv-chip { display: inline-flex; align-items: center; font-size: .72rem; font-weight: 500; border-radius: 4px; padding: 2px 8px; background: #f1f1ef; color: #37352f; }
 
-.alert {
-    border: none;
-    border-radius: 0.5rem;
+.inv-table { font-size: .88rem; }
+.inv-table thead th {
+    background: #f8fafc; color: #6b7280;
+    font-size: .7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .4px;
+    border-bottom: 1px solid #e9e9e7; padding: 10px 16px;
 }
+.inv-table tbody td { border-bottom: 1px solid #f5f5f4; padding: 12px 16px; vertical-align: middle; color: #37352f; background: #fff; }
+.inv-table tbody tr:last-child td { border-bottom: none; }
+.inv-table tbody tr:hover td { background: #fafaf9; }
 
-.card {
-    border-radius: 0.75rem;
-    overflow: hidden;
-    border: 2px solid #1657c1 !important;
-}
+.row-expired td   { background: #fff5f5 !important; }
+.row-expiring td  { background: #fffbeb !important; }
+.row-expired:hover td   { background: #fee2e2 !important; }
+.row-expiring:hover td  { background: #fef3c7 !important; }
 
-.badge {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.75rem;
+.inv-action-btn {
+    width: 28px; height: 28px; border-radius: 5px;
+    border: none; background: #f1f1ef; color: #787774;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background .12s, color .12s;
+    text-decoration: none;
 }
+.inv-action-btn:hover          { background: #e9e9e7; color: #37352f; }
+.inv-action-btn.edit:hover     { background: #dde9ff; color: #1657c1; }
+.inv-action-btn.del:hover      { background: #fee2e2; color: #b91c1c; }
 
-/* Add visible outline inside the table */
-.inventory-table th, .inventory-table td {
-    border-left: none !important;
-    border-right: none !important;
-    background: #fff;
-}
-.inventory-table thead th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #1657c1 !important;
-}
-.inventory-table tr {
-    border-radius: 0.5rem;
-}
-.inventory-table tbody tr {
-    border-top: none;
-    border-bottom: 1.5px solid #b6c6e3 !important;
-}
+.inv-empty { border: 1px dashed #e9e9e7; border-radius: 8px; padding: 48px 24px; text-align: center; background: #fafaf9; }
+.inv-empty-icon { font-size: 2rem; color: #d4d4d0; display: block; margin-bottom: 12px; }
+.inv-empty-title { font-size: .95rem; font-weight: 600; color: #787774; margin-bottom: 4px; }
+.inv-empty-text { font-size: .82rem; color: #9b9b9b; }
 
-/* Expiration status styling */
-.table-danger {
-    background-color: rgba(220, 53, 69, 0.1) !important;
-}
+.inv-form-label { font-size: .78rem; font-weight: 600; color: #37352f; margin-bottom: 4px; display: block; }
+.inv-input { border: 1px solid #e9e9e7; border-radius: 6px; font-size: .85rem; color: #37352f; background: #fff; }
+.inv-input:focus { border-color: #1657c1; box-shadow: 0 0 0 3px rgba(22,87,193,.1); }
 
-.table-warning {
-    background-color: rgba(255, 193, 7, 0.1) !important;
-}
-
-/* Filter button styling */
-.dropdown-toggle {
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-.dropdown-toggle:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.dropdown-toggle:active {
-    transform: translateY(0);
-}
-
-/* Simple modal fix - no more jittering */
-.modal {
-    z-index: 1055;
-}
-
-.modal-backdrop {
-    z-index: 1050;
-}
+/* Notion modal */
+.modal-header-custom { background: #1657c1; padding: 18px 22px; }
+.modal-type-badge { background: rgba(255,255,255,.12); color: rgba(255,255,255,.75); font-size: .64rem; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; border-radius: 4px; padding: 2px 8px; display: inline-block; }
+.modal-title-custom { font-size: 1.05rem; font-weight: 700; color: #fff; margin-top: 4px; }
+.modal-form-section { background: #fafaf9; border-radius: 6px; padding: 16px; border: 1px solid #f1f1ef; }
+.modal-section-title { font-size: .72rem; font-weight: 700; color: #9b9b9b; text-transform: uppercase; letter-spacing: .5px; }
 </style>
 
 <script>
@@ -503,106 +497,59 @@ function getCsrfToken() {
 let newResidentModalInstance = null;
 
 function toggleExpirationSort() {
-    // Toggle sort direction
     currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-    
-    // Update button text and icon
     const sortText = document.getElementById('sortText');
-    const sortIcon = document.querySelector('#sortExpirationBtn i');
-    
     if (currentSortDirection === 'desc') {
         sortText.textContent = 'Latest Expiry';
-        sortIcon.className = 'bi bi-funnel me-1';
     } else {
         sortText.textContent = 'Earliest Expiry';
-        sortIcon.className = 'bi bi-funnel me-1';
     }
-    
-    // Get the current URL and construct the sort URL
     const currentUrl = window.location.pathname;
-    let baseUrl;
-    
-    if (currentUrl.includes('/sort')) {
-        // If we're already on a sort page, remove the /sort part
-        baseUrl = currentUrl.replace('/sort', '');
-    } else {
-        // If we're on the regular show page, use the current URL
-        baseUrl = currentUrl;
-    }
-    
-    const sortUrl = baseUrl + '/sort?direction=' + currentSortDirection;
-    
-    // Redirect to sorted view
-    window.location.href = sortUrl;
+    let baseUrl = currentUrl.includes('/sort') ? currentUrl.replace('/sort', '') : currentUrl;
+    window.location.href = baseUrl + '/sort?direction=' + currentSortDirection;
 }
 
-// Initialize button state on page load
 document.addEventListener('DOMContentLoaded', function() {
     const sortText = document.getElementById('sortText');
-    const sortIcon = document.querySelector('#sortExpirationBtn i');
-    
-    if (currentSortDirection === 'desc') {
-        sortText.textContent = 'Latest Expiry';
-        sortIcon.className = 'bi bi-funnel me-1';
-    } else {
-        sortText.textContent = 'Earliest Expiry';
-        sortIcon.className = 'bi bi-funnel me-1';
+    if (sortText) {
+        sortText.textContent = currentSortDirection === 'desc' ? 'Latest Expiry' : 'Earliest Expiry';
     }
-    
-    // Initialize resident search functionality
     initializeResidentSearch();
-    // Initialize personnel search functionality
     initializePersonnelSearch();
-    // Setup modal for registering new residents
     setupNewResidentModal();
+
+    // Auto-dismiss toast
+    const toast = document.getElementById('flashToast');
+    if (toast) { setTimeout(() => { const b = bootstrap.Toast.getOrCreateInstance(toast); b.hide(); }, 4000); }
 });
 
 function setupNewResidentModal() {
     const modalElement = document.getElementById('newResidentModal');
     if (modalElement && typeof bootstrap !== 'undefined') {
         newResidentModalInstance = new bootstrap.Modal(modalElement);
-        modalElement.addEventListener('hidden.bs.modal', () => {
-            resetNewResidentForm();
-        });
+        modalElement.addEventListener('hidden.bs.modal', resetNewResidentForm);
     }
-
     const residentForm = document.getElementById('newResidentForm');
-    if (residentForm) {
-        residentForm.addEventListener('submit', submitNewResidentForm);
-    }
+    if (residentForm) residentForm.addEventListener('submit', submitNewResidentForm);
 }
 
 function openNewResidentModal(initialName = '') {
     resetNewResidentForm();
-
     if (initialName) {
         const parts = initialName.trim().split(/\s+/);
-        const firstNameField = document.getElementById('newResidentFirstName');
-        const lastNameField = document.getElementById('newResidentLastName');
-        if (firstNameField) {
-            firstNameField.value = parts.shift() || '';
-        }
-        if (lastNameField) {
-            lastNameField.value = parts.join(' ');
-        }
+        const fn = document.getElementById('newResidentFirstName');
+        const ln = document.getElementById('newResidentLastName');
+        if (fn) fn.value = parts.shift() || '';
+        if (ln) ln.value = parts.join(' ');
     }
-
     const emailField = document.getElementById('newResidentEmail');
-    if (emailField && !emailField.value) {
-        emailField.focus();
-    }
-
-    if (newResidentModalInstance) {
-        newResidentModalInstance.show();
-    }
+    if (emailField && !emailField.value) emailField.focus();
+    if (newResidentModalInstance) newResidentModalInstance.show();
 }
 
 function resetNewResidentForm() {
     const form = document.getElementById('newResidentForm');
-    if (form) {
-        form.reset();
-        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-    }
+    if (form) { form.reset(); form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid')); }
     clearNewResidentFormAlert();
 }
 
@@ -627,58 +574,43 @@ function displayNewResidentErrors(errors) {
     Object.keys(errors || {}).forEach(field => {
         const fieldErrors = errors[field];
         const input = document.querySelector(`#newResidentForm [name="${field}"]`);
-        if (input) {
-            input.classList.add('is-invalid');
-        }
+        if (input) input.classList.add('is-invalid');
         (fieldErrors || []).forEach(message => messages.push(message));
     });
-
     if (messages.length) {
-        const list = `<ul class="mb-0 ps-3">${messages.map(msg => `<li>${msg}</li>`).join('')}</ul>`;
-        showNewResidentFormMessage('danger', list);
+        showNewResidentFormMessage('danger', `<ul class="mb-0 ps-3">${messages.map(m => `<li>${m}</li>`).join('')}</ul>`);
     }
 }
 
 function submitNewResidentForm(event) {
     event.preventDefault();
-
     const form = event.target;
     clearNewResidentFormAlert();
     form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-
     const submitBtn = document.getElementById('newResidentSubmitBtn');
     const originalLabel = submitBtn ? submitBtn.innerHTML : '';
     if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Saving...';
     }
-
     const payload = {
-        first_name: form.first_name ? form.first_name.value.trim() : '',
-        last_name: form.last_name ? form.last_name.value.trim() : '',
-        email: form.email ? form.email.value.trim() : '',
-        purok: form.purok ? form.purok.value.trim() : '',
-        password: form.password ? form.password.value : '',
-        password_confirmation: form.password_confirmation ? form.password_confirmation.value : '',
+        first_name: form.first_name?.value.trim() ?? '',
+        last_name: form.last_name?.value.trim() ?? '',
+        email: form.email?.value.trim() ?? '',
+        purok: form.purok?.value.trim() ?? '',
+        password: form.password?.value ?? '',
+        password_confirmation: form.password_confirmation?.value ?? '',
     };
-
     fetch(residentStoreUrl, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken(),
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
         body: JSON.stringify(payload),
     })
     .then(async response => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            if (response.status === 422 && data.errors) {
-                displayNewResidentErrors(data.errors);
-            } else {
-                showNewResidentFormMessage('danger', data.message || 'Failed to create resident.');
-            }
+            if (response.status === 422 && data.errors) displayNewResidentErrors(data.errors);
+            else showNewResidentFormMessage('danger', data.message || 'Failed to create resident.');
             throw new Error('Request failed');
         }
         return data;
@@ -686,18 +618,11 @@ function submitNewResidentForm(event) {
     .then(data => {
         selectResident(data.id, data.name, data.email, data.username);
         showResidentInlineAlert('success', `Resident account created for ${data.name}.`);
-        if (newResidentModalInstance) {
-            newResidentModalInstance.hide();
-        }
+        if (newResidentModalInstance) newResidentModalInstance.hide();
     })
-    .catch(error => {
-        console.error('Error creating resident:', error);
-    })
+    .catch(error => console.error('Error creating resident:', error))
     .finally(() => {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalLabel;
-        }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalLabel; }
     });
 }
 
@@ -713,304 +638,136 @@ function hideResidentInlineAlert() {
     const alertEl = document.getElementById('residentInlineAlert');
     if (!alertEl) return;
     alertEl.classList.add('d-none');
-    alertEl.classList.remove('alert-success', 'alert-danger', 'alert-info');
     alertEl.innerHTML = '';
 }
 
-// Resident Search Functionality
+// Resident Search
 function initializeResidentSearch() {
     const searchInput = document.getElementById('resident_search');
     const dropdown = document.getElementById('resident_dropdown');
     const hiddenNameInput = document.getElementById('resident_name');
     const hiddenIdInput = document.getElementById('resident_id');
-    let searchTimeout;
-    let hasShownInitialList = false;
-    
-    // Show all residents when field is focused/clicked
+    let searchTimeout, hasShownInitialList = false;
+
     searchInput.addEventListener('focus', function() {
-        if (!hasShownInitialList && this.value.trim() === '') {
-            searchResidents('');
-            hasShownInitialList = true;
-        }
+        if (!hasShownInitialList && this.value.trim() === '') { searchResidents(''); hasShownInitialList = true; }
     });
-    
-    // Search for residents as user types
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
         hideResidentInlineAlert();
-        
-        // Reset flag when field is cleared
-        if (query === '') {
-            hasShownInitialList = false;
-        }
-        
+        if (query === '') hasShownInitialList = false;
         clearTimeout(searchTimeout);
-        
-        // Show all results if empty, or search if has query
-        searchTimeout = setTimeout(() => {
-            searchResidents(query);
-        }, query.length >= 2 ? 300 : 100);
+        searchTimeout = setTimeout(() => searchResidents(query), query.length >= 2 ? 300 : 100);
     });
-    
-    // Hide dropdown when clicking outside
     document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-            hideDropdown();
-        }
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) hideDropdown();
     });
-    
-    // Clear selection when input is manually changed
-    searchInput.addEventListener('keydown', function() {
-        hiddenNameInput.value = '';
-        hiddenIdInput.value = '';
-    });
+    searchInput.addEventListener('keydown', function() { hiddenNameInput.value = ''; hiddenIdInput.value = ''; });
 }
 
 function searchResidents(query) {
-    const dropdown = document.getElementById('resident_dropdown');
-    
     fetch(`{{ route('inventory.residents.search') }}?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(residents => {
-            displayResidents(residents, query);
-        })
-        .catch(error => {
-            console.error('Error searching residents:', error);
-            dropdown.innerHTML = '<div class="dropdown-item text-danger">Error searching residents</div>';
+        .then(r => r.json())
+        .then(residents => displayResidents(residents, query))
+        .catch(() => {
+            document.getElementById('resident_dropdown').innerHTML = '<div class="dropdown-item text-danger">Error searching residents</div>';
             showDropdown();
         });
 }
 
 function displayResidents(residents, query) {
     const dropdown = document.getElementById('resident_dropdown');
-    
     if (residents.length === 0) {
+        dropdown.innerHTML = query.length >= 2
+            ? `<div class="dropdown-item" style="white-space:normal;padding:12px;cursor:pointer;"><i class="bi bi-person-plus me-2 text-success"></i><strong>No residents found</strong><br><small class="text-muted">Click to add "${query}" as new resident</small></div>`
+            : `<div class="dropdown-item" style="white-space:normal;padding:12px;"><i class="bi bi-info-circle me-2 text-info"></i><strong>No residents found</strong><br><small class="text-muted">Start typing to search</small></div>`;
         if (query.length >= 2) {
-            dropdown.innerHTML = `
-                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-person-plus me-3 text-success" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4;">
-                            <strong style="color: #333;">No residents found</strong><br>
-                            <small class="text-muted">Click to add "${query}" as new resident</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Add click handler for new resident
-            dropdown.querySelector('.dropdown-item').addEventListener('click', function() {
-                addNewResident(query);
-            });
-        } else {
-            dropdown.innerHTML = `
-                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle me-3 text-info" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4;">
-                            <strong style="color: #333;">No residents found</strong><br>
-                            <small class="text-muted">Start typing to search for residents</small>
-                        </div>
-                    </div>
-                </div>
-            `;
+            dropdown.querySelector('.dropdown-item').addEventListener('click', () => addNewResident(query));
         }
     } else {
-        let html = '';
-        
-        residents.forEach(resident => {
-            html += `
-                <div class="dropdown-item" data-resident-id="${resident.id}" data-resident-name="${resident.name}" data-resident-email="${resident.email}" data-resident-username="${resident.username}" style="white-space: normal; padding: 12px;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-person me-3 text-primary" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4; flex: 1;">
-                            <strong style="color: #333;">${resident.name}</strong><br>
-                            <small class="text-muted">${resident.email || '@' + resident.username || 'No contact info'}</small>
-                            ${resident.location ? `<br><small class="text-muted">${resident.location}</small>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Add option to create new resident (only if query is provided)
+        let html = residents.map(r => `
+            <div class="dropdown-item" data-resident-id="${r.id}" data-resident-name="${r.name}" data-resident-email="${r.email}" data-resident-username="${r.username}" style="white-space:normal;padding:12px;cursor:pointer;">
+                <i class="bi bi-person me-2 text-primary"></i>
+                <strong>${r.name}</strong><br>
+                <small class="text-muted">${r.email || '@' + r.username || ''}</small>
+            </div>`).join('');
         if (query.length >= 2) {
-            html += `
-                <div class="dropdown-divider"></div>
-                <div class="dropdown-item" data-new-resident="${query}" style="white-space: normal; padding: 12px;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-person-plus me-3 text-success" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4; flex: 1;">
-                            <strong style="color: #333;">Add "${query}" as new resident</strong><br>
-                            <small class="text-muted">Register this person for the first time</small>
-                        </div>
-                    </div>
-                </div>
-            `;
+            html += `<div class="dropdown-divider"></div><div class="dropdown-item" data-new-resident="${query}" style="white-space:normal;padding:12px;cursor:pointer;"><i class="bi bi-person-plus me-2 text-success"></i><strong>Add "${query}" as new resident</strong></div>`;
         }
-        
         dropdown.innerHTML = html;
-        
-        // Add click handlers
         dropdown.querySelectorAll('.dropdown-item').forEach(item => {
             item.addEventListener('click', function() {
-                if (this.dataset.newResident) {
-                    addNewResident(this.dataset.newResident);
-                } else {
-                    selectResident(this.dataset.residentId, this.dataset.residentName, this.dataset.residentEmail, this.dataset.residentUsername);
-                }
+                if (this.dataset.newResident) addNewResident(this.dataset.newResident);
+                else selectResident(this.dataset.residentId, this.dataset.residentName, this.dataset.residentEmail, this.dataset.residentUsername);
             });
         });
     }
-    
     showDropdown();
 }
 
 function selectResident(id, name, email, username) {
-    // Display name with email or username
     const displayText = email ? `${name} (${email})` : (username ? `${name} (@${username})` : name);
     document.getElementById('resident_search').value = displayText;
     document.getElementById('resident_name').value = name;
     document.getElementById('resident_id').value = id;
     hideDropdown();
 }
+function addNewResident(name) { hideDropdown(); openNewResidentModal(name); }
+function showDropdown() { document.getElementById('resident_dropdown').style.display = 'block'; }
+function hideDropdown() { document.getElementById('resident_dropdown').style.display = 'none'; }
 
-function addNewResident(name) {
-    hideDropdown();
-    openNewResidentModal(name);
-}
-
-function showDropdown() {
-    document.getElementById('resident_dropdown').style.display = 'block';
-}
-
-function hideDropdown() {
-    document.getElementById('resident_dropdown').style.display = 'none';
-}
-
-// Personnel Search Functionality
+// Personnel Search
 function initializePersonnelSearch() {
     const searchInput = document.getElementById('personnel_search');
     const dropdown = document.getElementById('personnel_dropdown');
     const hiddenNameInput = document.getElementById('released_by');
     const hiddenIdInput = document.getElementById('personnel_id');
-    let searchTimeout;
-    let hasShownInitialList = false;
-    
-    if (!searchInput || !dropdown || !hiddenNameInput) {
-        return; // Exit if elements don't exist
-    }
-    
-    // Show all personnel when field is focused/clicked
+    if (!searchInput || !dropdown || !hiddenNameInput) return;
+    let searchTimeout, hasShownInitialList = false;
+
     searchInput.addEventListener('focus', function() {
-        if (!hasShownInitialList && this.value.trim() === '') {
-            searchPersonnel('');
-            hasShownInitialList = true;
-        }
+        if (!hasShownInitialList && this.value.trim() === '') { searchPersonnel(''); hasShownInitialList = true; }
     });
-    
-    // Search for personnel as user types
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
-        
-        // Reset flag when field is cleared
-        if (query === '') {
-            hasShownInitialList = false;
-        }
-        
+        if (query === '') hasShownInitialList = false;
         clearTimeout(searchTimeout);
-        
-        // Show all results if empty, or search if has query
-        searchTimeout = setTimeout(() => {
-            searchPersonnel(query);
-        }, query.length >= 2 ? 300 : 100);
+        searchTimeout = setTimeout(() => searchPersonnel(query), query.length >= 2 ? 300 : 100);
     });
-    
-    // Hide dropdown when clicking outside
     document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-            hidePersonnelDropdown();
-        }
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) hidePersonnelDropdown();
     });
-    
-    // Clear selection when input is manually changed
-    searchInput.addEventListener('keydown', function() {
-        hiddenNameInput.value = '';
-        hiddenIdInput.value = '';
-    });
+    searchInput.addEventListener('keydown', function() { hiddenNameInput.value = ''; hiddenIdInput.value = ''; });
 }
 
 function searchPersonnel(query) {
-    const dropdown = document.getElementById('personnel_dropdown');
-    
     fetch(`{{ route('inventory.personnel.search') }}?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(personnel => {
-            displayPersonnel(personnel, query);
-        })
-        .catch(error => {
-            console.error('Error searching personnel:', error);
-            dropdown.innerHTML = '<div class="dropdown-item text-danger">Error searching personnel</div>';
+        .then(r => r.json())
+        .then(personnel => displayPersonnel(personnel, query))
+        .catch(() => {
+            document.getElementById('personnel_dropdown').innerHTML = '<div class="dropdown-item text-danger">Error searching personnel</div>';
             showPersonnelDropdown();
         });
 }
 
 function displayPersonnel(personnel, query) {
     const dropdown = document.getElementById('personnel_dropdown');
-    
     if (personnel.length === 0) {
-        if (query.length >= 2) {
-            dropdown.innerHTML = `
-                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-person-x me-3 text-warning" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4;">
-                            <strong style="color: #333;">No personnel found</strong><br>
-                            <small class="text-muted">No matching personnel found for "${query}"</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            dropdown.innerHTML = `
-                <div class="dropdown-item" style="white-space: normal; padding: 12px;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle me-3 text-info" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4;">
-                            <strong style="color: #333;">No personnel found</strong><br>
-                            <small class="text-muted">No personnel available. Start typing to search.</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
+        dropdown.innerHTML = query.length >= 2
+            ? `<div class="dropdown-item" style="white-space:normal;padding:12px;"><i class="bi bi-person-x me-2 text-warning"></i><strong>No personnel found</strong><br><small class="text-muted">No match for "${query}"</small></div>`
+            : `<div class="dropdown-item" style="white-space:normal;padding:12px;"><i class="bi bi-info-circle me-2 text-info"></i><strong>No personnel found</strong><br><small class="text-muted">Start typing to search.</small></div>`;
     } else {
-        let html = '';
-        
-        personnel.forEach(person => {
-            html += `
-                <div class="dropdown-item" data-personnel-id="${person.id}" data-personnel-name="${person.name}" style="white-space: normal; padding: 12px; cursor: pointer;">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-person-badge me-3 text-primary" style="margin-top: 2px;"></i>
-                        <div style="line-height: 1.4; flex: 1;">
-                            <strong style="color: #333;">${person.name}</strong>
-                            ${person.position ? `<br><small class="text-muted">${person.position}</small>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        dropdown.innerHTML = html;
-        
-        // Add click handlers
+        dropdown.innerHTML = personnel.map(p => `
+            <div class="dropdown-item" data-personnel-id="${p.id}" data-personnel-name="${p.name}" style="white-space:normal;padding:12px;cursor:pointer;">
+                <i class="bi bi-person-badge me-2 text-primary"></i>
+                <strong>${p.name}</strong>${p.position ? `<br><small class="text-muted">${p.position}</small>` : ''}
+            </div>`).join('');
         dropdown.querySelectorAll('.dropdown-item').forEach(item => {
             item.addEventListener('click', function() {
                 selectPersonnel(this.dataset.personnelId, this.dataset.personnelName);
             });
         });
     }
-    
     showPersonnelDropdown();
 }
 
@@ -1020,19 +777,7 @@ function selectPersonnel(id, name) {
     document.getElementById('personnel_id').value = id;
     hidePersonnelDropdown();
 }
-
-function showPersonnelDropdown() {
-    const dropdown = document.getElementById('personnel_dropdown');
-    if (dropdown) {
-        dropdown.style.display = 'block';
-    }
-}
-
-function hidePersonnelDropdown() {
-    const dropdown = document.getElementById('personnel_dropdown');
-    if (dropdown) {
-        dropdown.style.display = 'none';
-    }
-}
+function showPersonnelDropdown() { const d = document.getElementById('personnel_dropdown'); if (d) d.style.display = 'block'; }
+function hidePersonnelDropdown() { const d = document.getElementById('personnel_dropdown'); if (d) d.style.display = 'none'; }
 </script>
-@endsection 
+@endsection

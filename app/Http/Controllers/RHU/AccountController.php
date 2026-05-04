@@ -21,38 +21,32 @@ class AccountController extends Controller
         $this->firestore = $firestore;
     }
 
-    // Show account management dashboard
     public function index()
     {
         $user = session('user');
-        
+
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access account management.');
         }
 
-        // Get health center profile based on user role
         $healthCenter = $this->getHealthCenterProfile($user['id'], $user['role']);
-        
-        // Get staff accounts for this health center
         $staffAccounts = $this->getStaffAccounts($user['id'], $user['role']);
 
         return $this->view('accounts.index', compact('healthCenter', 'staffAccounts'));
     }
 
-    // Show health center profile edit form
     public function editProfile()
     {
         $user = session('user');
         $healthCenter = $this->getHealthCenterProfile($user['id'], $user['role']);
-        
+
         return $this->view('accounts.profile', compact('healthCenter'));
     }
 
-    // Update health center profile
     public function updateProfile(Request $request)
     {
         $user = session('user');
-        
+
         $validated = $request->validate([
             'healthCenterName' => 'required|string|max:255',
             'contact_number' => 'required|string|max:20',
@@ -61,15 +55,14 @@ class AccountController extends Controller
             'open_days' => 'required|array|min:1',
             'open_time' => 'required|string|max:10',
             'close_time' => 'required|string|max:10',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:5120',
         ]);
 
-        // Ensure open_days is always an array
         if (!is_array($validated['open_days'])) {
             $validated['open_days'] = [$validated['open_days']];
         }
 
         $collectionName = $this->getCollectionNameByRole($user['role']);
-        // Prepare update data
         $updateData = [
             'healthCenterName' => $validated['healthCenterName'],
             'contact_number' => $validated['contact_number'],
@@ -80,26 +73,38 @@ class AccountController extends Controller
             'updated_at' => now()->toDateTimeString(),
         ];
 
-        // Handle open_days separately to ensure it's properly formatted
         if (!empty($validated['open_days'])) {
-            // Convert array to string for Firestore compatibility
             $updateData['open_days'] = implode(',', $validated['open_days']);
         }
 
-        // Remove any empty values to avoid Firestore errors
-        $updateData = array_filter($updateData, function($value) {
+        if ($request->hasFile('logo')) {
+            try {
+                $cloudinary = new Cloudinary();
+                $result = $cloudinary->uploadApi()->upload($request->file('logo')->getRealPath(), [
+                    'folder' => "gabayhealth/rhu/{$user['id']}/logo",
+                    'resource_type' => 'auto',
+                    'quality' => 'auto',
+                    'overwrite' => true,
+                    'public_id' => 'main-logo',
+                ]);
+                $updateData['logo_url'] = $result['secure_url'];
+                $userSession = session('user');
+                $userSession['logo_url'] = $result['secure_url'];
+                session(['user' => $userSession]);
+            } catch (\Exception $e) {
+                // logo upload failed, continue without updating it
+            }
+        }
+
+        $updateData = array_filter($updateData, function ($value) {
             return $value !== null && $value !== '';
         });
 
         try {
-            // Convert array to Firestore update format
             $firestoreUpdateData = [];
             foreach ($updateData as $key => $value) {
                 $firestoreUpdateData[] = ['path' => $key, 'value' => $value];
             }
-
-            // Debug: Log the data being sent
-            \Log::info('Firestore update data:', $firestoreUpdateData);
 
             $this->firestore->getFirestore()
                 ->collection($collectionName)
@@ -112,17 +117,15 @@ class AccountController extends Controller
         }
     }
 
-    // Show create staff account form
     public function createStaff()
     {
         return $this->view('accounts.create-staff');
     }
 
-    // Store new staff account
     public function storeStaff(Request $request)
     {
         $user = session('user');
-        
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -130,9 +133,9 @@ class AccountController extends Controller
             'contact_number' => 'required|string|max:20',
             'password' => 'required|string|min:6',
             'specialization' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:500',
         ]);
 
-        // Check if email already exists in the accounts subcollection
         $existingUser = $this->firestore->getFirestore()
             ->collection($user['role'])
             ->document($user['id'])
@@ -148,32 +151,30 @@ class AccountController extends Controller
         $auth = $this->firestore->getAuth();
 
         try {
-            // Create Firebase Auth user
             $authUser = $auth->createUser([
                 'email' => $validated['email'],
                 'password' => $validated['password'],
                 'displayName' => $validated['name'],
                 'emailVerified' => false,
             ]);
-            
+
             $uid = $authUser->uid;
 
-            // Prepare staff data
             $staffData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'role' => $validated['role'],
                 'contact_number' => $validated['contact_number'],
                 'specialization' => $validated['specialization'] ?? '',
+                'address' => $validated['address'] ?? '',
                 'status' => 'active',
-                'uid' => $uid, // Store Firebase UID
+                'uid' => $uid,
                 'created_at' => now()->toDateTimeString(),
                 'updated_at' => now()->toDateTimeString(),
             ];
 
-            // Save as subcollection under the barangay document
-            $documentRef = $this->firestore->getFirestore()
-                ->collection($user['role']) // barangay, rhu, or admin
+            $this->firestore->getFirestore()
+                ->collection($user['role'])
                 ->document($user['id'])
                 ->collection('accounts')
                 ->add($staffData);
@@ -194,34 +195,29 @@ class AccountController extends Controller
 
             return redirect()->route('rhu.accounts.index')->with('success', 'Staff account created successfully!');
         } catch (\Kreait\Firebase\Auth\Exception\AuthException $e) {
-            \Log::error('Firebase Auth error when creating staff: ' . $e->getMessage());
-            
             $message = 'Failed to create staff account.';
             if (str_contains($e->getMessage(), 'EMAIL_EXISTS')) {
                 $message = 'The email address is already registered.';
             }
-            
+
             return back()->withErrors(['email' => $message])->withInput();
         } catch (\Exception $e) {
-            // If Firestore save fails but Auth user was created, try to clean up
             if ($uid) {
                 try {
                     $auth->deleteUser($uid);
                 } catch (\Throwable $cleanupException) {
-                    \Log::warning('Failed to cleanup auth user after Firestore error: ' . $cleanupException->getMessage());
+                    // cleanup failed, ignore
                 }
             }
-            
-            \Log::error('Error creating staff account: ' . $e->getMessage());
+
             return back()->withErrors(['error' => 'Failed to create staff account: ' . $e->getMessage()])->withInput();
         }
     }
 
-    // Show edit staff account form
     public function editStaff($id)
     {
         $staff = $this->getStaffAccount($id);
-        
+
         if (!$staff) {
             abort(404);
         }
@@ -229,7 +225,6 @@ class AccountController extends Controller
         return $this->view('accounts.edit-staff', compact('staff'));
     }
 
-    // Update staff account
     public function updateStaff(Request $request, $id)
     {
         $validated = $request->validate([
@@ -238,6 +233,7 @@ class AccountController extends Controller
             'role' => 'required|in:doctor,midwife,nurse',
             'contact_number' => 'required|string|max:20',
             'specialization' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:500',
             'status' => 'required|in:active,inactive',
         ]);
 
@@ -253,6 +249,7 @@ class AccountController extends Controller
                 ['path' => 'role', 'value' => $validated['role']],
                 ['path' => 'contact_number', 'value' => $validated['contact_number']],
                 ['path' => 'specialization', 'value' => $validated['specialization'] ?? ''],
+                ['path' => 'address', 'value' => $validated['address'] ?? ''],
                 ['path' => 'status', 'value' => $validated['status']],
                 ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
             ]);
@@ -260,7 +257,6 @@ class AccountController extends Controller
         return redirect()->route('rhu.accounts.index')->with('success', 'Staff account updated successfully!');
     }
 
-    // Delete staff account
     public function destroyStaff($id)
     {
         $user = session('user');
@@ -274,7 +270,6 @@ class AccountController extends Controller
         return redirect()->route('rhu.accounts.index')->with('success', 'Staff account deleted successfully!');
     }
 
-    // Change password for current user
     public function changePassword(Request $request)
     {
         $validated = $request->validate([
@@ -286,7 +281,6 @@ class AccountController extends Controller
         $user = session('user');
         $healthCenter = $this->getHealthCenterProfile($user['id'], $user['role']);
 
-        // Verify current password
         if (!Hash::check($validated['current_password'], $healthCenter['password'] ?? '')) {
             return back()->withErrors(['current_password' => 'Current password is incorrect.']);
         }
@@ -303,20 +297,18 @@ class AccountController extends Controller
         return redirect()->route('rhu.accounts.index')->with('success', 'Password changed successfully!');
     }
 
-    // Upload health center logo
     public function uploadLogo(Request $request)
     {
         $validated = $request->validate([
-            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:5120', // max 5MB
+            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:5120',
         ]);
 
         $user = session('user');
-        
+
         try {
             $logo = $request->file('logo');
             $cloudinary = new Cloudinary();
-            
-            // Upload to Cloudinary
+
             $result = $cloudinary->uploadApi()->upload($logo->getRealPath(), [
                 'folder' => "gabayhealth/rhu/{$user['id']}/logo",
                 'resource_type' => 'auto',
@@ -324,10 +316,9 @@ class AccountController extends Controller
                 'overwrite' => true,
                 'public_id' => 'main-logo',
             ]);
-            
+
             $logoUrl = $result['secure_url'];
-            
-            // Update Firestore with new logo URL
+
             $collectionName = $this->getCollectionNameByRole($user['role']);
             $this->firestore->getFirestore()
                 ->collection($collectionName)
@@ -337,46 +328,31 @@ class AccountController extends Controller
                     ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
                 ]);
 
-            // Update session with new logo URL
             $userSession = session('user');
             $userSession['logo_url'] = $logoUrl;
             session(['user' => $userSession]);
 
-            \Log::info('Logo uploaded to Cloudinary', [
-                'rhu_id' => $user['id'],
-                'logo_url' => $logoUrl,
-            ]);
-
             return back()->with('success', 'Health center logo updated successfully!');
         } catch (\Exception $e) {
-            \Log::error('Logo upload error: ' . $e->getMessage(), [
-                'rhu_id' => $user['id'],
-                'error' => $e->getMessage(),
-            ]);
             return back()->withErrors(['error' => 'Failed to upload logo: ' . $e->getMessage()]);
         }
     }
 
-    // Delete health center logo
     public function deleteLogo(Request $request)
     {
         $user = session('user');
-        
+
         try {
             $cloudinary = new Cloudinary();
-            
-            // Delete from Cloudinary
+
             try {
                 $cloudinary->uploadApi()->destroy("gabayhealth/rhu/{$user['id']}/logo/main-logo", [
                     'resource_type' => 'image',
                 ]);
-                \Log::info('Logo deleted from Cloudinary', ['rhu_id' => $user['id']]);
             } catch (\Exception $e) {
-                \Log::warning('Cloudinary deletion failed, but continuing', ['error' => $e->getMessage()]);
-                // Continue even if Cloudinary deletion fails
+                // Cloudinary deletion failed, continue anyway
             }
 
-            // Update Firestore to remove logo URL
             $collectionName = $this->getCollectionNameByRole($user['role']);
             $this->firestore->getFirestore()
                 ->collection($collectionName)
@@ -386,22 +362,16 @@ class AccountController extends Controller
                     ['path' => 'updated_at', 'value' => now()->toDateTimeString()],
                 ]);
 
-            // Update session to remove logo URL
             $userSession = session('user');
             $userSession['logo_url'] = null;
             session(['user' => $userSession]);
 
             return back()->with('success', 'Health center logo deleted successfully!');
         } catch (\Exception $e) {
-            \Log::error('Logo deletion error: ' . $e->getMessage(), [
-                'rhu_id' => $user['id'],
-                'error' => $e->getMessage(),
-            ]);
             return back()->withErrors(['error' => 'Failed to delete logo: ' . $e->getMessage()]);
         }
     }
 
-    // Helper methods
     private function getHealthCenterProfile($userId, $userRole)
     {
         $collectionName = $this->getCollectionNameByRole($userRole);
@@ -428,8 +398,7 @@ class AccountController extends Controller
         $staffAccounts = [];
         foreach ($documents as $document) {
             if ($document->exists()) {
-                $data = $document->data();
-                $staffAccounts[] = array_merge(['id' => $document->id()], $data);
+                $staffAccounts[] = array_merge(['id' => $document->id()], $document->data());
             }
         }
 
@@ -453,8 +422,7 @@ class AccountController extends Controller
     private function getStaffAccount($id)
     {
         $user = session('user');
-        
-        // We need to search through the accounts subcollection
+
         $documents = $this->firestore->getFirestore()
             ->collection($user['role'])
             ->document($user['id'])
@@ -469,5 +437,4 @@ class AccountController extends Controller
 
         return null;
     }
-} 
-
+}

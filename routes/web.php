@@ -957,6 +957,7 @@ Route::middleware('auth.check')->group(function () {
         // Barangays routes
         Route::get('/barangays', [RHUBarangayController::class, 'index'])->name('barangays.index');
         Route::get('/barangays/{barangayId}', [RHUBarangayController::class, 'show'])->name('barangays.show');
+        Route::post('/barangays/{barangayId}/approve', [RHUBarangayController::class, 'approve'])->name('barangays.approve');
         Route::post('/barangays/{barangayId}/send-credentials', [RHUBarangayController::class, 'sendCredentials'])->name('barangays.send-credentials');
 
         // Reports routes

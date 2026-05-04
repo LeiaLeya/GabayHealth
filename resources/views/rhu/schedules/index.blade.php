@@ -1,412 +1,405 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header -->
+<div class="container-fluid px-4">
+
+    {{-- Flash Toasts --}}
+    @if(session('success'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-success border-0 rounded-3 shadow" role="alert" id="successToast">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-danger border-0 rounded-3 shadow" role="alert" id="errorToast">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Page Header --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-dark mb-1">Schedules</h2>
+            <h2 class="fw-bold mb-1" style="color:#1e293b;">Schedules</h2>
+            <p class="text-muted mb-0 small">Manage weekly staff schedules by location</p>
         </div>
-        <div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
-                <i class="bi bi-plus-circle me-2"></i>Add Schedule
-            </button>
-        </div>
+        <button class="btn btn-add-sched" onclick="openAddModal()" data-bs-toggle="modal" data-bs-target="#schedModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Schedule
+        </button>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-
-
-    <!-- Schedules Tabs -->
-    <div class="card">
-        <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs" id="scheduleTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="midwife-tab" data-bs-toggle="tab" data-bs-target="#midwife" type="button" role="tab">
-                        <i class="bi bi-heart-pulse me-2"></i>Midwife Schedules
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="doctor-tab" data-bs-toggle="tab" data-bs-target="#doctor" type="button" role="tab">
-                        <i class="bi bi-person-vcard me-2"></i>Doctor Schedules
-                    </button>
-                </li>
-            </ul>
-        </div>
-        <div class="card-body">
-            <div class="tab-content" id="scheduleTabsContent">
-                <!-- Midwife Schedules Tab -->
-                <div class="tab-pane fade show active" id="midwife" role="tabpanel">
-                    @if(count($midwifeSchedules) > 0)
-                        <div class="row">
-                            @foreach($midwifeSchedules as $schedule)
-                                <div class="col-md-6 col-lg-4 mb-4">
-                                    <div class="card h-100 schedule-card">
-                                        <div class="card-header bg-primary text-white">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h6 class="mb-0">
-                                                    <i class="bi bi-heart-pulse me-2"></i>{{ $schedule['personnel_name'] }}
-                                                </h6>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-sm btn-outline-light edit-schedule-btn" 
-                                                            data-schedule-id="{{ $schedule['id'] }}" 
-                                                            data-personnel-name="{{ $schedule['personnel_name'] }}" 
-                                                            data-schedule="{{ json_encode($schedule['schedule']) }}" 
-                                                            data-week-start="{{ $schedule['week_start'] ?? '' }}" 
-                                                            data-week-end="{{ $schedule['week_end'] ?? '' }}" 
-                                                            title="Edit Schedule">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-light delete-schedule-btn" 
-                                                            data-schedule-id="{{ $schedule['id'] }}" 
-                                                            data-personnel-name="{{ $schedule['personnel_name'] }}" 
-                                                            title="Delete Schedule">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            @if(isset($schedule['week_start']) && isset($schedule['week_end']))
-                                                <div class="alert alert-info mb-3">
-                                                    <i class="bi bi-calendar-week me-2"></i>
-                                                    <strong>Week Period:</strong> 
-                                                    {{ \Carbon\Carbon::parse($schedule['week_start'])->format('M d') }} - 
-                                                    {{ \Carbon\Carbon::parse($schedule['week_end'])->format('M d, Y') }}
-                                                </div>
-                                            @endif
-                                            <div class="schedule-grid">
-                                                @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day)
-                                                    @if(isset($schedule['schedule'][$day]) && !empty($schedule['schedule'][$day]))
-                                                        <div class="schedule-day">
-                                                            <div class="day-label">{{ ucfirst($day) }}</div>
-                                                            <div class="time-slots">
-                                                                @if(is_array($schedule['schedule'][$day]))
-                                                                    @foreach($schedule['schedule'][$day] as $timeSlot)
-                                                                        @if(is_string($timeSlot))
-                                                                            <span class="time-badge">{{ $timeSlot }}</span>
-                                                                        @endif
-                                                                    @endforeach
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    @endif
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="text-center py-5">
-                            <i class="bi bi-calendar-x display-4 text-muted mb-3"></i>
-                            <h5 class="text-muted">No Midwife Schedules</h5>
-                            <p class="text-muted">No midwife schedules have been created yet.</p>
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Doctor Schedules Tab -->
-                <div class="tab-pane fade" id="doctor" role="tabpanel">
-                    @if(count($doctorSchedules) > 0)
-                        <div class="row">
-                            @foreach($doctorSchedules as $schedule)
-                                <div class="col-md-6 col-lg-4 mb-4">
-                                    <div class="card h-100 schedule-card">
-                                        <div class="card-header bg-primary text-white">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h6 class="mb-0">
-                                                    <i class="bi bi-person-vcard me-2"></i>{{ $schedule['personnel_name'] }}
-                                                </h6>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-sm btn-outline-light edit-schedule-btn" 
-                                                            data-schedule-id="{{ $schedule['id'] }}" 
-                                                            data-personnel-name="{{ $schedule['personnel_name'] }}" 
-                                                            data-schedule="{{ json_encode($schedule['schedule']) }}" 
-                                                            data-week-start="{{ $schedule['week_start'] ?? '' }}" 
-                                                            data-week-end="{{ $schedule['week_end'] ?? '' }}" 
-                                                            title="Edit Schedule">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-light delete-schedule-btn" 
-                                                            data-schedule-id="{{ $schedule['id'] }}" 
-                                                            data-personnel-name="{{ $schedule['personnel_name'] }}" 
-                                                            title="Delete Schedule">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            @if(isset($schedule['week_start']) && isset($schedule['week_end']))
-                                                <div class="alert alert-info mb-3">
-                                                    <i class="bi bi-calendar-week me-2"></i>
-                                                    <strong>Week Period:</strong> 
-                                                    {{ \Carbon\Carbon::parse($schedule['week_start'])->format('M d') }} - 
-                                                    {{ \Carbon\Carbon::parse($schedule['week_end'])->format('M d, Y') }}
-                                                </div>
-                                            @endif
-                                            <div class="schedule-grid">
-                                                @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day)
-                                                    @if(isset($schedule['schedule'][$day]) && !empty($schedule['schedule'][$day]))
-                                                        <div class="schedule-day">
-                                                            <div class="day-label">{{ ucfirst($day) }}</div>
-                                                            <div class="time-slots">
-                                                                @if(is_array($schedule['schedule'][$day]))
-                                                                    @foreach($schedule['schedule'][$day] as $timeSlot)
-                                                                        @if(is_string($timeSlot))
-                                                                            <span class="time-badge">{{ $timeSlot }}</span>
-                                                                        @endif
-                                                                    @endforeach
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    @endif
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="text-center py-5">
-                            <i class="bi bi-calendar-x display-4 text-muted mb-3"></i>
-                            <h5 class="text-muted">No Doctor Schedules</h5>
-                            <p class="text-muted">No doctor schedules have been created yet.</p>
-                        </div>
-                    @endif
+    {{-- Stats Row --}}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-calendar2-week-fill"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ count($midwifeSchedules) + count($doctorSchedules) }}</div>
+                    <div class="stat-label">Total Schedules</div>
                 </div>
             </div>
         </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ count($midwifeSchedules) }}</div>
+                    <div class="stat-label">Midwife</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-person-vcard-fill"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ count($doctorSchedules) }}</div>
+                    <div class="stat-label">Doctor</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-geo-alt-fill"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ count($barangayOptions) }}</div>
+                    <div class="stat-label">Locations</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tabs --}}
+    <div class="sched-tabs mb-3">
+        <button class="sched-tab active" id="tabMidwife" onclick="switchTab('midwife')">
+            <i class="bi bi-heart-pulse me-1"></i>Midwife Schedules
+            <span class="tab-count">{{ count($midwifeSchedules) }}</span>
+        </button>
+        <button class="sched-tab" id="tabDoctor" onclick="switchTab('doctor')">
+            <i class="bi bi-person-vcard me-1"></i>Doctor Schedules
+            <span class="tab-count">{{ count($doctorSchedules) }}</span>
+        </button>
+    </div>
+
+    {{-- Midwife Schedules --}}
+    <div id="paneMidwife" class="sched-pane">
+        @if(count($midwifeSchedules) > 0)
+            <div class="row g-3">
+                @foreach($midwifeSchedules as $schedule)
+                <div class="col-md-6 col-xl-4">
+                    <div class="sched-card">
+                        <div class="sched-card-header">
+                            <div>
+                                <div class="sched-badge">Midwife</div>
+                                <div class="sched-name">{{ $schedule['personnel_name'] }}</div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="sched-action-btn" onclick="openEditModal('{{ $schedule['id'] }}','midwife','{{ addslashes($schedule['personnel_id'] ?? '') }}','{{ addslashes($schedule['personnel_name']) }}',{{ json_encode($schedule['schedule'] ?? []) }},'{{ $schedule['week_start'] ?? '' }}','{{ $schedule['week_end'] ?? '' }}','{{ $schedule['barangay_id'] ?? $selectedBarangayId }}')" data-bs-toggle="modal" data-bs-target="#schedModal" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="sched-action-btn danger" onclick="confirmDelete('{{ $schedule['id'] }}','{{ addslashes($schedule['personnel_name']) }}','{{ $schedule['barangay_id'] ?? $selectedBarangayId }}')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sched-card-body">
+                            @if(isset($schedule['week_start']) && isset($schedule['week_end']))
+                            <div class="sched-week-badge">
+                                <i class="bi bi-calendar-range me-1"></i>
+                                {{ \Carbon\Carbon::parse($schedule['week_start'])->format('M d') }} – {{ \Carbon\Carbon::parse($schedule['week_end'])->format('M d, Y') }}
+                            </div>
+                            @endif
+                            <div class="day-rows">
+                                @foreach(['monday'=>'Mon','tuesday'=>'Tue','wednesday'=>'Wed','thursday'=>'Thu','friday'=>'Fri','saturday'=>'Sat','sunday'=>'Sun'] as $day => $abbr)
+                                    @if(isset($schedule['schedule'][$day]) && !empty($schedule['schedule'][$day]))
+                                    <div class="day-row">
+                                        <span class="day-abbr {{ in_array($day, ['saturday','sunday']) ? 'weekend' : '' }}">{{ $abbr }}</span>
+                                        <div class="time-chips">
+                                            @foreach($schedule['schedule'][$day] as $slot)
+                                                @if(is_string($slot) && $slot)
+                                                <span class="time-chip">{{ $slot }}</span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        @else
+            <div class="sched-empty">
+                <i class="bi bi-calendar-x"></i>
+                <div class="sched-empty-title">No Midwife Schedules</div>
+                <div class="sched-empty-text">Create a midwife schedule using the Add Schedule button above.</div>
+            </div>
+        @endif
+    </div>
+
+    {{-- Doctor Schedules --}}
+    <div id="paneDoctor" class="sched-pane d-none">
+        @if(count($doctorSchedules) > 0)
+            <div class="row g-3">
+                @foreach($doctorSchedules as $schedule)
+                <div class="col-md-6 col-xl-4">
+                    <div class="sched-card">
+                        <div class="sched-card-header">
+                            <div>
+                                <div class="sched-badge doctor">Doctor</div>
+                                <div class="sched-name">{{ $schedule['personnel_name'] }}</div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="sched-action-btn" onclick="openEditModal('{{ $schedule['id'] }}','doctor','{{ addslashes($schedule['personnel_id'] ?? '') }}','{{ addslashes($schedule['personnel_name']) }}',{{ json_encode($schedule['schedule'] ?? []) }},'{{ $schedule['week_start'] ?? '' }}','{{ $schedule['week_end'] ?? '' }}','{{ $schedule['barangay_id'] ?? $selectedBarangayId }}')" data-bs-toggle="modal" data-bs-target="#schedModal" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="sched-action-btn danger" onclick="confirmDelete('{{ $schedule['id'] }}','{{ addslashes($schedule['personnel_name']) }}','{{ $schedule['barangay_id'] ?? $selectedBarangayId }}')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sched-card-body">
+                            @if(isset($schedule['week_start']) && isset($schedule['week_end']))
+                            <div class="sched-week-badge">
+                                <i class="bi bi-calendar-range me-1"></i>
+                                {{ \Carbon\Carbon::parse($schedule['week_start'])->format('M d') }} – {{ \Carbon\Carbon::parse($schedule['week_end'])->format('M d, Y') }}
+                            </div>
+                            @endif
+                            <div class="day-rows">
+                                @foreach(['monday'=>'Mon','tuesday'=>'Tue','wednesday'=>'Wed','thursday'=>'Thu','friday'=>'Fri','saturday'=>'Sat','sunday'=>'Sun'] as $day => $abbr)
+                                    @if(isset($schedule['schedule'][$day]) && !empty($schedule['schedule'][$day]))
+                                    <div class="day-row">
+                                        <span class="day-abbr {{ in_array($day, ['saturday','sunday']) ? 'weekend' : '' }}">{{ $abbr }}</span>
+                                        <div class="time-chips">
+                                            @foreach($schedule['schedule'][$day] as $slot)
+                                                @if(is_string($slot) && $slot)
+                                                <span class="time-chip">{{ $slot }}</span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        @else
+            <div class="sched-empty">
+                <i class="bi bi-calendar-x"></i>
+                <div class="sched-empty-title">No Doctor Schedules</div>
+                <div class="sched-empty-text">Create a doctor schedule using the Add Schedule button above.</div>
+            </div>
+        @endif
     </div>
 </div>
 
-<!-- Add Schedule Modal -->
-<div class="modal fade" id="addScheduleModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-calendar-plus me-2"></i>Add New Schedule
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+{{-- ─────────────────────────────────────────────
+     Unified Schedule Modal (Add + Edit)
+───────────────────────────────────────────── --}}
+<div class="modal fade" id="schedModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+
+            {{-- Modal header --}}
+            <div class="sm-header">
+                <div>
+                    <div class="sm-eyebrow" id="smEyebrow">New Schedule</div>
+                    <h5 class="sm-title" id="smTitle">Add Weekly Schedule</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('rhu.schedules.store') }}" method="POST">
+
+            <form id="schedForm" method="POST" novalidate>
                 @csrf
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Location</label>
-                            <select class="form-select" name="barangay_id" id="barangaySelect" required>
-                                <option value="">Select Location</option>
-                                @foreach($barangayOptions as $option)
-                                    <option value="{{ $option['id'] }}" @if($option['id'] == $selectedBarangayId) selected @endif>
-                                        {{ $option['name'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Schedule Type</label>
-                            <select class="form-select" name="type" id="scheduleType" required>
-                                <option value="">Select Type</option>
-                                <option value="midwife">Midwife</option>
-                                <option value="doctor">Doctor</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Personnel</label>
-                            <select class="form-select" name="personnel_id" id="personnelSelect" required>
-                                <option value="">Select Personnel</option>
-                            </select>
-                            <input type="hidden" name="personnel_name" id="personnelName">
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <label class="form-label">Week Period</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" name="week_start" id="weekStart" required>
-                                <span class="input-group-text">to</span>
-                                <input type="date" class="form-control" name="week_end" id="weekEnd" required>
+                <div id="smMethodField"></div>
+                <input type="hidden" name="barangay_id"    id="smBarangayId">
+                <input type="hidden" name="type"           id="smType">
+                <input type="hidden" name="personnel_id"   id="smPersonnelId">
+                <input type="hidden" name="personnel_name" id="smPersonnelName">
+                <input type="hidden" name="week_start"     id="smWeekStart">
+                <input type="hidden" name="week_end"       id="smWeekEnd">
+                {{-- schedule[day][] inputs injected on submit --}}
+
+                <div class="modal-body p-0">
+
+                    {{-- ── Section 1: Location + Type ── --}}
+                    <div class="sm-section sm-section-top">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-5">
+                                <label class="sm-label">Location</label>
+                                <select class="form-select form-select-sm rounded-3" id="smLocation">
+                                    <option value="">— Select location —</option>
+                                    @foreach($barangayOptions as $opt)
+                                        <option value="{{ $opt['id'] }}" {{ $opt['id'] === $selectedBarangayId ? 'selected' : '' }}>{{ $opt['name'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="sm-label">Staff Role</label>
+                                <div class="type-toggle" id="typeToggle">
+                                    <button type="button" class="type-btn" id="typeBtnMidwife" onclick="selectType('midwife')">
+                                        <i class="bi bi-heart-pulse-fill"></i> Midwife
+                                    </button>
+                                    <button type="button" class="type-btn" id="typeBtnDoctor" onclick="selectType('doctor')">
+                                        <i class="bi bi-person-vcard-fill"></i> Doctor
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Weekly Schedule</label>
-                        <div class="schedule-form">
-                            @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day)
-                                <div class="schedule-day-form mb-3">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <h6 class="mb-0 me-3">{{ ucfirst($day) }}</h6>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                onclick="addTimeSlot('{{ $day }}')">
-                                            <i class="bi bi-plus"></i> Add Time
-                                        </button>
-                                    </div>
-                                    <div class="time-slots-container" id="timeSlots_{{ $day }}">
-                                        <div class="time-input-group mb-2">
-                                            <div class="row">
-                                                <div class="col-md-5">
-                                                    <input type="time" class="form-control start-time" data-day="{{ $day }}" placeholder="Start Time">
-                                                </div>
-                                                <div class="col-md-5">
-                                                    <input type="time" class="form-control end-time" data-day="{{ $day }}" placeholder="End Time">
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(this)">
-                                                        <i class="bi bi-dash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" name="schedule[{{ $day }}][]" class="formatted-time" value="">
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
+                    {{-- ── Section 2: Personnel picker ── --}}
+                    <div class="sm-section sm-section-personnel">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="sm-label mb-0">Personnel</label>
+                            <span class="sm-hint" id="smPersonnelHint">Select a schedule type first</span>
+                        </div>
+                        <div class="personnel-scroll" id="personnelScroll">
+                            <div class="personnel-placeholder">
+                                <i class="bi bi-people"></i>
+                                <span>Select a schedule type to see available personnel</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-2"></i>Create Schedule
-                    </button>
+
+                    {{-- ── Section 3: Week + Shift Grid ── --}}
+                    <div class="sm-section">
+                        <div class="sm-grid-header">
+                            <label class="sm-label mb-0">Weekly Schedule</label>
+                            <div class="week-nav">
+                                <button type="button" class="wk-btn" onclick="shiftWeek(-1)"><i class="bi bi-chevron-left"></i></button>
+                                <span class="wk-label" id="wkLabel">—</span>
+                                <button type="button" class="wk-btn" onclick="shiftWeek(1)"><i class="bi bi-chevron-right"></i></button>
+                            </div>
+                            <div class="quick-actions">
+                                <button type="button" class="qa-btn" onclick="applyPattern('weekday-am')" title="Set Morning for Mon–Fri">Weekday AM</button>
+                                <button type="button" class="qa-btn" onclick="applyPattern('weekday-pm')" title="Set Afternoon for Mon–Fri">Weekday PM</button>
+                                <button type="button" class="qa-btn" onclick="applyPattern('full-week')" title="Morning + Afternoon Mon–Fri">Full Weekdays</button>
+                                <button type="button" class="qa-btn qa-btn-danger" onclick="applyPattern('clear')">Clear All</button>
+                            </div>
+                        </div>
+
+                        <div class="shift-grid-wrap">
+                            <table class="shift-grid">
+                                <thead>
+                                    <tr>
+                                        <th class="sg-row-header"></th>
+                                        <th>Mon</th>
+                                        <th>Tue</th>
+                                        <th>Wed</th>
+                                        <th>Thu</th>
+                                        <th>Fri</th>
+                                        <th class="sg-weekend">Sat</th>
+                                        <th class="sg-weekend">Sun</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{-- Morning row --}}
+                                    <tr>
+                                        <td class="sg-row-header">
+                                            <div class="sg-shift-name morning-label">Morning</div>
+                                            <div class="sg-shift-time">8:00 AM – 12:00 PM</div>
+                                        </td>
+                                        @foreach(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
+                                        <td class="{{ in_array($day, ['saturday','sunday']) ? 'sg-weekend' : '' }}">
+                                            <button type="button" class="sg-cell" data-day="{{ $day }}" data-shift="morning" onclick="toggleCell(this)">
+                                                <i class="bi bi-check2 sg-check"></i>
+                                            </button>
+                                        </td>
+                                        @endforeach
+                                    </tr>
+                                    {{-- Afternoon row --}}
+                                    <tr>
+                                        <td class="sg-row-header">
+                                            <div class="sg-shift-name afternoon-label">Afternoon</div>
+                                            <div class="sg-shift-time">1:00 PM – 5:00 PM</div>
+                                        </td>
+                                        @foreach(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
+                                        <td class="{{ in_array($day, ['saturday','sunday']) ? 'sg-weekend' : '' }}">
+                                            <button type="button" class="sg-cell" data-day="{{ $day }}" data-shift="afternoon" onclick="toggleCell(this)">
+                                                <i class="bi bi-check2 sg-check"></i>
+                                            </button>
+                                        </td>
+                                        @endforeach
+                                    </tr>
+                                    {{-- Custom row --}}
+                                    <tr class="sg-custom-row">
+                                        <td class="sg-row-header">
+                                            <div class="sg-shift-name" style="color:#6b7280;">Custom</div>
+                                            <div class="sg-shift-time">specific hours</div>
+                                        </td>
+                                        @foreach(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
+                                        <td class="sg-custom-cell {{ in_array($day, ['saturday','sunday']) ? 'sg-weekend' : '' }}" id="customCell_{{ $day }}">
+                                            <button type="button" class="sg-add-custom" onclick="addCustomSlot('{{ $day }}')" title="Add custom time">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                            <div class="custom-slots-list" id="customSlots_{{ $day }}"></div>
+                                        </td>
+                                        @endforeach
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- Legend --}}
+                        <div class="sg-legend">
+                            <span class="sg-legend-item"><span class="sg-legend-dot morning-dot"></span>Morning shift</span>
+                            <span class="sg-legend-item"><span class="sg-legend-dot afternoon-dot"></span>Afternoon shift</span>
+                            <span class="sg-legend-item text-muted">Leave cells empty for days off</span>
+                        </div>
+                    </div>
+
+                </div>{{-- /modal-body --}}
+
+                <div class="modal-footer border-top px-4 py-3 gap-2 justify-content-between">
+                    <div id="smValidationMsg" class="text-danger small d-none"><i class="bi bi-exclamation-circle me-1"></i><span id="smValidationText"></span></div>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-dark rounded-pill px-4" id="smSubmitBtn">
+                            <span class="sm-submit-label"><i class="bi bi-check2 me-1"></i><span id="smSubmitText">Create Schedule</span></span>
+                            <span class="sm-submit-loading d-none"><span class="spinner-border spinner-border-sm me-1"></span>Saving…</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Edit Schedule Modal -->
-<div class="modal fade" id="editScheduleModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-pencil me-2"></i>Edit Schedule
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="editScheduleForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Location</label>
-                            <select class="form-select" name="barangay_id" id="editBarangaySelect" required>
-                                <option value="">Select Location</option>
-                                @foreach($barangayOptions as $option)
-                                    <option value="{{ $option['id'] }}" @if($option['id'] == $selectedBarangayId) selected @endif>
-                                        {{ $option['name'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Personnel</label>
-                            <input type="text" class="form-control" id="editPersonnelName" readonly>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <label class="form-label">Week Period</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" name="week_start" id="editWeekStart" required>
-                                <span class="input-group-text">to</span>
-                                <input type="date" class="form-control" name="week_end" id="editWeekEnd" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Weekly Schedule</label>
-                        <div class="schedule-form">
-                            @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day)
-                                <div class="schedule-day-form mb-3">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <h6 class="mb-0 me-3">{{ ucfirst($day) }}</h6>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                onclick="addEditTimeSlot('{{ $day }}')">
-                                            <i class="bi bi-plus"></i> Add Time
-                                        </button>
-                                    </div>
-                                    <div class="time-slots-container" id="editTimeSlots_{{ $day }}">
-                                        <div class="time-input-group mb-2">
-                                            <div class="row">
-                                                <div class="col-md-5">
-                                                    <input type="time" class="form-control start-time" data-day="{{ $day }}" placeholder="Start Time">
-                                                </div>
-                                                <div class="col-md-5">
-                                                    <input type="time" class="form-control end-time" data-day="{{ $day }}" placeholder="End Time">
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(this)">
-                                                        <i class="bi bi-dash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" name="schedule[{{ $day }}][]" class="formatted-time" value="">
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
+{{-- ─── Delete Confirm Modal ─── --}}
+<div class="modal fade" id="deleteSchedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="sm-header" style="background:#b91c1c;">
+                <div>
+                    <div class="sm-eyebrow" style="background:rgba(255,255,255,.15);">Confirm Delete</div>
+                    <h5 class="sm-title">Delete Schedule</h5>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-2"></i>Update Schedule
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteScheduleModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Schedule
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the schedule for <strong id="deleteScheduleName"></strong>?</p>
-                <p class="text-muted small">This action cannot be undone.</p>
+            <div class="modal-body p-4">
+                <p class="mb-1">Are you sure you want to delete the schedule for <strong id="deleteSchedName"></strong>?</p>
+                <p class="text-muted small mb-0">This action cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteScheduleForm" method="POST" style="display: inline;">
+            <div class="modal-footer border-0 pb-4 px-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteSchedForm" method="POST" style="display:inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-2"></i>Delete Schedule
-                    </button>
+                    <input type="hidden" name="barangay_id" id="deleteSchedBarangay">
+                    <button type="submit" class="btn btn-danger rounded-pill px-4"><i class="bi bi-trash me-1"></i>Delete</button>
                 </form>
             </div>
         </div>
@@ -414,575 +407,637 @@
 </div>
 
 <style>
-.schedule-card {
-    transition: transform 0.2s, box-shadow 0.2s;
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── Page chrome ── */
+.btn-add-sched {
+    background:#1657c1; border:none; color:#fff;
+    font-size:.82rem; font-weight:500; padding:6px 16px;
+    border-radius:6px; transition:opacity .1s;
+}
+.btn-add-sched:hover { opacity:.82; color:#fff; }
+
+.stat-card { display:flex; align-items:center; gap:12px; padding:14px 18px; border-radius:6px; background:#fff; border:1px solid #e9e9e7; }
+.stat-icon { width:36px; height:36px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; background:#f1f1ef; color:#787774; }
+.stat-value { font-size:1.5rem; font-weight:700; color:#37352f; line-height:1; }
+.stat-label { font-size:.72rem; color:#9b9b9b; font-weight:400; margin-top:2px; }
+
+.sched-tabs { display:flex; gap:4px; border-bottom:1px solid #e9e9e7; }
+.sched-tab { background:none; border:none; padding:8px 16px 10px; font-size:.85rem; font-weight:500; color:#787774; border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; transition:all .15s; border-radius:4px 4px 0 0; display:flex; align-items:center; gap:6px; }
+.sched-tab:hover { color:#37352f; background:#f7f7f5; }
+.sched-tab.active { color:#37352f; border-bottom-color:#37352f; }
+.tab-count { background:#f1f1ef; color:#787774; font-size:.68rem; font-weight:600; padding:1px 7px; border-radius:10px; }
+.sched-tab.active .tab-count { background:#37352f; color:#fff; }
+
+/* ── Schedule cards ── */
+.sched-card { background:#fff; border:1px solid #e9e9e7; border-radius:8px; overflow:hidden; transition:box-shadow .15s; }
+.sched-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.08); }
+.sched-card-header { display:flex; align-items:flex-start; justify-content:space-between; padding:14px 16px 10px; background:#1657c1; }
+.sched-badge { display:inline-block; font-size:.62rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.15); color:rgba(255,255,255,.85); padding:2px 7px; border-radius:3px; margin-bottom:4px; }
+.sched-badge.doctor { background:rgba(99,179,237,.25); color:#bfdbfe; }
+.sched-name { font-size:.9rem; font-weight:600; color:#fff; }
+.sched-action-btn { width:26px; height:26px; border-radius:4px; border:none; background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); display:flex; align-items:center; justify-content:center; font-size:.75rem; cursor:pointer; transition:background .1s; }
+.sched-action-btn:hover { background:rgba(255,255,255,.22); color:#fff; }
+.sched-action-btn.danger:hover { background:rgba(239,68,68,.35); color:#fecaca; }
+.sched-card-body { padding:12px 16px 14px; }
+.sched-week-badge { display:inline-flex; align-items:center; font-size:.73rem; font-weight:500; color:#787774; background:#f1f1ef; padding:3px 10px; border-radius:4px; margin-bottom:10px; }
+.day-rows { display:flex; flex-direction:column; gap:4px; }
+.day-row { display:flex; align-items:center; gap:8px; }
+.day-abbr { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#787774; background:#f1f1ef; width:28px; height:22px; border-radius:3px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.day-abbr.weekend { color:#9b9b9b; }
+.time-chips { display:flex; flex-wrap:wrap; gap:3px; }
+.time-chip { background:#fef9c3; color:#854d0e; font-size:.69rem; font-weight:500; padding:2px 8px; border-radius:3px; }
+.sched-empty { text-align:center; padding:60px 20px; color:#9b9b9b; background:#fff; border:1px solid #e9e9e7; border-radius:8px; }
+.sched-empty i { font-size:2.5rem; margin-bottom:12px; display:block; }
+.sched-empty-title { font-size:1rem; font-weight:600; color:#37352f; margin-bottom:4px; }
+.sched-empty-text { font-size:.82rem; }
+
+/* ── Modal shell ── */
+.sm-header { display:flex; align-items:flex-start; justify-content:space-between; background:#1657c1; padding:18px 22px; }
+.sm-eyebrow { display:inline-block; font-size:.64rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.12); color:rgba(255,255,255,.75); padding:2px 8px; border-radius:4px; margin-bottom:5px; }
+.sm-title { font-size:1rem; font-weight:600; color:#fff; margin:0; }
+
+/* ── Modal sections ── */
+.sm-section { padding:18px 22px; border-bottom:1px solid #f1f1ef; }
+.sm-section:last-child { border-bottom:none; }
+.sm-section-top { background:#fafaf9; }
+.sm-section-personnel { background:#fff; }
+.sm-label { font-size:.7rem; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:#787774; display:block; margin-bottom:7px; }
+.sm-hint { font-size:.75rem; color:#b0b0a8; font-weight:400; }
+
+/* ── Type toggle ── */
+.type-toggle { display:flex; gap:8px; }
+.type-btn {
+    flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+    padding:9px 16px; border-radius:8px; border:2px solid #e2e8f0;
+    background:#fff; color:#64748b; font-size:.85rem; font-weight:500;
+    cursor:pointer; transition:all .15s;
+}
+.type-btn:hover { border-color:#94a3b8; color:#334155; background:#f8fafc; }
+.type-btn.active-midwife { border-color:#16a34a; background:#f0fdf4; color:#15803d; }
+.type-btn.active-doctor  { border-color:#1657c1; background:#eff6ff; color:#1657c1; }
+
+/* ── Personnel cards ── */
+.personnel-scroll {
+    display:flex; gap:10px; overflow-x:auto; padding-bottom:6px;
+    scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent;
+}
+.personnel-scroll::-webkit-scrollbar { height:4px; }
+.personnel-scroll::-webkit-scrollbar-track { background:transparent; }
+.personnel-scroll::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:4px; }
+.personnel-placeholder { display:flex; align-items:center; gap:10px; color:#b0b0a8; font-size:.82rem; padding:12px 6px; }
+.personnel-placeholder i { font-size:1.4rem; }
+.p-card {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    min-width:76px; padding:10px 8px; border-radius:10px;
+    border:2px solid #e9e9e7; background:#fff; cursor:pointer;
+    transition:all .15s; flex-shrink:0; text-align:center;
+}
+.p-card:hover { border-color:#94a3b8; background:#f8fafc; }
+.p-card.selected { border-color:#1657c1; background:#eff6ff; }
+.p-avatar {
+    width:40px; height:40px; border-radius:50%;
+    background:#e2e8f0; color:#475569;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.85rem; font-weight:700; flex-shrink:0;
+    text-transform:uppercase; letter-spacing:.5px;
+}
+.p-card.selected .p-avatar { background:#1657c1; color:#fff; }
+.p-card-name { font-size:.68rem; font-weight:600; color:#374151; line-height:1.2; word-break:break-word; max-width:66px; }
+.p-card.selected .p-card-name { color:#1657c1; }
+.p-prefill-dot { width:6px; height:6px; border-radius:50%; background:#10b981; flex-shrink:0; display:none; }
+.p-card.has-prior .p-prefill-dot { display:block; }
+
+/* ── Week nav + grid header ── */
+.sm-grid-header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.week-nav { display:flex; align-items:center; gap:6px; }
+.wk-btn { width:28px; height:28px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#374151; display:flex; align-items:center; justify-content:center; font-size:.75rem; cursor:pointer; transition:all .1s; }
+.wk-btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+.wk-label { font-size:.82rem; font-weight:600; color:#1e293b; white-space:nowrap; min-width:180px; text-align:center; }
+.quick-actions { display:flex; gap:6px; flex-wrap:wrap; margin-left:auto; }
+.qa-btn { font-size:.72rem; font-weight:500; padding:4px 10px; border-radius:20px; border:1px solid #e2e8f0; background:#fff; color:#374151; cursor:pointer; transition:all .12s; white-space:nowrap; }
+.qa-btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+.qa-btn-danger { border-color:#fecaca; color:#dc2626; }
+.qa-btn-danger:hover { background:#fef2f2; border-color:#fca5a5; }
+
+/* ── Shift grid ── */
+.shift-grid-wrap { overflow-x:auto; border-radius:10px; border:1px solid #e9e9e7; }
+.shift-grid { width:100%; border-collapse:collapse; table-layout:fixed; }
+.shift-grid thead th {
+    padding:8px 4px; text-align:center; font-size:.7rem; font-weight:700;
+    letter-spacing:.3px; text-transform:uppercase; color:#6b7280;
+    background:#f8fafc; border-bottom:1px solid #e9e9e7;
+}
+.shift-grid thead th:first-child { text-align:left; padding-left:12px; width:120px; }
+.shift-grid tbody td { padding:5px 4px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+.shift-grid tbody tr:last-child td { border-bottom:none; }
+.shift-grid tbody td:first-child { padding-left:12px; padding-right:8px; }
+.sg-row-header { min-width:110px; }
+.sg-shift-name { font-size:.75rem; font-weight:700; color:#374151; }
+.morning-label   { color:#b45309; }
+.afternoon-label { color:#1d4ed8; }
+.sg-shift-time { font-size:.65rem; color:#9ca3af; margin-top:1px; }
+.sg-weekend { background:#fafaf9; }
+
+/* ── Shift cell toggle ── */
+.sg-cell {
+    width:100%; height:46px; border-radius:8px;
+    border:2px dashed #e2e8f0; background:#fafafa;
+    color:transparent; cursor:pointer; transition:all .12s;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+}
+.sg-cell:hover { border-color:#94a3b8; background:#f1f5f9; }
+.sg-check { font-size:1rem; transition:opacity .12s; opacity:0; }
+
+.sg-cell.active-morning {
+    border:2px solid #f59e0b; background:#fffbeb;
+    color:#b45309;
+}
+.sg-cell.active-morning .sg-check { opacity:1; color:#d97706; }
+
+.sg-cell.active-afternoon {
+    border:2px solid #3b82f6; background:#eff6ff;
+    color:#1d4ed8;
+}
+.sg-cell.active-afternoon .sg-check { opacity:1; color:#2563eb; }
+
+/* ── Custom slots ── */
+.sg-custom-cell { min-width:90px; }
+.sg-add-custom {
+    width:100%; height:32px; border-radius:6px;
+    border:2px dashed #d1d5db; background:transparent;
+    color:#9ca3af; cursor:pointer; transition:all .12s;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.85rem;
+}
+.sg-add-custom:hover { border-color:#6b7280; color:#374151; background:#f9fafb; }
+.custom-slots-list { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+.custom-slot-group { display:flex; flex-direction:column; gap:2px; position:relative; }
+.custom-slot-group input[type="time"] {
+    width:100%; font-size:.68rem; padding:3px 5px;
+    border:1px solid #e2e8f0; border-radius:5px; color:#374151;
+    background:#fff; text-align:center;
+}
+.custom-slot-group input[type="time"]:focus { outline:none; border-color:#1657c1; }
+.custom-slot-sep { font-size:.6rem; color:#9ca3af; text-align:center; line-height:1; }
+.custom-slot-remove {
+    position:absolute; top:-5px; right:-5px; width:16px; height:16px;
+    border-radius:50%; border:none; background:#ef4444; color:#fff;
+    font-size:.6rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    line-height:1;
 }
 
-.schedule-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
+/* ── Legend ── */
+.sg-legend { display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap; }
+.sg-legend-item { display:flex; align-items:center; gap:5px; font-size:.72rem; color:#6b7280; }
+.sg-legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.morning-dot   { background:#f59e0b; }
+.afternoon-dot { background:#3b82f6; }
 
-.schedule-grid {
-    display: grid;
-    gap: 8px;
-}
+/* ── Validation ── */
+#smValidationMsg { padding:4px 0; }
 
-.schedule-day {
-    background: #f8f9fa;
-    border-radius: 6px;
-    padding: 8px;
-}
-
-.day-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 4px;
-}
-
-.time-slots {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.time-badge {
-    background: #007bff;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.time-input-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.time-input-group .form-control {
-    flex: 1;
-}
-
-.schedule-day-form {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 12px;
-    background: #f8f9fa;
-}
+/* ── Submit button loading ── */
+.sm-submit-loading { display:flex; align-items:center; }
 </style>
 
 <script>
-// Time formatting function for 12-hour format
-function formatTime12Hour(timeString) {
-    if (!timeString) return '';
-    
-    try {
-        const [hours, minutes] = timeString.split(':');
-        const hour = parseInt(hours);
-        const minute = parseInt(minutes);
-        
-        if (isNaN(hour) || isNaN(minute)) {
-            return timeString;
-        }
-        
-        const period = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-        const displayMinute = minute.toString().padStart(2, '0');
-        
-        return `${displayHour}:${displayMinute} ${period}`;
-    } catch (e) {
-        return timeString;
+// ── Data from PHP ────────────────────────────────────
+const availableMidwives = @json($availableMidwives);
+const assignedDoctors   = @json($assignedDoctors);
+const allMidwifeScheds  = @json($midwifeSchedules);
+const allDoctorScheds   = @json($doctorSchedules);
+
+// Build prior-schedule lookup: personnel_id → most recent schedule
+function buildLookup(schedules) {
+    const map = {};
+    schedules.forEach(s => {
+        const pid = s.personnel_id;
+        if (!pid) return;
+        if (!map[pid] || (s.week_start || '') > (map[pid].week_start || '')) map[pid] = s;
+    });
+    return map;
+}
+const midwifeLookup = buildLookup(allMidwifeScheds);
+const doctorLookup  = buildLookup(allDoctorScheds);
+
+// Shift definitions
+const SHIFTS = {
+    morning:   { label: '8:00 AM-12:00 PM', start: '08:00', end: '12:00' },
+    afternoon: { label: '1:00 PM-5:00 PM',  start: '13:00', end: '17:00' },
+};
+const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+const WEEKDAYS = ['monday','tuesday','wednesday','thursday','friday'];
+
+// ── State ───────────────────────────────────────────
+let smMode       = 'add';   // 'add' | 'edit'
+let smEditId     = null;
+let smType       = null;
+let smPersonnelId   = '';
+let smPersonnelName = '';
+let currentWeekStart = getThisMonday(); // Date object
+
+function getThisMonday() {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d;
+}
+
+function fmtDate(d) {
+    return d.toISOString().split('T')[0];
+}
+
+function fmtWeekLabel(monDate) {
+    const sun = new Date(monDate);
+    sun.setDate(monDate.getDate() + 6);
+    const opts = { month: 'short', day: 'numeric' };
+    return monDate.toLocaleDateString('en-US', opts) + ' – ' + sun.toLocaleDateString('en-US', { ...opts, year: 'numeric' });
+}
+
+// ── Tab switching ────────────────────────────────────
+function switchTab(tab) {
+    document.getElementById('paneMidwife').classList.toggle('d-none', tab !== 'midwife');
+    document.getElementById('paneDoctor').classList.toggle('d-none', tab !== 'doctor');
+    document.getElementById('tabMidwife').classList.toggle('active', tab === 'midwife');
+    document.getElementById('tabDoctor').classList.toggle('active', tab === 'doctor');
+}
+
+// ── Open Add Modal ───────────────────────────────────
+function openAddModal() {
+    smMode = 'add';
+    smEditId = null;
+    smType = null;
+    smPersonnelId = '';
+    smPersonnelName = '';
+    currentWeekStart = getThisMonday();
+
+    document.getElementById('smEyebrow').textContent = 'New Schedule';
+    document.getElementById('smTitle').textContent   = 'Add Weekly Schedule';
+    document.getElementById('smSubmitText').textContent = 'Create Schedule';
+    document.getElementById('smMethodField').innerHTML = '';
+    document.getElementById('schedForm').action = '{{ route("rhu.schedules.store") }}';
+
+    resetTypeButtons();
+    resetPersonnelArea();
+    updateWeekLabel();
+    clearGrid();
+    clearValidation();
+}
+
+// ── Open Edit Modal ──────────────────────────────────
+function openEditModal(id, type, personnelId, personnelName, schedule, weekStart, weekEnd, barangayId) {
+    smMode = 'edit';
+    smEditId = id;
+    smType = type;
+    smPersonnelId   = personnelId;
+    smPersonnelName = personnelName;
+
+    // Set week from existing data
+    if (weekStart) {
+        const d = new Date(weekStart + 'T00:00:00');
+        // normalise to Monday
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        currentWeekStart = d;
+    }
+
+    document.getElementById('smEyebrow').textContent = 'Edit Schedule';
+    document.getElementById('smTitle').textContent   = personnelName;
+    document.getElementById('smSubmitText').textContent = 'Update Schedule';
+    document.getElementById('smMethodField').innerHTML = '<input type="hidden" name="_method" value="PUT">';
+    document.getElementById('schedForm').action = `/rhu/schedules/${id}`;
+    document.getElementById('smLocation').value = barangayId;
+
+    // Set type buttons
+    resetTypeButtons();
+    if (type) {
+        const btn = document.getElementById(type === 'midwife' ? 'typeBtnMidwife' : 'typeBtnDoctor');
+        if (btn) btn.classList.add(type === 'midwife' ? 'active-midwife' : 'active-doctor');
+        loadPersonnelCards(type, personnelId);
+    }
+
+    updateWeekLabel();
+    clearGrid();
+    loadScheduleIntoGrid(schedule);
+    clearValidation();
+}
+
+// ── Type selection ───────────────────────────────────
+function selectType(type) {
+    smType = type;
+    resetTypeButtons();
+    const btn = document.getElementById(type === 'midwife' ? 'typeBtnMidwife' : 'typeBtnDoctor');
+    btn.classList.add(type === 'midwife' ? 'active-midwife' : 'active-doctor');
+
+    // Reset personnel if type changes in add mode
+    if (smMode === 'add') {
+        smPersonnelId   = '';
+        smPersonnelName = '';
+        clearGrid();
+    }
+
+    loadPersonnelCards(type, smPersonnelId);
+    clearValidation();
+}
+
+function resetTypeButtons() {
+    document.getElementById('typeBtnMidwife').className = 'type-btn';
+    document.getElementById('typeBtnDoctor').className  = 'type-btn';
+}
+
+function loadPersonnelCards(type, selectedId) {
+    const list = type === 'midwife' ? availableMidwives : assignedDoctors;
+    const lookup = type === 'midwife' ? midwifeLookup : doctorLookup;
+    const scroll = document.getElementById('personnelScroll');
+    const hint   = document.getElementById('smPersonnelHint');
+
+    if (!list.length) {
+        scroll.innerHTML = `<div class="personnel-placeholder"><i class="bi bi-person-x"></i><span>No ${type}s found</span></div>`;
+        hint.textContent = `No ${type}s available`;
+        return;
+    }
+
+    hint.textContent = `${list.length} available`;
+    scroll.innerHTML = '';
+
+    list.forEach(p => {
+        const name = p.name || p.full_name || 'Unknown';
+        const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2);
+        const hasPrior = !!lookup[p.id];
+        const isSelected = p.id === selectedId;
+
+        const card = document.createElement('div');
+        card.className = 'p-card' + (hasPrior ? ' has-prior' : '') + (isSelected ? ' selected' : '');
+        card.dataset.id   = p.id;
+        card.dataset.name = name;
+        card.innerHTML = `
+            <div class="p-avatar">${initials}</div>
+            <div class="p-card-name">${name}</div>
+            <div class="p-prefill-dot" title="Has prior schedule"></div>`;
+        card.onclick = () => selectPersonnel(p.id, name, card, type);
+        scroll.appendChild(card);
+    });
+
+    // Auto-select if selectedId given (edit mode)
+    if (selectedId) {
+        const card = scroll.querySelector(`[data-id="${selectedId}"]`);
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 }
 
-// Convert 12-hour format to 24-hour format for input fields
-function convert12To24Hour(time12Hour) {
-    if (!time12Hour) return '';
-    
-    try {
-        // Remove any extra spaces and convert to uppercase
-        const cleanTime = time12Hour.trim().toUpperCase();
-        
-        // Match pattern like "9:30 AM" or "1:45 PM"
-        let match = cleanTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
-        
-        if (!match) {
-            // Try pattern without minutes like "9AM" or "1PM"
-            match = cleanTime.match(/(\d{1,2})\s*(AM|PM)/);
-            if (match) {
-                let hour = parseInt(match[1]);
-                const period = match[2];
-                
-                // Convert to 24-hour format
-                if (period === 'PM' && hour !== 12) {
-                    hour += 12;
-                } else if (period === 'AM' && hour === 12) {
-                    hour = 0;
-                }
-                
-                return `${hour.toString().padStart(2, '0')}:00`;
-            }
-            return time12Hour;
-        }
-        
-        let hour = parseInt(match[1]);
-        const minute = parseInt(match[2]);
-        const period = match[3];
-        
-        // Convert to 24-hour format
-        if (period === 'PM' && hour !== 12) {
-            hour += 12;
-        } else if (period === 'AM' && hour === 12) {
-            hour = 0;
-        }
-        
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-    } catch (e) {
-        console.error('Error converting time:', time12Hour, e);
-        return time12Hour;
-    }
-}
+function selectPersonnel(id, name, cardEl, type) {
+    smPersonnelId   = id;
+    smPersonnelName = name;
 
-// Available personnel data
-const availablePersonnel = @json($availableMidwives);
-const assignedDoctors = @json($assignedDoctors);
+    // Highlight card
+    document.querySelectorAll('.p-card').forEach(c => c.classList.remove('selected'));
+    cardEl.classList.add('selected');
 
-// Handle schedule type change
-document.getElementById('scheduleType').addEventListener('change', function() {
-    const personnelSelect = document.getElementById('personnelSelect');
-    const type = this.value;
-    
-    personnelSelect.innerHTML = '<option value="">Select Personnel</option>';
-    
-    if (type === 'midwife') {
-        availablePersonnel.forEach(personnel => {
-            const option = document.createElement('option');
-            option.value = personnel.id;
-            option.textContent = personnel.name || personnel.full_name || 'Unknown';
-            option.dataset.name = personnel.name || personnel.full_name || 'Unknown';
-            personnelSelect.appendChild(option);
-        });
-    } else if (type === 'doctor') {
-        assignedDoctors.forEach(doctor => {
-            const option = document.createElement('option');
-            option.value = doctor.id;
-            option.textContent = doctor.name || doctor.full_name || 'Unknown';
-            option.dataset.name = doctor.name || doctor.full_name || 'Unknown';
-            personnelSelect.appendChild(option);
-        });
-    }
-});
-
-// Handle personnel selection
-document.getElementById('personnelSelect').addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    document.getElementById('personnelName').value = selectedOption.dataset.name || '';
-});
-
-// Handle form submission to ensure all time slots are formatted
-document.querySelector('#addScheduleModal form').addEventListener('submit', function(e) {
-    // Update all formatted times before submission
-    const timeGroups = document.querySelectorAll('.time-input-group');
-    timeGroups.forEach(group => {
-        const startInput = group.querySelector('.start-time');
-        const endInput = group.querySelector('.end-time');
-        const formattedInput = group.querySelector('.formatted-time');
-        
-        if (startInput && endInput && formattedInput) {
-            const startTime = startInput.value;
-            const endTime = endInput.value;
-            
-            if (startTime && endTime) {
-                const formattedStart = formatTime12Hour(startTime);
-                const formattedEnd = formatTime12Hour(endTime);
-                const formattedSlot = `${formattedStart}-${formattedEnd}`;
-                formattedInput.value = formattedSlot;
-            }
-        }
-    });
-});
-
-// Handle edit form submission to ensure all time slots are formatted
-document.querySelector('#editScheduleModal form').addEventListener('submit', function(e) {
-    // Update all formatted times before submission
-    const timeGroups = document.querySelectorAll('.time-input-group');
-    timeGroups.forEach(group => {
-        const startInput = group.querySelector('.start-time');
-        const endInput = group.querySelector('.end-time');
-        const formattedInput = group.querySelector('.formatted-time');
-        
-        if (startInput && endInput && formattedInput) {
-            const startTime = startInput.value;
-            const endTime = endInput.value;
-            
-            if (startTime && endTime) {
-                const formattedStart = formatTime12Hour(startTime);
-                const formattedEnd = formatTime12Hour(endTime);
-                const formattedSlot = `${formattedStart}-${formattedEnd}`;
-                formattedInput.value = formattedSlot;
-            }
-        }
-    });
-});
-
-// Function to set default week dates
-function setDefaultWeekDates() {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
-    
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
-    
-    // Format dates for input fields
-    const formatDate = (date) => {
-        return date.toISOString().split('T')[0];
-    };
-    
-    // Set the date inputs
-    const weekStartInput = document.getElementById('weekStart');
-    const weekEndInput = document.getElementById('weekEnd');
-    
-    if (weekStartInput && weekEndInput) {
-        weekStartInput.value = formatDate(startOfWeek);
-        weekEndInput.value = formatDate(endOfWeek);
-    }
-}
-
-// Add event listeners for edit and delete buttons
-document.addEventListener('DOMContentLoaded', function() {
-    // Set default week dates
-    setDefaultWeekDates();
-    // Edit button event listeners
-    document.querySelectorAll('.edit-schedule-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const scheduleId = this.getAttribute('data-schedule-id');
-            const personnelName = this.getAttribute('data-personnel-name');
-            const scheduleData = this.getAttribute('data-schedule');
-            const weekStart = this.getAttribute('data-week-start');
-            const weekEnd = this.getAttribute('data-week-end');
-            
-            try {
-                const schedule = JSON.parse(scheduleData);
-                editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd);
-                
-                // Show the edit modal
-                const editModal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
-                editModal.show();
-            } catch (error) {
-                console.error('Error parsing schedule data:', error);
-                alert('Error loading schedule data');
-            }
-        });
-    });
-    
-    // Delete button event listeners
-    document.querySelectorAll('.delete-schedule-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const scheduleId = this.getAttribute('data-schedule-id');
-            const personnelName = this.getAttribute('data-personnel-name');
-            deleteSchedule(scheduleId, personnelName);
-        });
-    });
-    
-    // Fix modal backdrop issues
-    const editModal = document.getElementById('editScheduleModal');
-    const addModal = document.getElementById('addScheduleModal');
-    
-    // Handle edit modal hidden event
-    editModal.addEventListener('hidden.bs.modal', function() {
-        // Remove any remaining backdrop
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        backdrops.forEach(backdrop => backdrop.remove());
-        
-        // Remove modal-open class from body
-        document.body.classList.remove('modal-open');
-        
-        // Reset body padding
-        document.body.style.paddingRight = '';
-        
-        // Enable scrolling
-        document.body.style.overflow = '';
-    });
-    
-    // Handle add modal hidden event
-    addModal.addEventListener('hidden.bs.modal', function() {
-        // Remove any remaining backdrop
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        backdrops.forEach(backdrop => backdrop.remove());
-        
-        // Remove modal-open class from body
-        document.body.classList.remove('modal-open');
-        
-        // Reset body padding
-        document.body.style.paddingRight = '';
-        
-        // Enable scrolling
-        document.body.style.overflow = '';
-    });
-    
-    // Handle modal close button clicks
-    document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            if (modal) {
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) {
-                    bsModal.hide();
-                }
-            }
-        });
-    });
-    
-    // Handle escape key to close modals
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            cleanupModals();
-        }
-    });
-    
-    // Handle clicks outside modal to close
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('modal')) {
-            cleanupModals();
-        }
-    });
-    
-    // Emergency cleanup button (for debugging)
-    if (document.querySelector('.btn-close')) {
-        document.querySelector('.btn-close').addEventListener('click', function() {
-            setTimeout(cleanupModals, 100);
-        });
-    }
-});
-
-// Add time slot functions
-function addTimeSlot(day) {
-    const container = document.getElementById(`timeSlots_${day}`);
-    const timeGroup = document.createElement('div');
-    timeGroup.className = 'time-input-group mb-2';
-    timeGroup.innerHTML = `
-        <div class="row">
-            <div class="col-md-5">
-                <input type="time" class="form-control start-time" data-day="${day}" placeholder="Start Time" onchange="updateFormattedTime(this)">
-            </div>
-            <div class="col-md-5">
-                <input type="time" class="form-control end-time" data-day="${day}" placeholder="End Time" onchange="updateFormattedTime(this)">
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(this)">
-                    <i class="bi bi-dash"></i>
-                </button>
-            </div>
-        </div>
-        <input type="hidden" name="schedule[${day}][]" class="formatted-time" value="">
-    `;
-    container.appendChild(timeGroup);
-}
-
-function addEditTimeSlot(day) {
-    const container = document.getElementById(`editTimeSlots_${day}`);
-    const timeGroup = document.createElement('div');
-    timeGroup.className = 'time-input-group mb-2';
-    timeGroup.innerHTML = `
-        <div class="row">
-            <div class="col-md-5">
-                <input type="time" class="form-control start-time" data-day="${day}" placeholder="Start Time" onchange="updateFormattedTime(this)">
-            </div>
-            <div class="col-md-5">
-                <input type="time" class="form-control end-time" data-day="${day}" placeholder="End Time" onchange="updateFormattedTime(this)">
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(this)">
-                    <i class="bi bi-dash"></i>
-                </button>
-            </div>
-        </div>
-        <input type="hidden" name="schedule[${day}][]" class="formatted-time" value="">
-    `;
-    container.appendChild(timeGroup);
-}
-
-function removeTimeSlot(button) {
-    // Find the time-input-group container and remove it
-    const timeGroup = button.closest('.time-input-group');
-    const container = timeGroup.closest('.time-slots-container');
-    
-    // Don't remove if it's the last time slot
-    if (timeGroup && container.querySelectorAll('.time-input-group').length > 1) {
-        timeGroup.remove();
-    }
-}
-
-// Update formatted time when start/end times change
-function updateFormattedTime(input) {
-    const timeGroup = input.closest('.time-input-group');
-    const startInput = timeGroup.querySelector('.start-time');
-    const endInput = timeGroup.querySelector('.end-time');
-    const formattedInput = timeGroup.querySelector('.formatted-time');
-    
-    const startTime = startInput.value;
-    const endTime = endInput.value;
-    
-    if (startTime && endTime) {
-        const formattedStart = formatTime12Hour(startTime);
-        const formattedEnd = formatTime12Hour(endTime);
-        const formattedSlot = `${formattedStart}-${formattedEnd}`;
-        formattedInput.value = formattedSlot;
-    } else {
-        formattedInput.value = '';
-    }
-}
-
-// Force cleanup stuck modals
-function cleanupModals() {
-    // Remove all modal backdrops
-    const backdrops = document.querySelectorAll('.modal-backdrop');
-    backdrops.forEach(backdrop => backdrop.remove());
-    
-    // Remove modal-open class from body
-    document.body.classList.remove('modal-open');
-    
-    // Reset body styles
-    document.body.style.paddingRight = '';
-    document.body.style.overflow = '';
-    
-    // Hide all modals
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        const bsModal = bootstrap.Modal.getInstance(modal);
-        if (bsModal) {
-            bsModal.hide();
-        }
-    });
-}
-
-// Edit schedule function
-function editSchedule(scheduleId, personnelName, schedule, weekStart, weekEnd) {
-    console.log('Editing schedule:', scheduleId, personnelName, schedule);
-    
-    document.getElementById('editPersonnelName').value = personnelName;
-    document.getElementById('editScheduleForm').action = `/rhu/schedules/${scheduleId}`;
-    
-    // Set week dates if provided
-    if (weekStart && weekEnd) {
-        document.getElementById('editWeekStart').value = weekStart;
-        document.getElementById('editWeekEnd').value = weekEnd;
-    }
-    
-    // Clear existing time slots
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    days.forEach(day => {
-        const container = document.getElementById(`editTimeSlots_${day}`);
-        container.innerHTML = '';
-        
-        if (schedule[day] && Array.isArray(schedule[day]) && schedule[day].length > 0) {
-            console.log(`Processing ${day}:`, schedule[day]);
-            // Handle simple string format (e.g., "9AM-12PM")
-            schedule[day].forEach(timeSlot => {
-                console.log(`Processing timeSlot: ${timeSlot}`);
-                // Parse the time slot to extract start and end times
-                // Updated regex to handle formats like "9:00 AM-12:00 PM" or "9AM-12PM"
-                const timeMatch = timeSlot.match(/(\d{1,2}:\d{2}\s*[AP]M)-(\d{1,2}:\d{2}\s*[AP]M)/);
-                let startTime = '';
-                let endTime = '';
-                
-                if (timeMatch) {
-                    console.log('Time match found:', timeMatch[1], timeMatch[2]);
-                    // Convert 12-hour format back to 24-hour for input fields
-                    startTime = convert12To24Hour(timeMatch[1].trim());
-                    endTime = convert12To24Hour(timeMatch[2].trim());
-                } else {
-                    // Try alternative format without minutes
-                    const altMatch = timeSlot.match(/(\d{1,2}[AP]M)-(\d{1,2}[AP]M)/);
-                    if (altMatch) {
-                        console.log('Alt match found:', altMatch[1], altMatch[2]);
-                        startTime = convert12To24Hour(altMatch[1].trim());
-                        endTime = convert12To24Hour(altMatch[2].trim());
-                    } else {
-                        console.log('No match found for timeSlot:', timeSlot);
-                    }
-                }
-                
-                const timeGroup = document.createElement('div');
-                timeGroup.className = 'time-input-group mb-2';
-                timeGroup.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-5">
-                            <input type="time" class="form-control start-time" data-day="${day}" value="${startTime}" placeholder="Start Time" onchange="updateFormattedTime(this)">
-                        </div>
-                        <div class="col-md-5">
-                            <input type="time" class="form-control end-time" data-day="${day}" value="${endTime}" placeholder="End Time" onchange="updateFormattedTime(this)">
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(this)">
-                                <i class="bi bi-dash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <input type="hidden" name="schedule[${day}][]" class="formatted-time" value="${timeSlot}">
-                `;
-                container.appendChild(timeGroup);
-            });
+    // Pre-fill from prior schedule if in add mode
+    if (smMode === 'add') {
+        const lookup = (type || smType) === 'midwife' ? midwifeLookup : doctorLookup;
+        const prior  = lookup[id];
+        if (prior && prior.schedule && Object.keys(prior.schedule).length) {
+            clearGrid();
+            loadScheduleIntoGrid(prior.schedule);
         } else {
-            // Add one empty slot
-            const timeGroup = document.createElement('div');
-            timeGroup.className = 'time-input-group mb-2';
-            timeGroup.innerHTML = `
-                <div class="row">
-                    <div class="col-md-5">
-                        <input type="time" class="form-control start-time" data-day="${day}" placeholder="Start Time" onchange="updateFormattedTime(this)">
-                    </div>
-                    <div class="col-md-5">
-                        <input type="time" class="form-control end-time" data-day="${day}" placeholder="End Time" onchange="updateFormattedTime(this)">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(this)">
-                            <i class="bi bi-dash"></i>
-                        </button>
-                    </div>
-                </div>
-                <input type="hidden" name="schedule[${day}][]" class="formatted-time" value="">
-            `;
-            container.appendChild(timeGroup);
+            clearGrid();
         }
-    });
-    
-    const editModal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
-    editModal.show();
+    }
+
+    clearValidation();
 }
 
-// Delete schedule function
-function deleteSchedule(scheduleId, personnelName) {
-    if (confirm(`Are you sure you want to delete the schedule for ${personnelName}?`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/rhu/schedules/${scheduleId}`;
-        
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = csrfToken;
-        form.appendChild(csrfInput);
-        
-        const barangayInput = document.createElement('input');
-        barangayInput.type = 'hidden';
-        barangayInput.name = 'barangay_id';
-        barangayInput.value = document.getElementById('barangaySelect').value;
-        form.appendChild(barangayInput);
-        
-        const methodInput = document.createElement('input');
-        methodInput.type = 'hidden';
-        methodInput.name = '_method';
-        methodInput.value = 'DELETE';
-        form.appendChild(methodInput);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
+// ── Week navigation ──────────────────────────────────
+function shiftWeek(dir) {
+    currentWeekStart = new Date(currentWeekStart);
+    currentWeekStart.setDate(currentWeekStart.getDate() + dir * 7);
+    updateWeekLabel();
 }
+
+function updateWeekLabel() {
+    document.getElementById('wkLabel').textContent = fmtWeekLabel(currentWeekStart);
+}
+
+// ── Grid management ──────────────────────────────────
+function toggleCell(btn) {
+    const shift = btn.dataset.shift; // 'morning' | 'afternoon'
+    const activeClass = 'active-' + shift;
+    const isActive = btn.classList.contains(activeClass);
+    btn.classList.toggle(activeClass, !isActive);
+    clearValidation();
+}
+
+function clearGrid() {
+    document.querySelectorAll('.sg-cell').forEach(btn => {
+        btn.classList.remove('active-morning', 'active-afternoon');
+    });
+    DAYS.forEach(day => {
+        const list = document.getElementById('customSlots_' + day);
+        if (list) list.innerHTML = '';
+    });
+}
+
+function loadScheduleIntoGrid(schedule) {
+    if (!schedule) return;
+    DAYS.forEach(day => {
+        const slots = schedule[day];
+        if (!slots || !Array.isArray(slots)) return;
+        slots.forEach(slot => {
+            if (!slot) return;
+            const norm = slot.trim().replace(/\s+/g, '');
+            if (norm === '8:00AM-12:00PM' || norm === '8:00AM–12:00PM') {
+                setCell(day, 'morning', true);
+            } else if (norm === '1:00PM-5:00PM' || norm === '1:00PM–5:00PM') {
+                setCell(day, 'afternoon', true);
+            } else {
+                // Custom slot — parse 12h to 24h and add
+                const parts = slot.split('-');
+                if (parts.length >= 2) {
+                    const start24 = convert12To24(parts[0].trim());
+                    const end24   = convert12To24(parts.slice(1).join('-').trim());
+                    if (start24 || end24) addCustomSlotWithValues(day, start24, end24);
+                }
+            }
+        });
+    });
+}
+
+function setCell(day, shift, active) {
+    const cell = document.querySelector(`.sg-cell[data-day="${day}"][data-shift="${shift}"]`);
+    if (cell) cell.classList.toggle('active-' + shift, active);
+}
+
+// ── Quick patterns ───────────────────────────────────
+function applyPattern(pattern) {
+    if (pattern === 'clear') { clearGrid(); return; }
+    const days = pattern.includes('weekday') ? WEEKDAYS : DAYS;
+    if (pattern === 'weekday-am') {
+        days.forEach(d => setCell(d, 'morning', true));
+    } else if (pattern === 'weekday-pm') {
+        days.forEach(d => setCell(d, 'afternoon', true));
+    } else if (pattern === 'full-week') {
+        days.forEach(d => { setCell(d, 'morning', true); setCell(d, 'afternoon', true); });
+    }
+    clearValidation();
+}
+
+// ── Custom slots ─────────────────────────────────────
+function addCustomSlot(day) {
+    addCustomSlotWithValues(day, '', '');
+}
+
+function addCustomSlotWithValues(day, start24, end24) {
+    const list = document.getElementById('customSlots_' + day);
+    if (!list) return;
+    const grp = document.createElement('div');
+    grp.className = 'custom-slot-group';
+    grp.innerHTML = `
+        <input type="time" class="cs-start" value="${start24}" placeholder="Start">
+        <div class="custom-slot-sep">to</div>
+        <input type="time" class="cs-end"   value="${end24}"   placeholder="End">
+        <button type="button" class="custom-slot-remove" onclick="this.closest('.custom-slot-group').remove()" title="Remove">×</button>`;
+    list.appendChild(grp);
+}
+
+// ── Time helpers ─────────────────────────────────────
+function convert12To24(t) {
+    if (!t) return '';
+    const m = t.trim().toUpperCase().match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+    if (!m) return '';
+    let h = parseInt(m[1]);
+    if (m[3] === 'PM' && h !== 12) h += 12;
+    else if (m[3] === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${m[2]}`;
+}
+
+function fmt12(t24) {
+    if (!t24) return '';
+    const [h, m] = t24.split(':').map(Number);
+    if (isNaN(h)) return t24;
+    const p = h >= 12 ? 'PM' : 'AM';
+    const d = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${d}:${String(m).padStart(2,'0')} ${p}`;
+}
+
+// ── Validation ───────────────────────────────────────
+function showValidation(msg) {
+    document.getElementById('smValidationMsg').classList.remove('d-none');
+    document.getElementById('smValidationText').textContent = msg;
+}
+function clearValidation() {
+    document.getElementById('smValidationMsg').classList.add('d-none');
+}
+
+// ── Collect grid → hidden inputs, then submit ────────
+document.getElementById('schedForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Validate
+    const barangayId = document.getElementById('smLocation').value;
+    if (!barangayId)    { showValidation('Please select a location.'); return; }
+    if (!smType)        { showValidation('Please select a schedule type.'); return; }
+    if (!smPersonnelId) { showValidation('Please select a personnel.'); return; }
+
+    // Collect shifts
+    const scheduleData = {};
+    DAYS.forEach(day => {
+        const slots = [];
+        // Standard shifts
+        ['morning','afternoon'].forEach(shift => {
+            const cell = document.querySelector(`.sg-cell[data-day="${day}"][data-shift="${shift}"]`);
+            if (cell && cell.classList.contains('active-' + shift)) {
+                slots.push(SHIFTS[shift].label);
+            }
+        });
+        // Custom slots
+        const list = document.getElementById('customSlots_' + day);
+        if (list) {
+            list.querySelectorAll('.custom-slot-group').forEach(grp => {
+                const s = grp.querySelector('.cs-start')?.value;
+                const en = grp.querySelector('.cs-end')?.value;
+                if (s && en) slots.push(`${fmt12(s)}-${fmt12(en)}`);
+            });
+        }
+        if (slots.length) scheduleData[day] = slots;
+    });
+
+    if (Object.keys(scheduleData).length === 0) {
+        showValidation('Please assign at least one shift.');
+        return;
+    }
+
+    // Set hidden fields
+    document.getElementById('smBarangayId').value    = barangayId;
+    document.getElementById('smType').value          = smType;
+    document.getElementById('smPersonnelId').value   = smPersonnelId;
+    document.getElementById('smPersonnelName').value = smPersonnelName;
+
+    const sun = new Date(currentWeekStart);
+    sun.setDate(currentWeekStart.getDate() + 6);
+    document.getElementById('smWeekStart').value = fmtDate(currentWeekStart);
+    document.getElementById('smWeekEnd').value   = fmtDate(sun);
+
+    // Remove old dynamic schedule inputs
+    this.querySelectorAll('.dyn-sched-input').forEach(el => el.remove());
+
+    // Inject schedule[day][] hidden inputs
+    Object.entries(scheduleData).forEach(([day, slots]) => {
+        slots.forEach(slot => {
+            const inp = document.createElement('input');
+            inp.type  = 'hidden';
+            inp.name  = `schedule[${day}][]`;
+            inp.value = slot;
+            inp.className = 'dyn-sched-input';
+            this.appendChild(inp);
+        });
+    });
+
+    // Loading state
+    document.querySelector('.sm-submit-label').classList.add('d-none');
+    document.querySelector('.sm-submit-loading').classList.remove('d-none');
+    document.getElementById('smSubmitBtn').disabled = true;
+
+    this.submit();
+});
+
+// ── Delete modal ─────────────────────────────────────
+function confirmDelete(id, name, barangayId) {
+    document.getElementById('deleteSchedName').textContent   = name;
+    document.getElementById('deleteSchedForm').action        = `/rhu/schedules/${id}`;
+    document.getElementById('deleteSchedBarangay').value     = barangayId;
+    new bootstrap.Modal(document.getElementById('deleteSchedModal')).show();
+}
+
+// ── Reset add modal on open ───────────────────────────
+function resetPersonnelArea() {
+    document.getElementById('personnelScroll').innerHTML = `
+        <div class="personnel-placeholder">
+            <i class="bi bi-people"></i>
+            <span>Select a schedule type to see available personnel</span>
+        </div>`;
+    document.getElementById('smPersonnelHint').textContent = 'Select a schedule type first';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateWeekLabel();
+
+    // Auto-dismiss toasts
+    document.querySelectorAll('.toast').forEach(t => {
+        setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000);
+    });
+
+    // Reset submit button when modal is hidden
+    document.getElementById('schedModal').addEventListener('hidden.bs.modal', function() {
+        document.querySelector('.sm-submit-label').classList.remove('d-none');
+        document.querySelector('.sm-submit-loading').classList.add('d-none');
+        document.getElementById('smSubmitBtn').disabled = false;
+    });
+});
 </script>
-@endsection 
+@endsection
