@@ -9,7 +9,7 @@
         <span class="title">GabayHealth</span>
     </div>
 
-    <div class="seal-section" id="profileTrigger" onclick="toggleProfileMenu()" title="Account options">
+    <div class="seal-section">
         @php
             $logoUrl = session('user.logo_url');
             $userRole = session('user.role');
@@ -30,23 +30,12 @@
         <div class="center-name">
             {{ session('user.name', 'Health Center') }}
         </div>
-        <div class="profile-chevron"><i class="bi bi-chevron-up" id="profileChevron"></i></div>
-
-        {{-- Profile popover --}}
-        <div class="profile-popover" id="profilePopover">
-            <div class="profile-popover-name">{{ session('user.name', 'Health Center') }}</div>
-            <div class="profile-popover-role">{{ ucfirst(session('user.role', 'user')) }}</div>
-            <div class="profile-popover-divider"></div>
-            <a href="{{ route('logout') }}" class="profile-popover-item profile-popover-logout">
-                <i class="bi bi-door-open"></i> Sign out
-            </a>
-        </div>
     </div>
 
     <ul class="nav-links">
         @php
             $userRole = session('user.role');
-            
+
             if ($userRole === 'admin') {
                 $navItems = [
                     ['route' => 'admin.system-admin.dashboard', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2'],
@@ -154,38 +143,21 @@
             @else
                 <li class="{{ $currentRoute == $item['route'] ? 'active' : '' }}">
                     <a href="{{ route($item['route']) }}">
-                        @php
-                            $iconMap = [
-                                'Dashboard' => 'bi-speedometer2',
-                                'All RHUs' => 'bi-building',
-                                'Approved RHUs' => 'bi-check-circle',
-                                'Rural Health Units' => 'bi-building',
-                                'Pending Approvals' => 'bi-clock-history',
-                                'User Requests' => 'bi-person-plus',
-                                'Reports' => 'bi-file-earmark-bar-graph',
-                                'Pending Reports' => 'bi-hourglass-split',
-                                'Overview' => 'bi-grid-1x2',
-                                'Barangays' => 'bi-geo-alt',
-                                'Schedules' => 'bi-calendar-event',
-                                'Calendars' => 'bi-calendar3',
-                                'Events' => 'bi-calendar2-event',
-                                'Inbox' => 'bi-inbox',
-                                'Send notification' => 'bi-send',
-                                'Sent' => 'bi-clock-history',
-                                'Notifications' => 'bi-bell',
-                                'Inventory' => 'bi-box-seam',
-                                'Services' => 'bi-heart-pulse',
-                                'Personnel' => 'bi-people',
-                                'Account Management' => 'bi-person-gear',
-                                'Logout' => 'bi-door-open',
-                            ];
-                        @endphp
-                        <i class="bi {{ $iconMap[$item['label']] ?? $item['icon'] }} nav-icon"></i>
+                        <i class="bi {{ $item['icon'] }} nav-icon"></i>
                         <span>{{ $item['label'] }}</span>
                     </a>
                 </li>
             @endif
         @endforeach
+
+        {{-- Logout pinned to bottom --}}
+        <li class="nav-logout-wrap">
+            <div class="nav-logout-divider"></div>
+            <a href="{{ route('logout') }}" class="nav-logout-link">
+                <i class="bi bi-door-open nav-icon"></i>
+                <span>Logout</span>
+            </a>
+        </li>
     </ul>
 </div>
 
@@ -198,6 +170,7 @@
         flex-direction: column;
         height: 100vh;
         font-family: 'Poppins', sans-serif;
+        overflow-y: auto;
     }
 
     .logo-section {
@@ -227,79 +200,6 @@
         background-color: rgba(255, 255, 255, 0.05);
         margin: 0 16px 4px;
         border-radius: 8px;
-        cursor: pointer;
-        position: relative;
-        transition: background 0.15s;
-    }
-    .seal-section:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-    .profile-chevron {
-        font-size: .65rem;
-        color: rgba(255,255,255,.5);
-        line-height: 1;
-    }
-    /* ── Profile popover ── */
-    .profile-popover {
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 12px; right: 12px;
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 8px 24px rgba(0,0,0,.22);
-        padding: 10px 0 6px;
-        z-index: 9999;
-        text-align: left;
-        opacity: 0;
-        transform: translateY(-6px);
-        pointer-events: none;
-        transition: opacity .18s ease, transform .18s ease;
-    }
-    .profile-popover.open {
-        opacity: 1;
-        transform: translateY(0);
-        pointer-events: auto;
-    }
-    .profile-popover-name {
-        font-size: .8rem;
-        font-weight: 600;
-        color: #37352f;
-        padding: 0 14px 1px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .profile-popover-role {
-        font-size: .7rem;
-        color: #9b9b9b;
-        padding: 0 14px 8px;
-        text-transform: capitalize;
-    }
-    .profile-popover-divider {
-        height: 1px;
-        background: #f1f1ef;
-        margin-bottom: 6px;
-    }
-    .profile-popover-item {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        padding: 8px 14px;
-        font-size: .82rem;
-        font-weight: 500;
-        color: #37352f;
-        text-decoration: none;
-        transition: background .1s;
-    }
-    .profile-popover-item:hover { background: #f7f7f5; color: #37352f; text-decoration: none; }
-    .profile-popover-logout { color: #dc2626; }
-    .profile-popover-logout:hover { background: #fef2f2; color: #dc2626; }
-
-    .rhu-logo {
-        width: 100px;
-        height: 100px;
-        object-fit: contain;
-        margin-top: 8px;
     }
 
     .seal {
@@ -328,6 +228,9 @@
         list-style: none;
         padding: 0;
         margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
 
     .nav-links > li {
@@ -343,7 +246,7 @@
         padding: 10px 24px;
     }
 
-    .nav-links > li:hover:not(.nav-group-wrap) {
+    .nav-links > li:hover:not(.nav-group-wrap):not(.nav-logout-wrap) {
         background-color: #113d96;
         border-radius: 6px;
         padding: 10px 24px;
@@ -475,23 +378,35 @@
     .nav-sub li:hover {
         opacity: 1;
     }
-</style>
 
-<script>
-function toggleProfileMenu() {
-    const popover  = document.getElementById('profilePopover');
-    const chevron  = document.getElementById('profileChevron');
-    const isOpen   = popover.classList.contains('open');
-    popover.classList.toggle('open', !isOpen);
-    chevron.className = isOpen ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
-}
-document.addEventListener('click', function(e) {
-    const trigger = document.getElementById('profileTrigger');
-    const popover = document.getElementById('profilePopover');
-    if (trigger && !trigger.contains(e.target)) {
-        popover.classList.remove('open');
-        const chevron = document.getElementById('profileChevron');
-        if (chevron) chevron.className = 'bi bi-chevron-up';
+    /* ── Logout (pinned bottom) ── */
+    .nav-logout-wrap {
+        margin-top: auto !important;
+        padding: 0 !important;
     }
-});
-</script>
+
+    .nav-logout-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.15);
+        margin: 8px 16px;
+    }
+
+    .nav-logout-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 24px;
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.75) !important;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: background 0.2s, color 0.2s;
+        margin-bottom: 8px;
+    }
+
+    .nav-logout-link:hover {
+        background-color: rgba(239, 68, 68, 0.2);
+        color: #fca5a5 !important;
+        text-decoration: none;
+    }
+</style>

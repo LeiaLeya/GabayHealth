@@ -33,6 +33,9 @@
                 <a href="{{ route('events.index') }}" class="action-btn action-btn-ghost">
                     <i class="bi bi-arrow-left"></i> Back to Events
                 </a>
+                <button type="button" class="action-btn action-btn-delete" onclick="openDeleteModal()">
+                    <i class="bi bi-trash3"></i> Delete Event
+                </button>
             </div>
         </div>
     </div>
@@ -289,5 +292,154 @@
 }
 .gender-chip.male   { background: #dbeafe; color: #1e40af; }
 .gender-chip.female { background: #fce7f3; color: #9d174d; }
+
+.action-btn-delete {
+    background: #fff;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    cursor: pointer;
+    font-family: inherit;
+}
+.action-btn-delete:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ── Delete modal ── */
+.delete-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+.delete-modal-overlay.open { display: flex; }
+.delete-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 440px;
+    padding: 28px 28px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    animation: modalIn .18s ease;
+}
+@keyframes modalIn {
+    from { opacity:0; transform:translateY(-10px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.delete-modal-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: #fee2e2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: #dc2626;
+    margin-bottom: 14px;
+}
+.delete-modal-title {
+    font-size: 1rem; font-weight: 700; color: #37352f; margin-bottom: 6px;
+}
+.delete-modal-body {
+    font-size: .85rem; color: #787774; line-height: 1.6; margin-bottom: 18px;
+}
+.delete-modal-body strong { color: #37352f; }
+.delete-modal-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e9e9e7;
+    border-radius: 7px;
+    font-size: .88rem;
+    color: #37352f;
+    outline: none;
+    transition: border-color .15s;
+    font-family: inherit;
+    margin-bottom: 18px;
+}
+.delete-modal-input:focus { border-color: #dc2626; }
+.delete-modal-input.match { border-color: #dc2626; background: #fff5f5; }
+.delete-modal-footer {
+    display: flex; gap: 10px; justify-content: flex-end;
+}
+.delete-modal-cancel {
+    padding: 8px 20px; border-radius: 7px;
+    border: 1px solid #e9e9e7; background: #fff;
+    color: #37352f; font-size: .85rem; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    transition: background .15s;
+}
+.delete-modal-cancel:hover { background: #f7f7f5; }
+.delete-modal-confirm {
+    padding: 8px 20px; border-radius: 7px;
+    border: none; background: #dc2626;
+    color: #fff; font-size: .85rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: background .15s, opacity .15s;
+    opacity: .4; pointer-events: none;
+}
+.delete-modal-confirm.active { opacity: 1; pointer-events: auto; }
+.delete-modal-confirm.active:hover { background: #b91c1c; }
 </style>
+
+{{-- Delete confirmation modal --}}
+<div class="delete-modal-overlay" id="deleteModalOverlay">
+    <div class="delete-modal">
+        <div class="delete-modal-icon"><i class="bi bi-trash3-fill"></i></div>
+        <div class="delete-modal-title">Delete Event</div>
+        <div class="delete-modal-body">
+            This action <strong>cannot be undone</strong>. This will permanently delete the event and all its attendee data.<br><br>
+            Please type <strong id="deleteModalEventName"></strong> to confirm.
+        </div>
+        <input type="text" class="delete-modal-input" id="deleteConfirmInput"
+               placeholder="Type the event name to confirm"
+               oninput="checkDeleteMatch()" autocomplete="off">
+        <div class="delete-modal-footer">
+            <button type="button" class="delete-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <form id="deleteEventForm" method="POST" action="{{ route('rhu.events.destroy', $event['id']) }}">
+                @csrf
+                @method('DELETE')
+                <input type="hidden" name="confirm_title" id="deleteConfirmHidden">
+                <button type="submit" class="delete-modal-confirm" id="deleteConfirmBtn">
+                    Delete Event
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const eventTitle = {{ Js::from($event['title']) }};
+
+function openDeleteModal() {
+    document.getElementById('deleteModalEventName').textContent = eventTitle;
+    document.getElementById('deleteConfirmInput').value = '';
+    document.getElementById('deleteConfirmBtn').classList.remove('active');
+    document.getElementById('deleteModalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('deleteConfirmInput').focus(), 100);
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModalOverlay').classList.remove('open');
+}
+
+function checkDeleteMatch() {
+    const input = document.getElementById('deleteConfirmInput').value.trim().toLowerCase();
+    const expected = eventTitle.trim().toLowerCase();
+    const btn = document.getElementById('deleteConfirmBtn');
+    const field = document.getElementById('deleteConfirmInput');
+    if (input === expected) {
+        btn.classList.add('active');
+        field.classList.add('match');
+        document.getElementById('deleteConfirmHidden').value = document.getElementById('deleteConfirmInput').value;
+    } else {
+        btn.classList.remove('active');
+        field.classList.remove('match');
+    }
+}
+
+// Close on overlay click
+document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+</script>
 @endsection

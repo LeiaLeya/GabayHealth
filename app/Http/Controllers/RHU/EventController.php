@@ -582,4 +582,37 @@ class EventController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
+    public function destroy(Request $request, $id)
+    {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return redirect()->back()->with('error', 'RHU ID not found.');
+
+        $eventDoc = $this->firestore
+            ->collection("rhu/{$rhuId}/events")
+            ->document($id)
+            ->snapshot();
+
+        if (!$eventDoc->exists()) {
+            return redirect()->route('rhu.events.index')->with('error', 'Event not found.');
+        }
+
+        $event = $eventDoc->data();
+        $confirmed = strtolower(trim($request->input('confirm_title', '')));
+        $expected  = strtolower(trim($event['title'] ?? ''));
+
+        if ($confirmed !== $expected) {
+            return redirect()->back()->with('error', 'Event name did not match. Deletion cancelled.');
+        }
+
+        $this->firestore
+            ->collection("rhu/{$rhuId}/events")
+            ->document($id)
+            ->delete();
+
+        return redirect()->route('rhu.events.index')->with('success', 'Event "' . ($event['title'] ?? '') . '" has been deleted.');
+    }
 }

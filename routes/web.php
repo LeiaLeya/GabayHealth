@@ -1012,6 +1012,7 @@ Route::middleware('auth.check')->group(function () {
         Route::get('/events/{id}/edit', [RHUEventController::class, 'edit'])->name('events.edit');
         Route::put('/events/{id}', [RHUEventController::class, 'update'])->name('events.update');
         Route::post('/events/{id}/cancel', [RHUEventController::class, 'cancel'])->name('events.cancel');
+        Route::delete('/events/{id}', [RHUEventController::class, 'destroy'])->name('events.destroy');
         Route::get('/events/{id}/export-pdf', [RHUEventController::class, 'exportPdf'])->name('events.exportPdf');
 
         // Calendar routes
