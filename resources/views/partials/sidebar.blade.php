@@ -9,26 +9,37 @@
         <span class="title">GabayHealth</span>
     </div>
 
-    <div class="seal-section">
+    <div class="seal-section" id="profileTrigger" onclick="toggleProfileMenu()" title="Account options">
         @php
             $logoUrl = session('user.logo_url');
             $userRole = session('user.role');
         @endphp
         @if($userRole === 'admin')
-            <i class="bi bi-gear-fill" style="font-size: 3rem; color: white;"></i>
+            <i class="bi bi-gear-fill" style="font-size: 2.5rem; color: white;"></i>
         @elseif($logoUrl && !empty($logoUrl))
-            <img src="{{ $logoUrl }}" 
-                 class="seal" 
+            <img src="{{ $logoUrl }}"
+                 class="seal"
                  alt="RHU Logo"
                  loading="eager"
                  crossorigin="anonymous"
-                 onerror="console.error('Logo failed to load:', this.src); this.src='{{ asset('images/seal.png') }}'; this.classList.add('fallback-seal');"
+                 onerror="this.src='{{ asset('images/seal.png') }}'; this.classList.add('fallback-seal');"
                  style="border-radius: 50%;">
         @else
             <img src="{{ asset('images/seal.png') }}" class="seal fallback-seal" alt="Municipal Seal" style="border-radius: 50%;">
         @endif
         <div class="center-name">
             {{ session('user.name', 'Health Center') }}
+        </div>
+        <div class="profile-chevron"><i class="bi bi-chevron-up" id="profileChevron"></i></div>
+
+        {{-- Profile popover --}}
+        <div class="profile-popover" id="profilePopover">
+            <div class="profile-popover-name">{{ session('user.name', 'Health Center') }}</div>
+            <div class="profile-popover-role">{{ ucfirst(session('user.role', 'user')) }}</div>
+            <div class="profile-popover-divider"></div>
+            <a href="{{ route('logout') }}" class="profile-popover-item profile-popover-logout">
+                <i class="bi bi-door-open"></i> Sign out
+            </a>
         </div>
     </div>
 
@@ -40,7 +51,6 @@
                 $navItems = [
                     ['route' => 'admin.system-admin.dashboard', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2'],
                     ['route' => 'admin.system-admin.all-rhus', 'label' => 'All RHUs', 'icon' => 'bi-building'],
-                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } elseif ($userRole === 'rhu') {
                 $navItems = [
@@ -54,7 +64,6 @@
                             ['route' => 'rhu.reports.verify', 'label' => 'Pending Reports', 'icon' => 'bi-hourglass-split', 'pending_badge' => true],
                         ],
                     ],
-                    ['route' => 'rhu.barangays.index', 'label' => 'Barangays', 'icon' => 'bi-geo-alt'],
                     [
                         'type' => 'group',
                         'label' => 'Calendars',
@@ -67,10 +76,10 @@
                     ],
                     ['route' => 'rhu.notifications.index', 'label' => 'Notifications', 'icon' => 'bi-bell'],
                     ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'bi-calendar2-event'],
+                    ['route' => 'rhu.barangays.index', 'label' => 'Barangays', 'icon' => 'bi-geo-alt'],
                     ['route' => 'rhu.inventory.index', 'label' => 'Inventory', 'icon' => 'bi-box-seam'],
                     ['route' => 'rhu.services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
                     ['route' => 'rhu.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
-                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             } else {
                 $navItems = [
@@ -101,7 +110,6 @@
                     ['route' => 'bhc.personnel.index', 'label' => 'Personnel', 'icon' => 'bi-people'],
                     ['route' => 'bhc.user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
                     ['route' => 'bhc.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
-                    ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
             }
         @endphp
@@ -211,15 +219,81 @@
 
     .seal-section {
         text-align: center;
-        padding: 16px 16px;
+        padding: 12px 16px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         background-color: rgba(255, 255, 255, 0.05);
-        margin: 16px;
+        margin: 0 16px 4px;
         border-radius: 8px;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.15s;
     }
+    .seal-section:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .profile-chevron {
+        font-size: .65rem;
+        color: rgba(255,255,255,.5);
+        line-height: 1;
+    }
+    /* ── Profile popover ── */
+    .profile-popover {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 12px; right: 12px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.22);
+        padding: 10px 0 6px;
+        z-index: 9999;
+        text-align: left;
+        opacity: 0;
+        transform: translateY(-6px);
+        pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease;
+    }
+    .profile-popover.open {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    .profile-popover-name {
+        font-size: .8rem;
+        font-weight: 600;
+        color: #37352f;
+        padding: 0 14px 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .profile-popover-role {
+        font-size: .7rem;
+        color: #9b9b9b;
+        padding: 0 14px 8px;
+        text-transform: capitalize;
+    }
+    .profile-popover-divider {
+        height: 1px;
+        background: #f1f1ef;
+        margin-bottom: 6px;
+    }
+    .profile-popover-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px 14px;
+        font-size: .82rem;
+        font-weight: 500;
+        color: #37352f;
+        text-decoration: none;
+        transition: background .1s;
+    }
+    .profile-popover-item:hover { background: #f7f7f5; color: #37352f; text-decoration: none; }
+    .profile-popover-logout { color: #dc2626; }
+    .profile-popover-logout:hover { background: #fef2f2; color: #dc2626; }
 
     .rhu-logo {
         width: 100px;
@@ -229,8 +303,8 @@
     }
 
     .seal {
-        width: 80px;
-        height: 80px;
+        width: 60px;
+        height: 60px;
         border-radius: 50%;
         object-fit: cover;
         background-color: white;
@@ -253,7 +327,7 @@
     .nav-links {
         list-style: none;
         padding: 0;
-        margin-top: 24px;
+        margin-top: 12px;
     }
 
     .nav-links > li {
@@ -402,3 +476,22 @@
         opacity: 1;
     }
 </style>
+
+<script>
+function toggleProfileMenu() {
+    const popover  = document.getElementById('profilePopover');
+    const chevron  = document.getElementById('profileChevron');
+    const isOpen   = popover.classList.contains('open');
+    popover.classList.toggle('open', !isOpen);
+    chevron.className = isOpen ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+}
+document.addEventListener('click', function(e) {
+    const trigger = document.getElementById('profileTrigger');
+    const popover = document.getElementById('profilePopover');
+    if (trigger && !trigger.contains(e.target)) {
+        popover.classList.remove('open');
+        const chevron = document.getElementById('profileChevron');
+        if (chevron) chevron.className = 'bi bi-chevron-up';
+    }
+});
+</script>
