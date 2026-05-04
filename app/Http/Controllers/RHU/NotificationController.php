@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use App\Services\NotificationPageSupport;
 use Carbon\Carbon;
 
 class NotificationController extends Controller
@@ -23,55 +24,111 @@ class NotificationController extends Controller
 
     public function index()
     {
-        $user = session('user');
+        return redirect()->route('rhu.notifications.index');
+    }
 
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Please login to access notifications.');
-        }
-
-        $rhuId = $this->getBarangayId();
-
-        if (!$rhuId) {
-            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
-        }
-
-        $notifications = [];
-        $barangays = [];
-
+    private function fetchAll(string $rhuId): array
+    {
+        $all = [];
         try {
-            $notificationsQuery = $this->firestore
+            $docs = $this->firestore
                 ->collection("rhu/{$rhuId}/notifications")
                 ->orderBy('createdAt', 'DESC')
-                ->limit(100)
+                ->limit(200)
                 ->documents();
-
-            foreach ($notificationsQuery as $doc) {
+            foreach ($docs as $doc) {
                 if ($doc->exists()) {
-                    $notifications[] = array_merge($doc->data(), ['id' => $doc->id()]);
+                    $all[] = array_merge($doc->data(), ['id' => $doc->id()]);
                 }
             }
         } catch (\Exception $e) {
-            // continue with empty notifications
+            // continue with empty
         }
+        return $all;
+    }
 
+    private function fetchBarangays(string $rhuId): array
+    {
+        $barangays = [];
         try {
-            $barangayDocs = $this->firestore
+            $docs = $this->firestore
                 ->collection('barangay')
                 ->where('rhuId', '=', $rhuId)
                 ->documents();
-
-            foreach ($barangayDocs as $doc) {
+            foreach ($docs as $doc) {
                 if ($doc->exists()) {
                     $data = $doc->data();
-                    $name = $data['healthCenterName'] ?? ($data['location']['name'] ?? 'Unknown Barangay');
-                    $barangays[] = ['id' => $doc->id(), 'name' => $name];
+                    $barangays[] = [
+                        'id'   => $doc->id(),
+                        'name' => $data['healthCenterName'] ?? ($data['location']['name'] ?? 'Unknown Barangay'),
+                    ];
                 }
             }
         } catch (\Exception $e) {
-            // continue with empty barangays
+            // continue with empty
+        }
+        return $barangays;
+    }
+
+    public function inbox()
+    {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return redirect()->back()->with('error', 'RHU ID not found.');
+
+        $all = $this->fetchAll($rhuId);
+        [$inbox] = NotificationPageSupport::partitionInboxSent($all);
+
+        return $this->view('notifications.inbox', compact('inbox'));
+    }
+
+    public function create()
+    {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return redirect()->back()->with('error', 'RHU ID not found.');
+
+        $barangays = $this->fetchBarangays($rhuId);
+
+        return $this->view('notifications.create', compact('barangays'));
+    }
+
+    public function sent()
+    {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return redirect()->back()->with('error', 'RHU ID not found.');
+
+        $all = $this->fetchAll($rhuId);
+        [, $sent] = NotificationPageSupport::partitionInboxSent($all);
+
+        return $this->view('notifications.sent', compact('sent'));
+    }
+
+    public function markRead($id)
+    {
+        $user = session('user');
+        if (!$user) return redirect()->route('login');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return response()->json(['error' => 'RHU ID not found.'], 400);
+
+        try {
+            $this->firestore
+                ->collection("rhu/{$rhuId}/notifications")
+                ->document($id)
+                ->update([['path' => 'read', 'value' => true]]);
+        } catch (\Exception $e) {
+            // silently ignore
         }
 
-        return $this->view('notifications.index', compact('notifications', 'barangays'));
+        return response()->json(['ok' => true]);
     }
 
     public function store(Request $request)

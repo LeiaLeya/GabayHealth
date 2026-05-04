@@ -80,8 +80,6 @@
                     ['route' => 'rhu.events.index', 'label' => 'Events', 'icon' => 'bi-calendar2-event'],
                     ['route' => 'rhu.inventory.index', 'label' => 'Inventory', 'icon' => 'bi-box-seam'],
                     ['route' => 'rhu.services.index', 'label' => 'Services', 'icon' => 'bi-heart-pulse'],
-                    ['route' => 'rhu.personnel.index', 'label' => 'Personnel', 'icon' => 'bi-people'],
-                    ['route' => 'rhu.user-requests.index', 'label' => 'User Requests', 'icon' => 'bi-person-plus'],
                     ['route' => 'rhu.accounts.index', 'label' => 'Account Management', 'icon' => 'bi-person-gear'],
                     ['route' => 'logout', 'label' => 'Logout', 'icon' => 'bi-door-open'],
                 ];
