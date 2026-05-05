@@ -959,6 +959,8 @@ Route::middleware('auth.check')->group(function () {
         Route::get('/barangays/{barangayId}', [RHUBarangayController::class, 'show'])->name('barangays.show');
         Route::post('/barangays/{barangayId}/approve', [RHUBarangayController::class, 'approve'])->name('barangays.approve');
         Route::post('/barangays/{barangayId}/send-credentials', [RHUBarangayController::class, 'sendCredentials'])->name('barangays.send-credentials');
+        Route::post('/barangays/{barangayId}/archive', [RHUBarangayController::class, 'archive'])->name('barangays.archive');
+        Route::post('/barangays/{barangayId}/restore', [RHUBarangayController::class, 'restore'])->name('barangays.restore');
 
         // Reports routes
         Route::get('/reports', [RHUReportsController::class, 'index'])->name('reports.index');

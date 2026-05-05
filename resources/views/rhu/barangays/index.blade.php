@@ -33,7 +33,15 @@
         </div>
     </div>
 
-    @if(empty($barangays))
+    @php
+        $active   = collect($barangays)->where('status', '!=', 'archived')->values();
+        $archived = collect($barangays)->where('status', 'archived')->values();
+        $total    = $active->count();
+        $activeCount  = $active->where('status', 'active')->count();
+        $pendingCount = $active->whereIn('status', ['pending', 'pending_setup', 'approved'])->count();
+    @endphp
+
+    @if($active->isEmpty() && $archived->isEmpty())
     <div class="brgy-empty">
         <i class="bi bi-building"></i>
         <div class="brgy-empty-title">No Registered Barangays</div>
@@ -42,31 +50,54 @@
     @else
 
     {{-- Stats Row --}}
-    @php
-        $total   = count($barangays);
-        $active  = collect($barangays)->where('status','active')->count();
-        $pending = collect($barangays)->whereIn('status',['pending','pending_setup','approved'])->count();
-    @endphp
     <div class="brgy-stats mb-4">
         <div class="brgy-stat">
             <div class="brgy-stat-val">{{ $total }}</div>
-            <div class="brgy-stat-lbl">Total Barangays</div>
+            <div class="brgy-stat-lbl">Total Active</div>
         </div>
         <div class="brgy-stat">
-            <div class="brgy-stat-val" style="color:#166534;">{{ $active }}</div>
+            <div class="brgy-stat-val" style="color:#166534;">{{ $activeCount }}</div>
             <div class="brgy-stat-lbl">Active</div>
         </div>
         <div class="brgy-stat">
-            <div class="brgy-stat-val" style="color:#92400e;">{{ $pending }}</div>
+            <div class="brgy-stat-val" style="color:#92400e;">{{ $pendingCount }}</div>
             <div class="brgy-stat-lbl">Pending / Setup</div>
         </div>
+        @if($archived->count() > 0)
+        <div class="brgy-stat">
+            <div class="brgy-stat-val" style="color:#787774;">{{ $archived->count() }}</div>
+            <div class="brgy-stat-lbl">Archived</div>
+        </div>
+        @endif
     </div>
 
-    <div class="brgy-card">
+    {{-- Tabs --}}
+    <div class="brgy-tabs mb-0">
+        <button class="brgy-tab active" id="tabActive" onclick="switchBrgyTab('active')">
+            <i class="bi bi-building me-1"></i>Active
+            <span class="brgy-tab-count">{{ $total }}</span>
+        </button>
+        @if($archived->count() > 0)
+        <button class="brgy-tab" id="tabArchived" onclick="switchBrgyTab('archived')">
+            <i class="bi bi-archive me-1"></i>Archived
+            <span class="brgy-tab-count">{{ $archived->count() }}</span>
+        </button>
+        @endif
+    </div>
+
+    {{-- Active Tab --}}
+    <div id="paneActive" class="brgy-card" style="border-top-left-radius:0;">
         <div class="brgy-card-header">
             <div class="brgy-badge">Barangays</div>
-            <div class="brgy-card-title">All Registered Barangays</div>
+            <div class="brgy-card-title">Active Barangays</div>
         </div>
+        @if($active->isEmpty())
+        <div class="brgy-empty" style="border:none;border-radius:0;">
+            <i class="bi bi-building"></i>
+            <div class="brgy-empty-title">No Active Barangays</div>
+            <div class="brgy-empty-text">All barangays may have been archived.</div>
+        </div>
+        @else
         <div class="p-0">
             <div class="table-responsive">
                 <table class="brgy-table">
@@ -82,14 +113,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($barangays as $barangay)
+                        @foreach($active as $barangay)
                         <tr>
                             <td>
                                 <div class="brgy-logo-wrap">
                                     @if($barangay['logo_url'])
                                         <img src="{{ $barangay['logo_url'] }}" alt="{{ $barangay['healthCenterName'] }}"
-                                             class="brgy-logo-img"
-                                             onerror="this.src='{{ asset('images/seal.png') }}'">
+                                             class="brgy-logo-img" onerror="this.src='{{ asset('images/seal.png') }}'">
                                     @else
                                         <img src="{{ asset('images/seal.png') }}" alt="Seal" class="brgy-logo-img" style="opacity:.4;">
                                     @endif
@@ -124,7 +154,7 @@
                             </td>
                             <td class="small text-muted">{{ $barangay['appliedDate'] }}</td>
                             <td>
-                                <div class="d-flex justify-content-center">
+                                <div class="d-flex justify-content-center gap-1">
                                     <a href="{{ route('rhu.barangays.show', $barangay['id']) }}" class="tbl-btn view" title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
@@ -136,7 +166,79 @@
                 </table>
             </div>
         </div>
+        @endif
     </div>
+
+    {{-- Archived Tab --}}
+    @if($archived->count() > 0)
+    <div id="paneArchived" class="brgy-card d-none" style="border-top-left-radius:0;border-top-right-radius:0;">
+        <div class="brgy-card-header" style="background:#787774;">
+            <div class="brgy-badge">Archived</div>
+            <div class="brgy-card-title">Archived Barangays</div>
+        </div>
+        <div class="p-0">
+            <div class="table-responsive">
+                <table class="brgy-table">
+                    <thead style="background:#787774;">
+                        <tr>
+                            <th style="width:60px;">Logo</th>
+                            <th>Health Center</th>
+                            <th>Email</th>
+                            <th>Location</th>
+                            <th>Archived On</th>
+                            <th style="width:100px;text-align:center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($archived as $barangay)
+                        <tr>
+                            <td>
+                                <div class="brgy-logo-wrap" style="opacity:.6;">
+                                    @if($barangay['logo_url'])
+                                        <img src="{{ $barangay['logo_url'] }}" alt="{{ $barangay['healthCenterName'] }}"
+                                             class="brgy-logo-img" onerror="this.src='{{ asset('images/seal.png') }}'">
+                                    @else
+                                        <img src="{{ asset('images/seal.png') }}" alt="Seal" class="brgy-logo-img" style="opacity:.4;">
+                                    @endif
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold" style="color:#787774;">{{ $barangay['healthCenterName'] }}</div>
+                                @if(!empty($barangay['barangayName']))
+                                <div class="small text-muted">{{ $barangay['barangayName'] }}</div>
+                                @endif
+                            </td>
+                            <td class="small text-muted">{{ $barangay['email'] }}</td>
+                            <td class="small text-muted">
+                                @if(is_array($barangay['location'] ?? null) && isset($barangay['location']['name']))
+                                    {{ $barangay['location']['name'] }}
+                                @else
+                                    {{ $barangay['location'] ?? '—' }}
+                                @endif
+                            </td>
+                            <td class="small text-muted">{{ $barangay['appliedDate'] }}</td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a href="{{ route('rhu.barangays.show', $barangay['id']) }}" class="tbl-btn view" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <form method="POST" action="{{ route('rhu.barangays.restore', $barangay['id']) }}">
+                                        @csrf
+                                        <button type="submit" class="tbl-btn restore" title="Restore">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @endif
 </div>
 
@@ -149,7 +251,14 @@
 .brgy-stat { background:#fff; border:1px solid #e9e9e7; border-radius:8px; padding:14px 20px; min-width:120px; }
 .brgy-stat-val { font-size:1.5rem; font-weight:700; color:#37352f; line-height:1; }
 .brgy-stat-lbl { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.4px; color:#9b9b9b; margin-top:4px; }
-.brgy-card { background:#fff; border:1px solid #e9e9e7; border-radius:8px; overflow:hidden; }
+
+.brgy-tabs { display:flex; gap:0; }
+.brgy-tab { background:#f8fafc; border:1px solid #e9e9e7; border-bottom:none; border-radius:8px 8px 0 0; padding:9px 20px; font-size:.82rem; font-weight:500; color:#787774; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
+.brgy-tab:first-child { margin-right:4px; }
+.brgy-tab.active { background:#fff; color:#37352f; font-weight:600; border-color:#e9e9e7; position:relative; z-index:1; }
+.brgy-tab-count { background:#f1f1ef; color:#787774; font-size:.65rem; font-weight:700; border-radius:10px; padding:1px 6px; }
+
+.brgy-card { background:#fff; border:1px solid #e9e9e7; border-radius:0 8px 8px 8px; overflow:hidden; }
 .brgy-card-header { background:#1657c1; padding:16px 20px 12px; }
 .brgy-badge { display:inline-block; font-size:.62rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.15); color:rgba(255,255,255,.85); padding:2px 7px; border-radius:3px; margin-bottom:4px; }
 .brgy-card-title { font-size:.95rem; font-weight:600; color:#fff; }
@@ -166,13 +275,23 @@
 .brgy-status.setup    { background:#fef9c3; color:#92400e; }
 .brgy-status.approved { background:#dbeafe; color:#1e40af; }
 .brgy-status.pending  { background:#f1f1ef; color:#787774; }
-.tbl-btn { width:28px; height:28px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:.8rem; cursor:pointer; text-decoration:none; transition:background .1s; }
-.tbl-btn.view { background:#f1f1ef; color:#787774; }
+.tbl-btn { width:28px; height:28px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:.8rem; cursor:pointer; text-decoration:none; transition:background .1s; border:none; }
+.tbl-btn.view    { background:#f1f1ef; color:#787774; }
 .tbl-btn.view:hover { background:#dbeafe; color:#1e40af; }
+.tbl-btn.restore { background:#f1f1ef; color:#787774; }
+.tbl-btn.restore:hover { background:#dcfce7; color:#166534; }
 </style>
 
 @push('scripts')
 <script>
+function switchBrgyTab(tab) {
+    document.getElementById('paneActive').classList.toggle('d-none', tab !== 'active');
+    const archived = document.getElementById('paneArchived');
+    if (archived) archived.classList.toggle('d-none', tab !== 'archived');
+    document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+    const tabArc = document.getElementById('tabArchived');
+    if (tabArc) tabArc.classList.toggle('active', tab === 'archived');
+}
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.toast').forEach(t => setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000));
 });

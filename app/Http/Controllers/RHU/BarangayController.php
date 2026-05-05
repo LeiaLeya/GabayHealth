@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use App\Mail\BarangayArchivedEmail;
+use App\Mail\BarangayRestoredEmail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 
@@ -269,6 +272,105 @@ class BarangayController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to send credentials: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function archive(Request $request, $barangayId)
+    {
+        $user = session('user');
+        if (!$user) return back()->with('error', 'Unauthorized.');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return back()->with('error', 'RHU ID not found.');
+
+        try {
+            $doc = $this->firestore->collection('barangay')->document($barangayId)->snapshot();
+            if (!$doc->exists()) return back()->with('error', 'Barangay not found.');
+
+            $data = $doc->data();
+            if (($data['rhuId'] ?? '') !== $rhuId) return back()->with('error', 'Permission denied.');
+
+            $healthCenterName = $data['healthCenterName'] ?? '';
+            $confirmed = strtolower(trim($request->input('confirm_name', '')));
+            if ($confirmed !== strtolower(trim($healthCenterName))) {
+                return back()->with('error', 'Name does not match. Archive cancelled.');
+            }
+
+            $this->firestore->collection('barangay')->document($barangayId)->update([
+                ['path' => 'status',      'value' => 'archived'],
+                ['path' => 'archived_at', 'value' => now()->toDateTimeString()],
+                ['path' => 'archived_by', 'value' => $user['id']],
+            ]);
+
+            $barangayEmail = $data['email'] ?? null;
+            if ($barangayEmail) {
+                $rhuDoc = $this->firestore->collection('rhu')->document($rhuId)->snapshot();
+                $rhuName = $rhuDoc->exists() ? ($rhuDoc->data()['healthCenterName'] ?? 'Your RHU') : 'Your RHU';
+                $rhuEmail = $rhuDoc->exists() ? ($rhuDoc->data()['email'] ?? config('mail.from.address')) : config('mail.from.address');
+
+                try {
+                    Mail::to($barangayEmail)->send(new BarangayArchivedEmail(
+                        $healthCenterName,
+                        $rhuName,
+                        now()->format('F d, Y g:i A'),
+                        $rhuEmail,
+                    ));
+                } catch (\Exception $e) {
+                    // email failed silently — archive still succeeded
+                }
+            }
+
+            return redirect()->route('rhu.barangays.show', $barangayId)
+                ->with('success', $healthCenterName . ' has been archived. A notification email was sent to the barangay.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to archive barangay: ' . $e->getMessage());
+        }
+    }
+
+    public function restore(Request $request, $barangayId)
+    {
+        $user = session('user');
+        if (!$user) return back()->with('error', 'Unauthorized.');
+
+        $rhuId = $this->getBarangayId();
+        if (!$rhuId) return back()->with('error', 'RHU ID not found.');
+
+        try {
+            $doc = $this->firestore->collection('barangay')->document($barangayId)->snapshot();
+            if (!$doc->exists()) return back()->with('error', 'Barangay not found.');
+
+            $data = $doc->data();
+            if (($data['rhuId'] ?? '') !== $rhuId) return back()->with('error', 'Permission denied.');
+
+            $this->firestore->collection('barangay')->document($barangayId)->update([
+                ['path' => 'status',      'value' => 'active'],
+                ['path' => 'archived_at', 'value' => null],
+                ['path' => 'archived_by', 'value' => null],
+            ]);
+
+            $name          = $data['healthCenterName'] ?? 'Barangay';
+            $barangayEmail = $data['email'] ?? null;
+            if ($barangayEmail) {
+                $rhuDoc  = $this->firestore->collection('rhu')->document($rhuId)->snapshot();
+                $rhuName  = $rhuDoc->exists() ? ($rhuDoc->data()['healthCenterName'] ?? 'Your RHU') : 'Your RHU';
+                $rhuEmail = $rhuDoc->exists() ? ($rhuDoc->data()['email'] ?? config('mail.from.address')) : config('mail.from.address');
+
+                try {
+                    Mail::to($barangayEmail)->send(new BarangayRestoredEmail(
+                        $name,
+                        $rhuName,
+                        now()->format('F d, Y g:i A'),
+                        $rhuEmail,
+                    ));
+                } catch (\Exception $e) {
+                    // email failed silently — restore still succeeded
+                }
+            }
+
+            return redirect()->route('rhu.barangays.show', $barangayId)
+                ->with('success', $name . ' has been restored and is now active. A notification email was sent to the barangay.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to restore barangay: ' . $e->getMessage());
         }
     }
 

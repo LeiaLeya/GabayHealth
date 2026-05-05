@@ -40,6 +40,18 @@
                 </button>
             </form>
             @endif
+            @if(($barangay['status'] ?? '') === 'archived')
+            <form method="POST" action="{{ route('rhu.barangays.restore', $barangay['id']) }}">
+                @csrf
+                <button type="submit" class="btn-restore">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restore Barangay
+                </button>
+            </form>
+            @else
+            <button class="btn-archive" onclick="openArchiveConfirm('{{ $barangay['id'] }}','{{ addslashes($barangay['healthCenterName']) }}','{{ route('rhu.barangays.archive', $barangay['id']) }}')">
+                <i class="bi bi-archive me-1"></i>Archive
+            </button>
+            @endif
             <a href="{{ route('rhu.barangays.index') }}" class="btn-back">
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
@@ -78,6 +90,7 @@
                                     'pending_setup' => ['label'=>'Pending Setup', 'cls'=>'setup'],
                                     'approved'      => ['label'=>'Approved',      'cls'=>'approved'],
                                     'pending'       => ['label'=>'Pending',       'cls'=>'pending'],
+                                    'archived'      => ['label'=>'Archived',      'cls'=>'archived'],
                                 ];
                                 $st = $statusMap[$s] ?? ['label'=>ucfirst($s),'cls'=>'pending'];
                             @endphp
@@ -193,6 +206,10 @@
 <style>
 .btn-back { background:transparent; border:1px solid #e9e9e7; color:#787774; font-size:.82rem; font-weight:500; padding:6px 16px; border-radius:6px; text-decoration:none; transition:all .1s; }
 .btn-back:hover { background:#f1f1ef; color:#37352f; }
+.btn-archive { background:transparent; border:1px solid #fde68a; color:#d97706; font-size:.82rem; font-weight:500; padding:6px 14px; border-radius:6px; cursor:pointer; transition:all .1s; }
+.btn-archive:hover { background:#fef9c3; color:#b45309; border-color:#f59e0b; }
+.btn-restore { background:#dcfce7; border:1px solid #bbf7d0; color:#166534; font-size:.82rem; font-weight:500; padding:6px 14px; border-radius:6px; cursor:pointer; transition:all .1s; }
+.btn-restore:hover { background:#bbf7d0; color:#14532d; }
 .info-card { background:#fff; border:1px solid #e9e9e7; border-radius:8px; overflow:hidden; }
 .info-card-header { background:#1657c1; padding:16px 20px 12px; }
 .info-badge { display:inline-block; font-size:.62rem; font-weight:600; letter-spacing:.6px; text-transform:uppercase; background:rgba(255,255,255,.15); color:rgba(255,255,255,.85); padding:2px 7px; border-radius:3px; margin-bottom:4px; }
@@ -205,6 +222,7 @@
 .brgy-status.setup    { background:#fef9c3; color:#92400e; }
 .brgy-status.approved { background:#dbeafe; color:#1e40af; }
 .brgy-status.pending  { background:#f1f1ef; color:#787774; }
+.brgy-status.archived { background:#f1f1ef; color:#787774; }
 .info-grid { display:flex; flex-direction:column; gap:0; }
 .info-row { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid #f1f1ef; }
 .info-row:last-child { border-bottom:none; }
@@ -213,6 +231,8 @@
 .info-value { font-size:.85rem; font-weight:500; color:#37352f; }
 .info-divider { border-top:1px solid #f1f1ef; margin:16px 0; }
 </style>
+
+@include('partials.archive-confirm-modal', ['modalId' => 'brgyArchiveModal'])
 
 @push('scripts')
 <script>

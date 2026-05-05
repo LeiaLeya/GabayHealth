@@ -49,6 +49,10 @@ class LoginController extends Controller
                 return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
             }
 
+            if (($user['status'] ?? '') === 'archived') {
+                return back()->withErrors(['login' => 'Your account has been archived. Please contact your Rural Health Unit administrator to restore access.'])->withInput();
+            }
+
             $sessionUser = [
                 'id' => $user['uid'] ?? $user['id'],
                 'uid' => $user['uid'] ?? $user['id'],
@@ -129,6 +133,10 @@ class LoginController extends Controller
                 ]);
                 
                 return redirect()->route('register.rhu.google')->with('info', 'Please complete your registration details.');
+            }
+
+            if (($user['status'] ?? '') === 'archived') {
+                return redirect()->route('login')->with('error', 'Your account has been archived. Please contact your Rural Health Unit administrator to restore access.');
             }
 
             if (($user['status'] ?? 'pending') !== 'approved') {
