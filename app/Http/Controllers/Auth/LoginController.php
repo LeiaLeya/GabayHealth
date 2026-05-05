@@ -50,7 +50,10 @@ class LoginController extends Controller
             }
 
             if (($user['status'] ?? '') === 'archived') {
-                return back()->withErrors(['login' => 'Your account has been archived. Please contact your Rural Health Unit administrator to restore access.'])->withInput();
+                $msg = $userRole === 'rhu'
+                    ? 'Your RHU account has been archived. Please contact the GabayHealth system administrator to restore access.'
+                    : 'Your account has been archived. Please contact your Rural Health Unit administrator to restore access.';
+                return back()->with('archived_error', $msg)->withInput();
             }
 
             $sessionUser = [
@@ -136,10 +139,13 @@ class LoginController extends Controller
             }
 
             if (($user['status'] ?? '') === 'archived') {
-                return redirect()->route('login')->with('error', 'Your account has been archived. Please contact your Rural Health Unit administrator to restore access.');
+                $msg = $userRole === 'rhu'
+                    ? 'Your RHU account has been archived. Please contact the GabayHealth system administrator to restore access.'
+                    : 'Your account has been archived. Please contact your Rural Health Unit administrator to restore access.';
+                return redirect()->route('login')->with('archived_error', $msg);
             }
 
-            if (($user['status'] ?? 'pending') !== 'approved') {
+            if (!in_array($user['status'] ?? 'pending', ['approved', 'active', 'credentials_sent'])) {
                 return redirect()->route('login')->with('error', 'Your account is pending approval. Please wait for admin approval.');
             }
 

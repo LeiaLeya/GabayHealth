@@ -257,6 +257,37 @@
         color: #991b1b;
     }
 
+    .alert-archived {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.625rem;
+    }
+
+    .alert-archived .arc-err-icon {
+        font-size: 1rem;
+        flex-shrink: 0;
+        margin-top: 1px;
+        color: #d97706;
+    }
+
+    .alert-archived .arc-err-text {
+        line-height: 1.5;
+    }
+
+    .alert-archived .arc-err-title {
+        font-weight: 600;
+        margin-bottom: 2px;
+        font-size: 0.875rem;
+    }
+
+    .alert-archived .arc-err-body {
+        font-size: 0.825rem;
+        color: #a16207;
+    }
+
     /* ── Left: Photo ── */
     .login-photo-panel {
         flex: 1;
@@ -356,12 +387,18 @@
             <h1 class="login-title">Welcome back</h1>
             <p class="login-subtitle">Sign in to your account to continue.</p>
 
-            @if($errors->has('login'))
-                <div class="alert alert-danger">{{ $errors->first('login') }}</div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger">{{ session('error') }}</div>
+            @if(session('archived_error'))
+                <div class="alert alert-archived">
+                    <i class="bi bi-archive-fill arc-err-icon"></i>
+                    <div class="arc-err-text">
+                        <div class="arc-err-title">Account Archived</div>
+                        <div class="arc-err-body">{{ session('archived_error') }}</div>
+                    </div>
+                </div>
+            @elseif($errors->has('login'))
+                <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill me-2"></i>{{ $errors->first('login') }}</div>
+            @elseif(session('error'))
+                <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}</div>
             @endif
 
             <a href="{{ route('google.login.redirect') }}" class="login-btn-google">

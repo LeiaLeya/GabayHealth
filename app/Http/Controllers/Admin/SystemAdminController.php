@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use App\Mail\RhuArchivedEmail;
+use App\Mail\RhuRestoredEmail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Exception;
 use Illuminate\Support\Facades\Http;
@@ -374,6 +377,108 @@ class SystemAdminController extends Controller
     }
 
 
+
+    public function archive(Request $request, $rhuId)
+    {
+        $user = session('user');
+        if (!$user || $user['role'] !== 'admin') return back()->with('error', 'Unauthorized.');
+
+        try {
+            $rhuDoc = $this->firestore->collection('rhu')->document($rhuId)->snapshot();
+            if (!$rhuDoc->exists()) return back()->with('error', 'RHU not found.');
+
+            $rhuData = $rhuDoc->data();
+            $rhuName = $rhuData['rhuName'] ?? $rhuData['name'] ?? '';
+
+            $confirmed = strtolower(trim($request->input('confirm_name', '')));
+            if ($confirmed !== strtolower(trim($rhuName))) {
+                return back()->with('error', 'Name does not match. Archive cancelled.');
+            }
+
+            // Block if active barangays still exist under this RHU
+            $activeBgyCount = 0;
+            $bgyDocs = $this->firestore->collection('barangay')
+                ->where('rhuId', '=', $rhuId)
+                ->documents();
+            foreach ($bgyDocs as $doc) {
+                if ($doc->exists() && ($doc->data()['status'] ?? '') !== 'archived') {
+                    $activeBgyCount++;
+                }
+            }
+            if ($activeBgyCount > 0) {
+                return back()->with('error',
+                    "Cannot archive — {$activeBgyCount} active barangay" . ($activeBgyCount > 1 ? 's are' : ' is') .
+                    " still under this RHU. Archive them first."
+                );
+            }
+
+            $this->firestore->collection('rhu')->document($rhuId)->update([
+                ['path' => 'status',      'value' => 'archived'],
+                ['path' => 'archived_at', 'value' => now()->toDateTimeString()],
+                ['path' => 'archived_by', 'value' => $user['id']],
+            ]);
+
+            $rhuEmail = $rhuData['email'] ?? null;
+            if ($rhuEmail) {
+                $adminEmail = config('mail.from.address');
+                try {
+                    Mail::to($rhuEmail)->send(new RhuArchivedEmail(
+                        $rhuName,
+                        now()->format('F d, Y g:i A'),
+                        $adminEmail,
+                    ));
+                } catch (\Exception $e) {
+                    // email failed silently — archive still succeeded
+                }
+            }
+
+            return redirect()->route('admin.system-admin.view-application', $rhuId)
+                ->with('success', $rhuName . ' has been archived. A notification email was sent to the RHU.');
+        } catch (Exception $e) {
+            \Log::error('Error archiving RHU: ' . $e->getMessage());
+            return back()->with('error', 'Failed to archive RHU: ' . $e->getMessage());
+        }
+    }
+
+    public function restore(Request $request, $rhuId)
+    {
+        $user = session('user');
+        if (!$user || $user['role'] !== 'admin') return back()->with('error', 'Unauthorized.');
+
+        try {
+            $rhuDoc = $this->firestore->collection('rhu')->document($rhuId)->snapshot();
+            if (!$rhuDoc->exists()) return back()->with('error', 'RHU not found.');
+
+            $rhuData = $rhuDoc->data();
+            $rhuName = $rhuData['rhuName'] ?? $rhuData['name'] ?? 'RHU';
+
+            $this->firestore->collection('rhu')->document($rhuId)->update([
+                ['path' => 'status',      'value' => 'active'],
+                ['path' => 'archived_at', 'value' => null],
+                ['path' => 'archived_by', 'value' => null],
+            ]);
+
+            $rhuEmail = $rhuData['email'] ?? null;
+            if ($rhuEmail) {
+                $adminEmail = config('mail.from.address');
+                try {
+                    Mail::to($rhuEmail)->send(new RhuRestoredEmail(
+                        $rhuName,
+                        now()->format('F d, Y g:i A'),
+                        $adminEmail,
+                    ));
+                } catch (\Exception $e) {
+                    // email failed silently — restore still succeeded
+                }
+            }
+
+            return redirect()->route('admin.system-admin.view-application', $rhuId)
+                ->with('success', $rhuName . ' has been restored and is now active. A notification email was sent to the RHU.');
+        } catch (Exception $e) {
+            \Log::error('Error restoring RHU: ' . $e->getMessage());
+            return back()->with('error', 'Failed to restore RHU: ' . $e->getMessage());
+        }
+    }
 
     /**
      * Count RHUs by status

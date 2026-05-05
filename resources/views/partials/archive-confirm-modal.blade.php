@@ -3,15 +3,18 @@
     Usage: @include('partials.archive-confirm-modal', ['modalId' => 'archiveModal'])
     JS API: openArchiveConfirm(id, name, action)
 --}}
-@php $modalId = $modalId ?? 'archiveConfirmModal'; @endphp
+@php
+    $modalId     = $modalId ?? 'archiveConfirmModal';
+    $entityLabel = $entityLabel ?? 'Barangay';
+@endphp
 
 <div class="arc-overlay" id="{{ $modalId }}Overlay">
     <div class="arc-modal">
         <div class="arc-icon"><i class="bi bi-archive-fill"></i></div>
         <div class="arc-title" id="{{ $modalId }}Title">Archive</div>
         <div class="arc-body">
-            This barangay will be <strong>archived</strong>. All data is preserved and can be restored at any time.
-            The barangay will receive an email notification.<br><br>
+            This {{ strtolower($entityLabel) }} will be <strong>archived</strong>. All data is preserved and can be restored at any time.
+            The {{ strtolower($entityLabel) }} will receive an email notification.<br><br>
             Please type <strong id="{{ $modalId }}Name"></strong> to confirm.
         </div>
         <input type="text"
@@ -25,7 +28,7 @@
             <form id="{{ $modalId }}Form" method="POST">
                 @csrf
                 <input type="hidden" name="confirm_name" id="{{ $modalId }}Hidden">
-                <button type="submit" class="arc-confirm" id="{{ $modalId }}Btn">Archive Barangay</button>
+                <button type="submit" class="arc-confirm" id="{{ $modalId }}Btn">Archive {{ $entityLabel }}</button>
             </form>
         </div>
     </div>

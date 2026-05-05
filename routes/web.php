@@ -164,6 +164,8 @@ Route::middleware('auth.check')->group(function () {
         Route::post('/{rhuId}/approve', [App\Http\Controllers\Admin\SystemAdminController::class, 'approveAndSendCredentials'])->name('approve');
         Route::post('/{rhuId}/reject', [App\Http\Controllers\Admin\SystemAdminController::class, 'rejectApplication'])->name('reject');
         Route::post('/{rhuId}/resend-credentials', [App\Http\Controllers\Admin\SystemAdminController::class, 'resendCredentials'])->name('resend-credentials');
+        Route::post('/{rhuId}/archive', [App\Http\Controllers\Admin\SystemAdminController::class, 'archive'])->name('archive');
+        Route::post('/{rhuId}/restore', [App\Http\Controllers\Admin\SystemAdminController::class, 'restore'])->name('restore');
     });
     
     // Remove the auth middleware group for RHUs
