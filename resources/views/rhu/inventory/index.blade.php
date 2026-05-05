@@ -178,13 +178,9 @@
                                                         <button class="inv-action-btn" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $brand['id'] }}" title="Edit">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
-                                                        <form action="{{ route('inventory.destroy', $brand['id']) }}" method="POST" class="d-inline">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button class="inv-action-btn danger" onclick="return confirm('Delete this item?')" title="Delete">
-                                                                <i class="bi bi-trash"></i>
-                                                            </button>
-                                                        </form>
+                                                        <button class="inv-action-btn danger" onclick="openDeleteConfirm('{{ $brand['id'] }}','{{ addslashes($brand['name']) }}','{{ route('inventory.destroy', $brand['id']) }}','Delete Item')" title="Delete">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -370,13 +366,9 @@
                                         <button class="inv-action-btn" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item['id'] }}" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <form action="{{ route('inventory.destroy', $item['id']) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="inv-action-btn danger" onclick="return confirm('Delete this item?')" title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button class="inv-action-btn danger" onclick="openDeleteConfirm('{{ $item['id'] }}','{{ addslashes($item['name']) }}','{{ route('inventory.destroy', $item['id']) }}','Delete Item')" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -1092,4 +1084,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.toast').forEach(t => setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000));
 });
 </script>
+
+@include('partials.delete-confirm-modal', ['modalId' => 'invDeleteModal'])
 @endsection

@@ -257,15 +257,31 @@ class AccountController extends Controller
         return redirect()->route('rhu.accounts.index')->with('success', 'Staff account updated successfully!');
     }
 
-    public function destroyStaff($id)
+    public function destroyStaff(Request $request, $id)
     {
         $user = session('user');
-        $this->firestore->getFirestore()
+        if (!$user) return redirect()->route('login');
+
+        $doc = $this->firestore->getFirestore()
             ->collection($user['role'])
             ->document($user['id'])
             ->collection('accounts')
             ->document($id)
-            ->delete();
+            ->snapshot();
+
+        if (!$doc->exists()) {
+            return redirect()->route('rhu.accounts.index')->with('error', 'Staff account not found.');
+        }
+
+        $data = $doc->data();
+        $expected  = strtolower(trim($data['name'] ?? $data['displayName'] ?? ''));
+        $confirmed = strtolower(trim($request->input('confirm_title', '')));
+
+        if ($confirmed !== $expected) {
+            return redirect()->back()->with('error', 'Staff name did not match. Deletion cancelled.');
+        }
+
+        $doc->reference()->delete();
 
         return redirect()->route('rhu.accounts.index')->with('success', 'Staff account deleted successfully!');
     }

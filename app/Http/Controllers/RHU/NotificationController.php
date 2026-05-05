@@ -226,46 +226,45 @@ class NotificationController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $user = session('user');
-
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Please login to delete notifications.');
-        }
+        if (!$user) return redirect()->route('login')->with('error', 'Please login to delete notifications.');
 
         $rhuId = $this->getBarangayId();
-
-        if (!$rhuId) {
-            return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
-        }
+        if (!$rhuId) return redirect()->back()->with('error', 'RHU ID not found. Please contact administrator.');
 
         try {
-            // Read notification first to get target barangay IDs for cascading delete
             $notifDoc = $this->firestore
                 ->collection("rhu/{$rhuId}/notifications")
                 ->document($id)
                 ->snapshot();
 
-            if ($notifDoc->exists()) {
-                $barangayIds = $notifDoc->data()['target_barangay_ids'] ?? [];
-                foreach ($barangayIds as $barangayId) {
-                    $matches = $this->firestore
-                        ->collection("barangay/{$barangayId}/notifications")
-                        ->where('rhu_notification_id', '=', $id)
-                        ->documents();
-                    foreach ($matches as $doc) {
-                        if ($doc->exists()) {
-                            $doc->reference()->delete();
-                        }
-                    }
+            if (!$notifDoc->exists()) {
+                return redirect()->back()->with('error', 'Notification not found.');
+            }
+
+            $data = $notifDoc->data();
+            $expected  = strtolower(trim($data['title'] ?? ''));
+            $confirmed = strtolower(trim($request->input('confirm_title', '')));
+
+            if ($confirmed !== $expected) {
+                return redirect()->back()->with('error', 'Notification title did not match. Deletion cancelled.');
+            }
+
+            // Cascade delete from each barangay
+            $barangayIds = $data['target_barangay_ids'] ?? [];
+            foreach ($barangayIds as $barangayId) {
+                $matches = $this->firestore
+                    ->collection("barangay/{$barangayId}/notifications")
+                    ->where('rhu_notification_id', '=', $id)
+                    ->documents();
+                foreach ($matches as $doc) {
+                    if ($doc->exists()) $doc->reference()->delete();
                 }
             }
 
-            $this->firestore
-                ->collection("rhu/{$rhuId}/notifications")
-                ->document($id)
-                ->delete();
+            $notifDoc->reference()->delete();
 
             return redirect()->route('rhu.notifications.index')->with('success', 'Notification deleted successfully!');
         } catch (\Exception $e) {

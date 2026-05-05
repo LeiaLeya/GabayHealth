@@ -165,7 +165,7 @@
                                             <button class="svc-action-btn svc-btn-warn" onclick="openSuspendModal('{{ $service['id'] }}','{{ addslashes($service['display_name'] ?? $service['name']) }}')" title="Suspend">
                                                 <i class="bi bi-pause-fill"></i>
                                             </button>
-                                            <button class="svc-action-btn svc-btn-danger" onclick="openDeleteModal('{{ $service['id'] }}','{{ addslashes($service['display_name'] ?? $service['name']) }}')" title="Delete">
+                                            <button class="svc-action-btn svc-btn-danger" onclick="openDeleteConfirm('{{ $service['id'] }}','{{ addslashes($service['display_name'] ?? $service['name']) }}','/services/{{ $service['id'] }}','Delete Service')" title="Delete">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -221,7 +221,7 @@
                                             <button class="svc-action-btn svc-btn-resume" onclick="resumeService('{{ $service['id'] }}','{{ addslashes($service['display_name'] ?? $service['name']) }}')" title="Reactivate">
                                                 <i class="bi bi-play-fill"></i>
                                             </button>
-                                            <button class="svc-action-btn svc-btn-danger" onclick="openDeleteModal('{{ $service['id'] }}','{{ addslashes($service['display_name'] ?? $service['name']) }}')" title="Delete">
+                                            <button class="svc-action-btn svc-btn-danger" onclick="openDeleteConfirm('{{ $service['id'] }}','{{ addslashes($service['display_name'] ?? $service['name']) }}','/services/{{ $service['id'] }}','Delete Service')" title="Delete">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -411,28 +411,7 @@
     </div>
 </div>
 
-{{-- ─── Delete Service Modal ─── --}}
-<div class="modal fade" id="deleteServiceModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
-            <div class="modal-hd" style="background:#dc2626;">
-                <div><div class="modal-eyebrow">Confirm Delete</div><h5 class="modal-hd-title">Delete Service</h5></div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="mb-0">Are you sure you want to delete <strong id="deleteServiceName"></strong>? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer border-0 pb-4 px-4 gap-2">
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteServiceForm" method="POST" style="display:inline;">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger rounded-pill px-4"><i class="bi bi-trash me-1"></i>Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@include('partials.delete-confirm-modal', ['modalId' => 'svcDeleteModal'])
 
 <style>
 *, *::before, *::after { box-sizing: border-box; }
@@ -683,11 +662,7 @@ function submitToggle(id, status, reason) {
 }
 
 // ── Delete service ────────────────────────────────────
-function openDeleteModal(id, name) {
-    document.getElementById('deleteServiceName').textContent = name;
-    document.getElementById('deleteServiceForm').action = `/services/${id}`;
-    new bootstrap.Modal(document.getElementById('deleteServiceModal')).show();
-}
+// delete handled by partials/delete-confirm-modal
 
 // ── Schedule day toggle ───────────────────────────────
 function toggleSchedDay(cb) {

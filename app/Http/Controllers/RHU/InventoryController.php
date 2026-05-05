@@ -809,19 +809,31 @@ class InventoryController extends Controller
         return redirect()->back()->with('success', "Successfully distributed {$requestedQuantity} units to {$request->resident_name}!");
     }
 
-    public function destroy($id)
+    public function destroy(\Illuminate\Http\Request $request, $id)
     {
         $user = session('user');
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Please login to access inventory management.');
-        }
+        if (!$user) return redirect()->route('login')->with('error', 'Please login to access inventory management.');
 
-        $this->firestore
+        $doc = $this->firestore
             ->collection($user['role'])
             ->document($user['id'])
             ->collection('inventory')
             ->document($id)
-            ->delete();
+            ->snapshot();
+
+        if (!$doc->exists()) {
+            return redirect()->back()->with('error', 'Item not found.');
+        }
+
+        $data = $doc->data();
+        $expected  = strtolower(trim($data['name'] ?? ''));
+        $confirmed = strtolower(trim($request->input('confirm_title', '')));
+
+        if ($confirmed !== $expected) {
+            return redirect()->back()->with('error', 'Item name did not match. Deletion cancelled.');
+        }
+
+        $doc->reference()->delete();
 
         return redirect()->back()->with('success', 'Item deleted successfully!');
     }

@@ -120,7 +120,7 @@
                             <td>
                                 <div class="d-flex justify-content-center gap-1">
                                     <a href="{{ route('rhu.accounts.staff.edit', $staff['id']) }}" class="tbl-btn edit" title="Edit"><i class="bi bi-pencil"></i></a>
-                                    <button class="tbl-btn delete" onclick="deleteStaff('{{ $staff['id'] }}','{{ addslashes($staff['name']) }}')" title="Delete"><i class="bi bi-trash"></i></button>
+                                    <button class="tbl-btn delete" onclick="openDeleteConfirm('{{ $staff['id'] }}','{{ addslashes($staff['name']) }}','/rhu/accounts/staff/{{ $staff['id'] }}','Delete Staff')" title="Delete"><i class="bi bi-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -140,32 +140,7 @@
     </div>
 </div>
 
-{{-- Delete Modal --}}
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
-            <div class="modal-header-custom" style="background:#b91c1c;">
-                <div>
-                    <div class="modal-type-badge" style="background:rgba(255,255,255,.15);">Confirm Delete</div>
-                    <h5 class="modal-title-custom">Delete Staff Account</h5>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="mb-1">Are you sure you want to delete <strong id="staffName"></strong>?</p>
-                <p class="text-muted small mb-0">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer border-0 pb-4 px-4 gap-2">
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="POST" style="display:inline;">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger rounded-pill px-4"><i class="bi bi-trash me-1"></i>Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@include('partials.delete-confirm-modal', ['modalId' => 'acctDeleteModal'])
 
 <style>
 .acct-card { background:#fff; border:1px solid #e9e9e7; border-radius:8px; overflow:hidden; }
@@ -213,11 +188,7 @@
 
 @push('scripts')
 <script>
-function deleteStaff(staffId, staffName) {
-    document.getElementById('staffName').textContent = staffName;
-    document.getElementById('deleteForm').action = `/rhu/accounts/staff/${staffId}`;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
+// delete handled by partials/delete-confirm-modal
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.toast').forEach(t => setTimeout(() => bootstrap.Toast.getOrCreateInstance(t).hide(), 4000));
 });

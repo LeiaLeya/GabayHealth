@@ -235,21 +235,32 @@ class ServicesController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(\Illuminate\Http\Request $request, $id)
     {
         $user = session('user');
-
-        if (!$user) {
-            return redirect()->route('login');
-        }
+        if (!$user) return redirect()->route('login');
 
         try {
-            $this->firestore
+            $doc = $this->firestore
                 ->collection($user['role'])
                 ->document($user['id'])
                 ->collection('services')
                 ->document($id)
-                ->delete();
+                ->snapshot();
+
+            if (!$doc->exists()) {
+                return redirect()->back()->with('error', 'Service not found.');
+            }
+
+            $data = $doc->data();
+            $expected  = strtolower(trim($data['display_name'] ?? $data['name'] ?? ''));
+            $confirmed = strtolower(trim($request->input('confirm_title', '')));
+
+            if ($confirmed !== $expected) {
+                return redirect()->back()->with('error', 'Service name did not match. Deletion cancelled.');
+            }
+
+            $doc->reference()->delete();
 
             return redirect()->back()->with('success', 'Service deleted successfully!');
         } catch (\Exception $e) {

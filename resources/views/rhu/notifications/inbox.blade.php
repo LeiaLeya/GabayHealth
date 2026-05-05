@@ -171,14 +171,10 @@
                         </td>
                         <td><span class="nstatus {{ $status === 'sent' ? 'nstatus-sent' : 'nstatus-pending' }}">{{ ucfirst($status) }}</span></td>
                         <td onclick="event.stopPropagation()">
-                            <form action="{{ route('notifications.destroy', $notification['id']) }}" method="POST"
-                                  onsubmit="return confirm('Delete this notification from all barangays too?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="notif-del-btn" title="Delete">
-                                    <i class="bi bi-trash" style="font-size:.75rem;"></i>
-                                </button>
-                            </form>
+                            <button class="notif-del-btn" title="Delete"
+                                onclick="openDeleteConfirm('{{ $notification['id'] }}','{{ addslashes($notification['title']) }}','{{ route('notifications.destroy', $notification['id']) }}','Delete Notification')">
+                                <i class="bi bi-trash" style="font-size:.75rem;"></i>
+                            </button>
                         </td>
                     </tr>
                     @endforeach
@@ -849,4 +845,6 @@ document.addEventListener('DOMContentLoaded', function() {
     validateStep1();
 });
 </script>
+
+@include('partials.delete-confirm-modal', ['modalId' => 'notifDeleteModal'])
 @endsection

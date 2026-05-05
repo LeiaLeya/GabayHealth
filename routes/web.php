@@ -375,12 +375,12 @@ Route::middleware('auth.check')->group(function () {
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('inventory.release');
     
-    Route::delete('/inventory/{id}', function($id) {
+    Route::delete('/inventory/{id}', function(\Illuminate\Http\Request $request, $id) {
         $user = session('user');
         if (!$user) return redirect()->route('login');
         $role = $user['role'] ?? null;
-        if ($role === 'rhu') return app(RHUInventoryController::class)->destroy($id);
-        elseif ($role === 'barangay') return app(BHCInventoryController::class)->destroy($id);
+        if ($role === 'rhu') return app(RHUInventoryController::class)->destroy($request, $id);
+        elseif ($role === 'barangay') return app(BHCInventoryController::class)->destroy($request, $id);
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('inventory.destroy');
     
@@ -524,12 +524,12 @@ Route::middleware('auth.check')->group(function () {
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('notifications.store');
     
-    Route::delete('/notifications/{id}', function($id) {
+    Route::delete('/notifications/{id}', function(\Illuminate\Http\Request $request, $id) {
         $user = session('user');
         if (!$user) return redirect()->route('login');
         $role = $user['role'] ?? null;
-        if ($role === 'rhu') return app(RHUNotificationController::class)->destroy($id);
-        elseif ($role === 'barangay') return app(BHCNotificationController::class)->destroy($id);
+        if ($role === 'rhu') return app(RHUNotificationController::class)->destroy($request, $id);
+        elseif ($role === 'barangay') return app(BHCNotificationController::class)->destroy($request, $id);
         return redirect()->route('login')->with('error', 'Unauthorized access');
     })->name('notifications.destroy');
 
@@ -581,12 +581,12 @@ Route::middleware('auth.check')->group(function () {
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('toggle-status');
         
-        Route::delete('/{id}', function($id) {
+        Route::delete('/{id}', function(\Illuminate\Http\Request $request, $id) {
             $user = session('user');
             if (!$user) return redirect()->route('login');
             $role = $user['role'] ?? null;
-            if ($role === 'rhu') return app(RHUServicesController::class)->destroy($id);
-            elseif ($role === 'barangay') return app(BHCServicesController::class)->destroy($id);
+            if ($role === 'rhu') return app(RHUServicesController::class)->destroy($request, $id);
+            elseif ($role === 'barangay') return app(BHCServicesController::class)->destroy($request, $id);
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('destroy');
     });
@@ -746,12 +746,12 @@ Route::middleware('auth.check')->group(function () {
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('staff.update');
         
-        Route::delete('/staff/{id}', function($id) {
+        Route::delete('/staff/{id}', function(\Illuminate\Http\Request $request, $id) {
             $user = session('user');
             if (!$user) return redirect()->route('login');
             $role = $user['role'] ?? null;
-            if ($role === 'rhu') return app(RHUAccountController::class)->destroyStaff($id);
-            elseif ($role === 'barangay') return app(BHCAccountController::class)->destroyStaff($id);
+            if ($role === 'rhu') return app(RHUAccountController::class)->destroyStaff($request, $id);
+            elseif ($role === 'barangay') return app(BHCAccountController::class)->destroyStaff($request, $id);
             return redirect()->route('login')->with('error', 'Unauthorized access');
         })->name('staff.destroy');
     });
