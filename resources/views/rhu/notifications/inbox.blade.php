@@ -192,50 +192,119 @@
 
     {{-- ── INBOX TAB ── --}}
     <div id="paneInbox" class="notif-list-card d-none" style="border-top-left-radius:0;border-top-right-radius:0;">
-        <div class="notif-list-header px-4 py-3">
-            <span class="notif-list-title">Inbox</span>
-            <span class="notif-list-meta ms-2">System messages received</span>
+        <div class="notif-list-header d-flex align-items-center justify-content-between px-4 py-3">
+            <div>
+                <span class="notif-list-title">Inbox</span>
+                <span class="notif-list-meta ms-2">System messages received</span>
+            </div>
+            @if($inboxUnread > 0)
+            <span id="inboxUnreadCount" style="font-size:.72rem;font-weight:600;color:#787774;">{{ $inboxUnread }} unread</span>
+            @else
+            <span id="inboxUnreadCount" style="font-size:.72rem;font-weight:600;color:#787774;display:none;"></span>
+            @endif
         </div>
-        <div class="p-3">
-            @forelse($inbox as $n)
-            @php
-                $title    = \App\Services\NotificationPageSupport::inboxTitle($n);
-                $subtitle = \App\Services\NotificationPageSupport::inboxSubtitle($n);
-                $raw      = $n['createdAt'] ?? $n['created_at'] ?? null;
-                $when     = $raw ? \Carbon\Carbon::parse($raw)->format('M d, Y · g:i A') : '—';
-                $isUnread = ($n['status'] ?? '') === 'unread';
-            @endphp
-            <div class="inbox-item {{ $isUnread ? 'inbox-item-unread' : '' }}">
-                <div class="d-flex align-items-start justify-content-between gap-3">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="fw-semibold" style="font-size:.9rem;color:#37352f;">{{ $title }}</span>
-                            @if($isUnread)<span class="nbadge nbadge-primary" style="font-size:.62rem;">New</span>@endif
-                        </div>
-                        @if($subtitle)
-                        <div style="font-size:.8rem;color:#787774;margin-bottom:4px;">{{ $subtitle }}</div>
-                        @endif
-                        <div style="font-size:.72rem;color:#9b9b9b;"><i class="bi bi-clock me-1"></i>{{ $when }}</div>
+        @forelse($inbox as $n)
+        @php
+            $title    = \App\Services\NotificationPageSupport::inboxTitle($n);
+            $subtitle = \App\Services\NotificationPageSupport::inboxSubtitle($n);
+            $raw      = $n['createdAt'] ?? $n['created_at'] ?? null;
+            $when     = $raw ? \Carbon\Carbon::parse($raw)->format('M d, Y · g:i A') : '—';
+            $isUnread = ($n['status'] ?? '') === 'unread';
+            $inboxType = $n['type'] ?? $n['notification_type'] ?? 'system';
+            $iconMap = [
+                'barangay_registration' => ['icon' => 'bi-building-fill-check', 'bg' => '#dbeafe', 'color' => '#1d4ed8'],
+                'appointment'           => ['icon' => 'bi-calendar-check-fill', 'bg' => '#dcfce7', 'color' => '#15803d'],
+                'health_alert'          => ['icon' => 'bi-exclamation-triangle-fill', 'bg' => '#fee2e2', 'color' => '#b91c1c'],
+                'reminder'              => ['icon' => 'bi-bell-fill', 'bg' => '#fef9c3', 'color' => '#a16207'],
+                'system'                => ['icon' => 'bi-gear-fill', 'bg' => '#f1f1ef', 'color' => '#787774'],
+            ];
+            $iconInfo = $iconMap[$inboxType] ?? $iconMap['system'];
+            $detailData = json_encode([
+                'id'       => $n['id'],
+                'title'    => $title,
+                'subtitle' => $subtitle,
+                'when'     => $when,
+                'type'     => $inboxType,
+                'message'  => $n['message'] ?? $n['body'] ?? '',
+                'barangay' => $n['barangay_name'] ?? '',
+                'isUnread' => $isUnread,
+                'readUrl'  => route('rhu.notifications.read', $n['id']),
+                'iconBg'   => $iconInfo['bg'],
+                'iconColor'=> $iconInfo['color'],
+                'iconClass'=> $iconInfo['icon'],
+            ]);
+        @endphp
+        <div class="inbox-row {{ $isUnread ? 'inbox-row-unread' : '' }}" id="inbox-row-{{ $n['id'] }}"
+             onclick="openInboxDetail({{ $detailData }})" role="button" title="Click to view">
+            <div class="inbox-icon-wrap" style="background:{{ $iconInfo['bg'] }};color:{{ $iconInfo['color'] }};">
+                <i class="bi {{ $iconInfo['icon'] }}"></i>
+            </div>
+            <div class="inbox-body">
+                <div class="inbox-title-row">
+                    <span class="inbox-title">{{ $title }}</span>
+                    @if($isUnread)<span class="inbox-new-badge" id="inbox-badge-{{ $n['id'] }}">New</span>@endif
+                </div>
+                @if($subtitle)
+                <div class="inbox-subtitle">{{ $subtitle }}</div>
+                @endif
+                <div class="inbox-meta"><i class="bi bi-clock me-1"></i>{{ $when }}</div>
+            </div>
+            <div class="inbox-actions">
+                @if($isUnread)
+                <span class="inbox-status-dot" id="inbox-dot-{{ $n['id'] }}"></span>
+                @else
+                <span class="nstatus nstatus-sent">Read</span>
+                @endif
+            </div>
+        </div>
+        @empty
+        <div class="notif-empty">
+            <i class="bi bi-inbox notif-empty-icon"></i>
+            <div class="notif-empty-title">Inbox is empty</div>
+            <div class="notif-empty-text">Incoming system messages will appear here.</div>
+        </div>
+        @endforelse
+    </div>
+
+{{-- Inbox Detail Modal --}}
+<div class="modal fade" id="inboxDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 overflow-hidden border-0 shadow-lg">
+            <div class="modal-header-custom d-flex align-items-start justify-content-between" id="inboxDetailHeader">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="inbox-modal-icon" id="inboxDetailIcon">
+                        <i class="bi bi-inbox" id="inboxDetailIconEl"></i>
                     </div>
-                    @if($isUnread)
-                    <form action="{{ route('rhu.notifications.read', $n['id']) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill" style="font-size:.75rem;white-space:nowrap;">Mark as read</button>
-                    </form>
-                    @else
-                    <span class="nstatus nstatus-sent" style="flex-shrink:0;">Read</span>
-                    @endif
+                    <div>
+                        <div class="modal-type-badge mb-1">INBOX</div>
+                        <div class="modal-title-custom" id="inboxDetailTitle">—</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white mt-1" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="inboxDetailSubtitleWrap" class="modal-form-section mb-3" style="display:none;">
+                    <div class="modal-section-title mb-2">Details</div>
+                    <div class="review-row">
+                        <span class="review-label">From</span>
+                        <span class="review-value fw-semibold" id="inboxDetailSubtitle">—</span>
+                    </div>
+                </div>
+                <div id="inboxDetailMessageWrap" class="modal-form-section mb-3" style="display:none;">
+                    <div class="modal-section-title mb-2">Message</div>
+                    <p id="inboxDetailMessage" style="font-size:.88rem;color:#37352f;white-space:pre-wrap;line-height:1.6;margin:0;">—</p>
+                </div>
+                <div class="review-row" style="border-bottom:none;padding-top:0;">
+                    <span class="review-label">Received</span>
+                    <span class="review-value" id="inboxDetailWhen">—</span>
                 </div>
             </div>
-            @empty
-            <div class="notif-empty">
-                <i class="bi bi-inbox notif-empty-icon"></i>
-                <div class="notif-empty-title">Inbox is empty</div>
-                <div class="notif-empty-text">Incoming system messages will appear here.</div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
             </div>
-            @endforelse
         </div>
     </div>
+</div>
 </div>
 
 {{-- ═══════════════════════════════════════════════════════ --}}
@@ -549,10 +618,26 @@
 .notif-empty-title { font-size:.95rem;font-weight:600;color:#787774;margin-bottom:4px; }
 .notif-empty-text  { font-size:.82rem;color:#9b9b9b; }
 
-/* Inbox items */
-.inbox-item { padding:14px 0;border-bottom:1px solid #f5f5f4; }
-.inbox-item:last-child { border-bottom:none; }
-.inbox-item-unread { background:#fafaf9;border-radius:6px;padding:14px 10px;margin-bottom:4px; }
+/* Inbox rows */
+.inbox-row { display:flex;align-items:flex-start;gap:14px;padding:16px 20px;border-bottom:1px solid #f5f5f4;transition:background .1s; }
+.inbox-row:last-child { border-bottom:none; }
+.inbox-row:hover { background:#fafaf9; }
+.inbox-row-unread { background:#fff; }
+.inbox-row-unread:hover { background:#f8faff; }
+.inbox-icon-wrap { width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;margin-top:1px; }
+.inbox-body { flex:1;min-width:0; }
+.inbox-title-row { display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap; }
+.inbox-title { font-size:.88rem;font-weight:400;color:#37352f; }
+.inbox-row-unread .inbox-title { font-weight:700;color:#1a1a1a; }
+.inbox-new-badge { font-size:.62rem;font-weight:700;background:#dde9ff;color:#1657c1;border-radius:4px;padding:1px 6px;white-space:nowrap; }
+.inbox-subtitle { font-size:.78rem;color:#9b9b9b;margin-bottom:4px;line-height:1.4;font-weight:400; }
+.inbox-row-unread .inbox-subtitle { color:#37352f;font-weight:600; }
+.inbox-meta { font-size:.7rem;color:#b0b0b0; }
+.inbox-row-unread .inbox-meta { color:#787774;font-weight:500; }
+.inbox-row { cursor:pointer; }
+.inbox-actions { flex-shrink:0;display:flex;align-items:center;padding-top:4px; }
+.inbox-status-dot { width:9px;height:9px;border-radius:50%;background:#1657c1;display:block;flex-shrink:0; }
+.inbox-modal-icon { width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;background:rgba(255,255,255,.15); }
 
 /* Wizard modal */
 .modal-header-custom { background:#1657c1;padding:18px 22px; }
@@ -645,6 +730,55 @@ function switchTab(tab) {
     document.getElementById('paneInbox').classList.toggle('d-none', tab !== 'inbox');
     document.getElementById('tabSent').classList.toggle('active', tab === 'sent');
     document.getElementById('tabInbox').classList.toggle('active', tab === 'inbox');
+}
+
+// ── Inbox detail modal ────────────────────────────────
+let _inboxUnreadCount = {{ $inboxUnread }};
+
+function openInboxDetail(data) {
+    document.getElementById('inboxDetailTitle').textContent   = data.title || '—';
+    document.getElementById('inboxDetailWhen').textContent    = data.when  || '—';
+    document.getElementById('inboxDetailIconEl').className    = 'bi ' + (data.iconClass || 'bi-inbox');
+    document.getElementById('inboxDetailIcon').style.color    = data.iconColor || '#787774';
+
+    const subtitleWrap = document.getElementById('inboxDetailSubtitleWrap');
+    const subtitleEl   = document.getElementById('inboxDetailSubtitle');
+    if (data.subtitle) { subtitleEl.textContent = data.subtitle; subtitleWrap.style.display = ''; }
+    else { subtitleWrap.style.display = 'none'; }
+
+    const msgWrap = document.getElementById('inboxDetailMessageWrap');
+    const msgEl   = document.getElementById('inboxDetailMessage');
+    if (data.message) { msgEl.textContent = data.message; msgWrap.style.display = ''; }
+    else { msgWrap.style.display = 'none'; }
+
+    new bootstrap.Modal(document.getElementById('inboxDetailModal')).show();
+
+    if (data.isUnread) {
+        fetch(data.readUrl, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}', 'Accept': 'application/json' }
+        }).then(r => r.ok ? markRowRead(data.id) : null).catch(() => {});
+    }
+}
+
+function markRowRead(id) {
+    const row   = document.getElementById('inbox-row-' + id);
+    const badge = document.getElementById('inbox-badge-' + id);
+    const dot   = document.getElementById('inbox-dot-' + id);
+    if (row)   { row.classList.remove('inbox-row-unread'); row.dataset.unread = '0'; }
+    if (badge) badge.remove();
+    if (dot)   { dot.outerHTML = '<span class="nstatus nstatus-sent">Read</span>'; }
+    _inboxUnreadCount = Math.max(0, _inboxUnreadCount - 1);
+    const countEl = document.getElementById('inboxUnreadCount');
+    if (countEl) {
+        if (_inboxUnreadCount > 0) { countEl.textContent = _inboxUnreadCount + ' unread'; countEl.style.display = ''; }
+        else countEl.style.display = 'none';
+    }
+    const tabBadge = document.querySelector('#tabInbox .tab-count-unread');
+    if (tabBadge) {
+        if (_inboxUnreadCount > 0) tabBadge.textContent = _inboxUnreadCount;
+        else { tabBadge.className = 'tab-count'; tabBadge.textContent = document.querySelectorAll('.inbox-row').length; }
+    }
 }
 
 // ── Wizard state ─────────────────────────────────────

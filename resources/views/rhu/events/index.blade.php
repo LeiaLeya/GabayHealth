@@ -59,6 +59,16 @@ window.__events = @json($eventsForJs);
         </div>
     </div>
     @endif
+    @if($errors->has('image'))
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div class="toast show align-items-center text-bg-danger border-0 rounded-3 shadow" role="alert">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold"><i class="bi bi-image-fill me-2"></i>{{ $errors->first('image') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Page Header --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -289,7 +299,7 @@ window.__events = @json($eventsForJs);
                             <div id="addUploadPlaceholder">
                                 <i class="bi bi-image ev-upload-icon"></i>
                                 <div class="ev-upload-text">Click or drag to upload</div>
-                                <div class="ev-upload-hint">PNG or JPG, max 5MB</div>
+                                <div class="ev-upload-hint">PNG or JPG, max 2MB</div>
                             </div>
                             <div id="addUploadPreview" class="d-none">
                                 <img id="addPreviewImg" src="" alt="Preview" class="ev-preview-img">
@@ -297,6 +307,7 @@ window.__events = @json($eventsForJs);
                             </div>
                         </div>
                         <input type="file" id="eventImageUpload" name="image" accept="image/*" class="d-none">
+                        <div id="addImageError" class="d-none mt-2" style="font-size:.78rem;color:#b91c1c;display:flex;align-items:center;gap:5px;"><i class="bi bi-exclamation-circle-fill"></i><span></span></div>
                     </div>
                     {{-- Target Attendees + In Charge --}}
                     <div class="row g-3 mb-3">
@@ -427,7 +438,7 @@ window.__events = @json($eventsForJs);
                             <div id="editUploadPlaceholder">
                                 <i class="bi bi-image ev-upload-icon"></i>
                                 <div class="ev-upload-text">Click or drag to upload</div>
-                                <div class="ev-upload-hint">PNG or JPG, max 5MB</div>
+                                <div class="ev-upload-hint">PNG or JPG, max 2MB</div>
                             </div>
                             <div id="editUploadPreview" class="d-none">
                                 <img id="editPreviewImg" src="" alt="Preview" class="ev-preview-img">
@@ -435,6 +446,7 @@ window.__events = @json($eventsForJs);
                             </div>
                         </div>
                         <input type="file" id="editImageUpload" name="image" accept="image/*" class="d-none">
+                        <div id="editImageError" class="d-none mt-2" style="font-size:.78rem;color:#b91c1c;display:flex;align-items:center;gap:5px;"><i class="bi bi-exclamation-circle-fill"></i><span></span></div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
@@ -774,7 +786,19 @@ function removeBgyTag(prefix, val) {
 }
 
 // ── Image upload ──────────────────────────────────────
-function setupImageUpload(zoneId, inputId, placeholderId, previewId, previewImgId) {
+function showImgError(errorDivId, msg) {
+    const el = document.getElementById(errorDivId);
+    if (!el) return;
+    el.querySelector('span').textContent = msg;
+    el.classList.remove('d-none');
+    el.style.display = 'flex';
+}
+function hideImgError(errorDivId) {
+    const el = document.getElementById(errorDivId);
+    if (el) { el.classList.add('d-none'); el.style.display = ''; }
+}
+
+function setupImageUpload(zoneId, inputId, placeholderId, previewId, previewImgId, errorDivId) {
     const zone        = document.getElementById(zoneId);
     const input       = document.getElementById(inputId);
     const placeholder = document.getElementById(placeholderId);
@@ -785,8 +809,17 @@ function setupImageUpload(zoneId, inputId, placeholderId, previewId, previewImgI
     input.addEventListener('change', function() {
         const file = this.files[0];
         if (!file) return;
-        if (!file.type.match('image.*')) { alert('Please select an image file.'); return; }
-        if (file.size > 5 * 1024 * 1024) { alert('File size must be less than 5MB.'); return; }
+        hideImgError(errorDivId);
+        if (!file.type.match('image.*')) {
+            showImgError(errorDivId, 'Please select a valid image file (PNG or JPG).');
+            this.value = '';
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            showImgError(errorDivId, 'Image is too large. Maximum size is 2MB. Please choose a smaller file.');
+            this.value = '';
+            return;
+        }
         const reader = new FileReader();
         reader.onload = e => {
             previewImg.src = e.target.result;
@@ -852,8 +885,8 @@ document.getElementById('editEventForm')?.addEventListener('submit', function() 
 
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-    setupImageUpload('addUploadZone',  'eventImageUpload', 'addUploadPlaceholder',  'addUploadPreview',  'addPreviewImg');
-    setupImageUpload('editUploadZone', 'editImageUpload',  'editUploadPlaceholder', 'editUploadPreview', 'editPreviewImg');
+    setupImageUpload('addUploadZone',  'eventImageUpload', 'addUploadPlaceholder',  'addUploadPreview',  'addPreviewImg',  'addImageError');
+    setupImageUpload('editUploadZone', 'editImageUpload',  'editUploadPlaceholder', 'editUploadPreview', 'editPreviewImg', 'editImageError');
     setupTimeValidation('add_start_time', 'add_end_time');
     setupTimeValidation('edit_start_time', 'edit_end_time');
     updateBgyLabel('add');
