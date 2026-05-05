@@ -29,15 +29,18 @@ class RegisterController extends Controller
         try {
             $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
 
-            $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'approved')->documents();
             $rhus = [];
-            foreach ($rhuDocs as $doc) {
-                if ($doc->exists()) {
-                    $data = $doc->data();
-                    $rhus[] = [
-                        'id' => $doc->id(),
-                        'name' => $data['name'] ?? $data['rhuName'] ?? 'Unnamed RHU',
-                    ];
+            $seen = [];
+            foreach (['approved', 'active'] as $rhuStatus) {
+                foreach ($firestore->collection('rhu')->where('status', '=', $rhuStatus)->documents() as $doc) {
+                    if ($doc->exists() && !isset($seen[$doc->id()])) {
+                        $seen[$doc->id()] = true;
+                        $data = $doc->data();
+                        $rhus[] = [
+                            'id'   => $doc->id(),
+                            'name' => $data['name'] ?? $data['rhuName'] ?? 'Unnamed RHU',
+                        ];
+                    }
                 }
             }
             if (empty($rhus)) {
@@ -527,18 +530,21 @@ class RegisterController extends Controller
         }
         
         $firestore = app(\App\Services\FirebaseService::class)->getFirestore();
-        $rhuDocs = $firestore->collection('rhu')->where('status', '=', 'approved')->documents();
         $rhus = [];
-        foreach ($rhuDocs as $doc) {
-            if ($doc->exists()) {
-                $data = $doc->data();
-                $rhus[] = [
-                    'id' => $doc->id(),
-                    'name' => $data['name'] ?? 'Unnamed RHU',
-                ];
+        $seen = [];
+        foreach (['approved', 'active'] as $rhuStatus) {
+            foreach ($firestore->collection('rhu')->where('status', '=', $rhuStatus)->documents() as $doc) {
+                if ($doc->exists() && !isset($seen[$doc->id()])) {
+                    $seen[$doc->id()] = true;
+                    $data = $doc->data();
+                    $rhus[] = [
+                        'id'   => $doc->id(),
+                        'name' => $data['name'] ?? $data['rhuName'] ?? 'Unnamed RHU',
+                    ];
+                }
             }
         }
-        
+
         return view('auth.register_bhw_google', compact('rhus'));
     }
 

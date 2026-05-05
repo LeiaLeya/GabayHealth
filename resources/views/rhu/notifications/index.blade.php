@@ -39,31 +39,39 @@
     @endphp
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="stat-card p-3">
-                <div class="stat-icon mb-2"><i class="bi bi-send"></i></div>
-                <div class="stat-value">{{ $totalSent }}</div>
-                <div class="stat-label">Total Sent</div>
+            <div class="stat-card stat-card--blue">
+                <div class="stat-card-icon"><i class="bi bi-send-fill"></i></div>
+                <div class="stat-card-body">
+                    <div class="stat-card-value">{{ $totalSent }}</div>
+                    <div class="stat-card-label">Total Sent</div>
+                </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card p-3">
-                <div class="stat-icon mb-2"><i class="bi bi-calendar-week"></i></div>
-                <div class="stat-value">{{ $thisWeek }}</div>
-                <div class="stat-label">This Week</div>
+            <div class="stat-card stat-card--indigo">
+                <div class="stat-card-icon"><i class="bi bi-calendar-week-fill"></i></div>
+                <div class="stat-card-body">
+                    <div class="stat-card-value">{{ $thisWeek }}</div>
+                    <div class="stat-card-label">This Week</div>
+                </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card p-3">
-                <div class="stat-icon mb-2"><i class="bi bi-exclamation-triangle"></i></div>
-                <div class="stat-value">{{ $healthAlerts }}</div>
-                <div class="stat-label">Health Alerts</div>
+            <div class="stat-card stat-card--red">
+                <div class="stat-card-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div class="stat-card-body">
+                    <div class="stat-card-value">{{ $healthAlerts }}</div>
+                    <div class="stat-card-label">Health Alerts</div>
+                </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card p-3">
-                <div class="stat-icon mb-2"><i class="bi bi-geo-alt"></i></div>
-                <div class="stat-value">{{ $barangayCount }}</div>
-                <div class="stat-label">Barangays</div>
+            <div class="stat-card stat-card--green">
+                <div class="stat-card-icon"><i class="bi bi-geo-alt-fill"></i></div>
+                <div class="stat-card-body">
+                    <div class="stat-card-value">{{ $barangayCount }}</div>
+                    <div class="stat-card-label">Barangays</div>
+                </div>
             </div>
         </div>
     </div>
@@ -470,11 +478,16 @@
 }
 .btn-notif-add:hover { background:#1249a8; color:#fff; }
 
-.stat-card { border:1px solid #e9e9e7; border-radius:8px; background:#fff; transition:box-shadow .15s; }
-.stat-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.07); }
-.stat-icon { width:36px; height:36px; border-radius:6px; background:#f1f1ef; color:#787774; display:flex; align-items:center; justify-content:center; font-size:1rem; }
-.stat-value { font-size:1.4rem; font-weight:700; color:#37352f; line-height:1.2; }
-.stat-label { font-size:.72rem; color:#9b9b9b; font-weight:500; text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+.stat-card { display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:10px;background:#fff;border:1px solid #e9e9e7;transition:box-shadow .15s; }
+.stat-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
+.stat-card-icon { width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0; }
+.stat-card-body { min-width:0; }
+.stat-card-value { font-size:1.5rem;font-weight:700;line-height:1;color:#37352f; }
+.stat-card-label { font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9b9b9b;margin-top:4px; }
+.stat-card--blue   .stat-card-icon { background:#dde9ff;color:#1657c1; }
+.stat-card--indigo .stat-card-icon { background:#ede9fe;color:#6d28d9; }
+.stat-card--red    .stat-card-icon { background:#fee2e2;color:#b91c1c; }
+.stat-card--green  .stat-card-icon { background:#dcfce7;color:#166534; }
 
 /* ── Notification list card ── */
 .notif-list-card { border:1px solid #e9e9e7; border-radius:8px; background:#fff; }

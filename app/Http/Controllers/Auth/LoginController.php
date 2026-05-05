@@ -56,6 +56,10 @@ class LoginController extends Controller
                 return back()->with('archived_error', $msg)->withInput();
             }
 
+            if ($userRole === 'barangay' && !in_array($user['status'] ?? 'pending', ['approved', 'active'])) {
+                return back()->withErrors(['login' => 'Your account is pending approval. Please wait for your Rural Health Unit administrator to approve your account.'])->withInput();
+            }
+
             $sessionUser = [
                 'id' => $user['uid'] ?? $user['id'],
                 'uid' => $user['uid'] ?? $user['id'],

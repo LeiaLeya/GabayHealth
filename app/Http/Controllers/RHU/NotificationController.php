@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\HasRoleContext;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
+use App\Services\NotificationBellService;
 use App\Services\NotificationPageSupport;
 use Carbon\Carbon;
 
@@ -124,7 +125,12 @@ class NotificationController extends Controller
             $this->firestore
                 ->collection("rhu/{$rhuId}/notifications")
                 ->document($id)
-                ->update([['path' => 'read', 'value' => true]]);
+                ->update([
+                    ['path' => 'status',  'value' => 'read'],
+                    ['path' => 'read_at', 'value' => now()->toDateTimeString()],
+                ]);
+
+            NotificationBellService::forgetCacheForCurrentUser();
         } catch (\Exception $e) {
             // silently ignore
         }
